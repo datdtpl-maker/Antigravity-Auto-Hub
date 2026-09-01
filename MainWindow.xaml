@@ -189,7 +189,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="Th&#x1B0; m&#x1EE5;c l&#x1B0;u tr&#x1EEF;: D:\AntigravityAccounts" Foreground="#585B70" FontSize="11" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxtFooterPath" Text="Th&#x1B0; m&#x1EE5;c l&#x1B0;u tr&#x1EEF;: D:\AntigravityAccounts" Foreground="#585B70" FontSize="11" VerticalAlignment="Center"/>
                     <Button x:Name="BtnOpenFolder" Grid.Column="1" Style="{StaticResource TitleBtn}" Width="Auto" Height="Auto" Padding="8,4" Content="M&#x1EDF; th&#x1B0; m&#x1EE5;c" Foreground="#89B4FA" FontSize="11"/>
                 </Grid>
             </Border>

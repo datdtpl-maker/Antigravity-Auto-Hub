@@ -1,5 +1,5 @@
 # ==============================================================================
-# ANTIGRAVITY AUTO-ROTATOR ENGINE (WIN CREDENTIAL MANAGER INTEGRATED)
+# ANTIGRAVITY AUTO-ROTATOR ENGINE (WIN CREDENTIAL MANAGER INTEGRATED & PORTABLE)
 # ==============================================================================
 param (
     [switch]$RunOnce,
@@ -8,11 +8,12 @@ param (
     [double]$MinQuotaThreshold = 0.10
 )
 
-$baseDir = "D:\AntigravityAccounts"
+$baseDir = $PSScriptRoot
+if (-not $baseDir) { $baseDir = (Get-Location).Path }
 $accDir = Join-Path $baseDir "accounts"
 $activeFile = Join-Path $baseDir "current_active.txt"
 $logFile = Join-Path $baseDir "rotator.log"
-$geminiTokenPath = "C:\Users\datdt\.gemini\jetski-standalone-oauth-token"
+$geminiTokenPath = Join-Path $env:USERPROFILE ".gemini\jetski-standalone-oauth-token"
 
 if (-not (Test-Path $accDir)) {
     New-Item -ItemType Directory -Path $accDir -Force | Out-Null
@@ -108,7 +109,6 @@ function Write-RotatorLog {
     } catch {}
 }
 
-# Function to fetch / refresh quota for a given token file
 function Get-AccountQuotaInfo {
     param ([string]$tokenFilePath)
     
@@ -120,7 +120,6 @@ function Get-AccountQuotaInfo {
         if (-not $refreshToken) { $refreshToken = $tokenRaw.refresh_token }
         if (-not $refreshToken) { return $null }
 
-        # 1. Refresh Access Token
         $tokenResp = Invoke-RestMethod -Uri "https://oauth2.googleapis.com/token" -Method Post -Body @{
             client_id = $script:GoogleClientId
             client_secret = $script:GoogleClientSecret
@@ -131,7 +130,6 @@ function Get-AccountQuotaInfo {
         $accessToken = $tokenResp.access_token
         if (-not $accessToken) { return $null }
 
-        # 2. Get Project ID
         $loadResp = Invoke-RestMethod -Uri "https://daily-cloudcode-pa.googleapis.com/v1internal:loadCodeAssist" -Method Post -Headers @{
             Authorization = "Bearer $accessToken"
             "User-Agent" = "antigravity/1.11.9 windows/amd64"
@@ -141,7 +139,6 @@ function Get-AccountQuotaInfo {
         if (-not $projectID) { $projectID = $loadResp.project }
         if (-not $projectID) { $projectID = "aicode-consumers" }
 
-        # 3. Get Quota Summary
         $quotaResp = Invoke-RestMethod -Uri "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary" -Method Post -Headers @{
             Authorization = "Bearer $accessToken"
             "User-Agent" = "antigravity/1.11.9 windows/amd64"
@@ -166,7 +163,6 @@ function Get-AccountQuotaInfo {
             }
         }
 
-        # Get Google Email
         $email = ""
         try {
             $uinfo = Invoke-RestMethod -Uri "https://www.googleapis.com/oauth2/v3/userinfo" -Headers @{ Authorization = "Bearer $accessToken" } -TimeoutSec 5
@@ -204,7 +200,6 @@ function Get-AllAccountsQuota {
     return $list
 }
 
-# Function to switch active account in both Windows Credential Manager & standalone file
 function Switch-ActiveAccount {
     param ([string]$targetAccountName)
 
@@ -217,13 +212,8 @@ function Switch-ActiveAccount {
     try {
         $tokenContent = [System.IO.File]::ReadAllText($srcFile, [System.Text.Encoding]::UTF8)
         
-        # 1. Update Windows Credential Manager
         [WinCred]::Write("gemini:antigravity", "antigravity", $tokenContent) | Out-Null
-        
-        # 2. Update Fallback standalone token
         [System.IO.File]::WriteAllText($geminiTokenPath, $tokenContent, [System.Text.Encoding]::UTF8)
-        
-        # 3. Update current active record
         Set-Content -Path $activeFile -Value $targetAccountName -Encoding ASCII
         
         Write-RotatorLog ">>> DA TU DONG XOAY SANG TAI KHOAN: [$targetAccountName]"
@@ -237,7 +227,7 @@ function Switch-ActiveAccount {
 function Invoke-AutoRotationCheck {
     $accounts = Get-AllAccountsQuota
     if ($accounts.Count -eq 0) {
-        Write-RotatorLog "Chua co tai khoan nao trong danh sach D:\AntigravityAccounts\accounts."
+        Write-RotatorLog "Chua co tai khoan nao trong danh sach $accDir."
         return
     }
 

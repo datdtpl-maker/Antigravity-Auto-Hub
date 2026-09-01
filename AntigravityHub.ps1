@@ -1,12 +1,13 @@
 # ==============================================================================
-# ANTIGRAVITY MULTI-ACCOUNT HUB - 100% PURE ASCII UNICODE SAFE & WIN CRED MANAGER
+# ANTIGRAVITY MULTI-ACCOUNT HUB - 100% PURE ASCII UNICODE SAFE & PORTABLE
 # ==============================================================================
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Drawing, System.Windows.Forms, Microsoft.VisualBasic
 
-$baseDir = "D:\AntigravityAccounts"
+$baseDir = $PSScriptRoot
+if (-not $baseDir) { $baseDir = (Get-Location).Path }
 $accDir = Join-Path $baseDir "accounts"
 $activeFile = Join-Path $baseDir "current_active.txt"
-$geminiTokenPath = "C:\Users\datdt\.gemini\jetski-standalone-oauth-token"
+$geminiTokenPath = Join-Path $env:USERPROFILE ".gemini\jetski-standalone-oauth-token"
 $rotatorScript = Join-Path $baseDir "AutoRotator.ps1"
 $xamlFile = Join-Path $baseDir "MainWindow.xaml"
 
@@ -50,7 +51,12 @@ $btnRefresh = $window.FindName("BtnRefresh")
 $btnSaveCurrent = $window.FindName("BtnSaveCurrent")
 $btnAddAccount = $window.FindName("BtnAddAccount")
 $btnOpenFolder = $window.FindName("BtnOpenFolder")
+$txtFooterPath = $window.FindName("TxtFooterPath")
 $accountsContainer = $window.FindName("AccountsContainer")
+
+if ($txtFooterPath) {
+    $txtFooterPath.Text = "Th$([char]0x01B0) m$([char]0x1EE5)c l$([char]0x01B0)u tr$([char]0x1EEF): $baseDir"
+}
 
 $titleBar.Add_MouseLeftButtonDown({ $window.DragMove() })
 $btnMinimize.Add_Click({ $window.WindowState = [System.Windows.WindowState]::Minimized })
@@ -257,7 +263,6 @@ $btnRefresh.Add_Click({
 })
 
 $btnSaveCurrent.Add_Click({
-    # 1. Read token from Windows Credential Manager or Standalone file
     $cred = [WinCred]::Read("gemini:antigravity")
     if (-not $cred -and (Test-Path $geminiTokenPath)) {
         $cred = [System.IO.File]::ReadAllText($geminiTokenPath, [System.Text.Encoding]::UTF8)
@@ -268,7 +273,6 @@ $btnSaveCurrent.Add_Click({
         return
     }
 
-    # Extract email automatically
     $email = ""
     try {
         $json = $cred | ConvertFrom-Json
@@ -294,7 +298,6 @@ $btnSaveCurrent.Add_Click({
 })
 
 $btnAddAccount.Add_Click({
-    # Backup current active account first
     $currentCred = [WinCred]::Read("gemini:antigravity")
     $activeName = Get-CurrentActiveName
     if ($currentCred -and $activeName -ne "") {
@@ -304,12 +307,11 @@ $btnAddAccount.Add_Click({
     $msg = "C$([char]0x00E1)c b$([char]0x01B0)$([char]0x1EDB)c th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i:`n`n1. H$([char]0x1EC7) th$([char]0x1ED1)ng $([char]0x0111)$([char]0x00E3) sao l$([char]0x01B0)u t$([char]0x00E0)i kho$([char]0x1EA3)n hi$([char]0x1EC7)n t$([char]0x1EA1)i an to$([char]0x00E0)n.`n2. Antigravity IDE s$([char]0x1EBD) y$([char]0x00EA)u c$([char]0x1EA7)u b$([char]0x1EA1)n $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i.`n3. $([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p xong tr$([char]0x00EA)n IDE, quay l$([char]0x1EA1)i Hub n$([char]0x00E0)y v$([char]0x00E0) b$([char]0x1EA5)m 'L$([char]0x01B0)u Acc N$([char]0x00E0)y'.`n`nB$([char]0x1EA1)n c$([char]0x00F3) mu$([char]0x1ED1)n b$([char]0x1EAF)t $([char]0x0111)$([char]0x1EA7)u $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i ngay b$([char]0x00E2)y gi$([char]0x1EDD) kh$([char]0x00F4)ng?"
     $confirm = [System.Windows.MessageBox]::Show($msg, "Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Information)
     if ($confirm -eq [System.Windows.MessageBoxResult]::Yes) {
-        # Clear active credential in Windows Credential Manager & standalone token so IDE prompts for sign-in
         [WinCred]::Delete("gemini:antigravity") | Out-Null
         Remove-Item $geminiTokenPath -Force -ErrorAction SilentlyContinue
         Set-Content -Path $activeFile -Value "Dang_Login_Acc_Moi" -Encoding ASCII
         Load-Accounts-UI
-        [System.Windows.MessageBox]::Show("S$([char]0x1EB5)n s$([char]0x00E0)ng! H$([char]0x00E3)y quay l$([char]0x1EA1)i Antigravity IDE v$([char]0x00E0) ti$([char]0x1EBF)n h$([char]0x00E0)nh $([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i.`n`n$([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p xong, m$([char]0x1EDF) l$([char]0x1EA1)i Hub n$([char]0x00E0)y v$([char]0x00E0) b$([char]0x1EA5)m 'L$([char]0x01B0)u Acc N$([char]0x00E0)y'.", "$([char]0x0110)ang $([char]0x0110)$([char]0x0103)ng Nh$([char]0x1EAD)p", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+        [System.Windows.MessageBox]::Show("S$([char]0x1EB5)n s$([char]0x00E0)ng! H$([char]0x00E3)y quay l$([char]0x1EA1)i Antigravity IDE v$([char]0x00E0) ti$([char]0x1EBF)n h$([char]0x00E0)nh $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i.`n`n$([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p xong, m$([char]0x1EDF) l$([char]0x1EA1)i Hub n$([char]0x00E0)y v$([char]0x00E0) b$([char]0x1EA5)m 'L$([char]0x01B0)u Acc N$([char]0x00E0)y'.", "$([char]0x0110)ang $([char]0x0110)$([char]0x0103)ng Nh$([char]0x1EAD)p", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
     }
 })
 
