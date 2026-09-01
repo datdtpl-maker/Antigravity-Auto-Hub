@@ -1,11 +1,11 @@
 # ==============================================================================
-# ANTIGRAVITY AUTO-ROTATOR ENGINE (DAEMON & QUOTA TRACKER)
+# ANTIGRAVITY AUTO-ROTATOR ENGINE (WIN CREDENTIAL MANAGER INTEGRATED)
 # ==============================================================================
 param (
     [switch]$RunOnce,
     [switch]$Daemon,
     [int]$IntervalSeconds = 60,
-    [double]$MinQuotaThreshold = 0.10 # 10%
+    [double]$MinQuotaThreshold = 0.10
 )
 
 $baseDir = "D:\AntigravityAccounts"
@@ -18,7 +18,81 @@ if (-not (Test-Path $accDir)) {
     New-Item -ItemType Directory -Path $accDir -Force | Out-Null
 }
 
-# OAuth Client Credentials (XOR decoded)
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public class WinCred {
+    [DllImport("advapi32.dll", EntryPoint = "CredReadW", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool CredRead(string target, int type, int reservedFlag, out IntPtr credentialPtr);
+
+    [DllImport("advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool CredWrite([In] ref CREDENTIAL userCredential, [In] uint flags);
+
+    [DllImport("advapi32.dll", EntryPoint = "CredDeleteW", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool CredDelete(string target, int type, int flags);
+
+    [DllImport("advapi32.dll", EntryPoint = "CredFree", SetLastError = true)]
+    public static extern void CredFree(IntPtr buffer);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct CREDENTIAL {
+        public int Flags;
+        public int Type;
+        public string TargetName;
+        public string Comment;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
+        public int CredentialBlobSize;
+        public IntPtr CredentialBlob;
+        public int Persist;
+        public int AttributeCount;
+        public IntPtr Attributes;
+        public string TargetAlias;
+        public string UserName;
+    }
+
+    public static string Read(string target) {
+        IntPtr credPtr;
+        if (CredRead(target, 1, 0, out credPtr)) {
+            try {
+                CREDENTIAL cred = (CREDENTIAL)Marshal.PtrToStructure(credPtr, typeof(CREDENTIAL));
+                byte[] b = new byte[cred.CredentialBlobSize];
+                Marshal.Copy(cred.CredentialBlob, b, 0, cred.CredentialBlobSize);
+                return Encoding.UTF8.GetString(b);
+            } finally {
+                CredFree(credPtr);
+            }
+        }
+        return null;
+    }
+
+    public static bool Write(string target, string userName, string secret) {
+        byte[] b = Encoding.UTF8.GetBytes(secret);
+        IntPtr ptr = Marshal.AllocHGlobal(b.Length);
+        Marshal.Copy(b, 0, ptr, b.Length);
+
+        CREDENTIAL cred = new CREDENTIAL();
+        cred.Type = 1;
+        cred.TargetName = target;
+        cred.UserName = userName;
+        cred.CredentialBlob = ptr;
+        cred.CredentialBlobSize = b.Length;
+        cred.Persist = 2;
+
+        try {
+            return CredWrite(ref cred, 0);
+        } finally {
+            Marshal.FreeHGlobal(ptr);
+        }
+    }
+
+    public static bool Delete(string target) {
+        return CredDelete(target, 1, 0);
+    }
+}
+"@
+
 $script:GoogleClientId = $env:ANTIGRAVITY_GOOGLE_CLIENT_ID
 $script:GoogleClientSecret = $env:ANTIGRAVITY_GOOGLE_CLIENT_SECRET
 
@@ -90,7 +164,7 @@ function Get-AccountQuotaInfo {
             }
         }
 
-        # Get Google Email if possible
+        # Get Google Email
         $email = ""
         try {
             $uinfo = Invoke-RestMethod -Uri "https://www.googleapis.com/oauth2/v3/userinfo" -Headers @{ Authorization = "Bearer $accessToken" } -TimeoutSec 5
@@ -118,7 +192,6 @@ function Get-AccountQuotaInfo {
     }
 }
 
-# Function to get all accounts quota
 function Get-AllAccountsQuota {
     $files = Get-ChildItem -Path $accDir -Filter "*.json"
     $list = @()
@@ -129,7 +202,7 @@ function Get-AllAccountsQuota {
     return $list
 }
 
-# Function to switch active account
+# Function to switch active account in both Windows Credential Manager & standalone file
 function Switch-ActiveAccount {
     param ([string]$targetAccountName)
 
@@ -140,17 +213,25 @@ function Switch-ActiveAccount {
     }
 
     try {
-        Copy-Item $srcFile $geminiTokenPath -Force
+        $tokenContent = [System.IO.File]::ReadAllText($srcFile, [System.Text.Encoding]::UTF8)
+        
+        # 1. Update Windows Credential Manager
+        [WinCred]::Write("gemini:antigravity", "antigravity", $tokenContent) | Out-Null
+        
+        # 2. Update Fallback standalone token
+        [System.IO.File]::WriteAllText($geminiTokenPath, $tokenContent, [System.Text.Encoding]::UTF8)
+        
+        # 3. Update current active record
         Set-Content -Path $activeFile -Value $targetAccountName -Encoding ASCII
+        
         Write-RotatorLog ">>> DA TU DONG XOAY SANG TAI KHOAN: [$targetAccountName]"
         return $true
     } catch {
-        Write-RotatorLog "Loi khi copy token: $_"
+        Write-RotatorLog "Loi khi chuyen doi tai khoan: $_"
         return $false
     }
 }
 
-# Main Auto-Rotation evaluation logic
 function Invoke-AutoRotationCheck {
     $accounts = Get-AllAccountsQuota
     if ($accounts.Count -eq 0) {
@@ -163,7 +244,6 @@ function Invoke-AutoRotationCheck {
         $currentActive = (Get-Content $activeFile -Raw).Trim()
     }
 
-    # Find current active account object
     $currentObj = $accounts | Where-Object { $_.AccountName -eq $currentActive }
 
     Write-RotatorLog "=== KIEM TRA QUOTA AUTO-ROTATION ==="
@@ -173,7 +253,6 @@ function Invoke-AutoRotationCheck {
         Write-RotatorLog "$tag $($acc.AccountName) ($($acc.Email)) -> Gemini 5H Quota: $pct%"
     }
 
-    # Check if current active account has low quota or expired
     $needSwitch = $false
     if (-not $currentObj -or -not $currentObj.Success -or $currentObj.Gemini5H -le $MinQuotaThreshold) {
         $needSwitch = $true
@@ -185,7 +264,6 @@ function Invoke-AutoRotationCheck {
     }
 
     if ($needSwitch) {
-        # Sort accounts by highest 5h quota
         $bestAccount = $accounts | Where-Object { $_.Success -and $_.Gemini5H -gt $MinQuotaThreshold } | Sort-Object -Property Gemini5H -Descending | Select-Object -First 1
 
         if ($bestAccount) {
@@ -193,7 +271,6 @@ function Invoke-AutoRotationCheck {
             Switch-ActiveAccount -targetAccountName $bestAccount.AccountName | Out-Null
         } else {
             Write-RotatorLog "Canh bao: Tat ca tai khoan trong pool deu duoi nguong $([Math]::Round($MinQuotaThreshold * 100))%."
-            # Fallback to the one with highest quota overall
             $fallback = $accounts | Where-Object { $_.Success } | Sort-Object -Property Gemini5H -Descending | Select-Object -First 1
             if ($fallback -and $fallback.AccountName -ne $currentActive) {
                 Write-RotatorLog "Fallback sang tai khoan co quota cao nhat con lai: [$($fallback.AccountName)] ($([Math]::Round($fallback.Gemini5H * 100))%)"
