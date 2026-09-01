@@ -1,9 +1,6 @@
-﻿# ==============================================================================
-# ANTIGRAVITY MULTI-ACCOUNT HUB - FONT FIXED & LIVE AUTO-ROTATION
 # ==============================================================================
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-[Console]::InputEncoding = [System.Text.Encoding]::UTF8
-
+# ANTIGRAVITY MULTI-ACCOUNT HUB - 100% PURE ASCII UNICODE SAFE
+# ==============================================================================
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Drawing, System.Windows.Forms, Microsoft.VisualBasic
 
 $baseDir = "D:\AntigravityAccounts"
@@ -17,7 +14,6 @@ if (-not (Test-Path $accDir)) {
     New-Item -ItemType Directory -Path $accDir -Force | Out-Null
 }
 
-# Helper to check if AutoRotator daemon is running
 function Get-DaemonStatus {
     $procs = Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%AutoRotator.ps1%Daemon%'" -ErrorAction SilentlyContinue
     return ($procs.Count -gt 0)
@@ -34,7 +30,6 @@ function Start-AutoRotatorDaemon {
     }
 }
 
-# Auto start daemon on launch
 Start-AutoRotatorDaemon
 
 if (-not (Test-Path $xamlFile)) {
@@ -42,7 +37,7 @@ if (-not (Test-Path $xamlFile)) {
     exit 1
 }
 
-$xamlText = [System.IO.File]::ReadAllText($xamlFile, [System.Text.Encoding]::UTF8)
+$xamlText = [System.IO.File]::ReadAllText($xamlFile, [System.Text.Encoding]::ASCII)
 $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xamlText))
 $window = [System.Windows.Markup.XamlReader]::Load($reader)
 
@@ -54,7 +49,6 @@ $btnSaveCurrent = $window.FindName("BtnSaveCurrent")
 $btnAddAccount = $window.FindName("BtnAddAccount")
 $btnOpenFolder = $window.FindName("BtnOpenFolder")
 $accountsContainer = $window.FindName("AccountsContainer")
-$txtDaemonStatus = $window.FindName("TxtDaemonStatus")
 
 $titleBar.Add_MouseLeftButtonDown({ $window.DragMove() })
 $btnMinimize.Add_Click({ $window.WindowState = [System.Windows.WindowState]::Minimized })
@@ -69,18 +63,16 @@ function Get-CurrentActiveName {
     return ""
 }
 
-# Function to load and render accounts with Live Quota
 function Load-Accounts-UI {
     $accountsContainer.Children.Clear()
     
-    # Run quota check
     . $rotatorScript
     $accounts = Get-AllAccountsQuota
     $activeName = Get-CurrentActiveName
 
     if ($accounts.Count -eq 0) {
         $empty = New-Object System.Windows.Controls.TextBlock
-        $empty.Text = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::UTF8.GetBytes("ChÆ°a cĂ³ tĂ i khoáº£n nĂ o Ä‘Æ°á»£c thĂªm vĂ o há»‡ thá»‘ng.`nHĂ£y báº¥m 'â• ThĂªm TĂ i Khoáº£n Má»›i' á»Ÿ trĂªn Ä‘á»ƒ báº¯t Ä‘áº§u."))
+        $empty.Text = "Ch$([char]0x01B0)a c$([char]0x00F3) t$([char]0x00E0)i kho$([char]0x1EA3)n n$([char]0x00E0)o trong h$([char]0x1EC7) th$([char]0x1ED1)ng.`nH$([char]0x00E3)y b$([char]0x1EA5)m '+ Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i' $ linh ho$([char]0x1EA1)t b$([char]0x1EAF)t $([char]0x0111)$([char]0x1EA7)u."
         $empty.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#6C7086")
         $empty.FontSize = 13
         $empty.Margin = New-Object System.Windows.Thickness(0, 40, 0, 0)
@@ -94,7 +86,7 @@ function Load-Accounts-UI {
         $accName = $acc.AccountName
         $isActive = ($accName -eq $activeName)
         $geminiPct = [Math]::Max(0, [Math]::Round($acc.Gemini5H * 100))
-        $email = if ($acc.Email) { $acc.Email } else { "Äang xĂ¡c thá»±c..." }
+        $email = if ($acc.Email) { $acc.Email } else { "$([char]0x0110)ang x$([char]0x00E1)c th$([char]0x1EF1)c..." }
 
         # Card Border
         $card = New-Object System.Windows.Controls.Border
@@ -123,17 +115,9 @@ function Load-Accounts-UI {
         $info = New-Object System.Windows.Controls.StackPanel
         $info.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
 
-        # Row 1: Icon + Name + Email + Status Badge
+        # Row 1: Name + Email + Status Badge
         $row1 = New-Object System.Windows.Controls.StackPanel
         $row1.Orientation = [System.Windows.Controls.Orientation]::Horizontal
-
-        $icon = New-Object System.Windows.Controls.TextBlock
-        $icon.Text = "[đŸ‘¤]"
-        $icon.FontSize = 13
-        $icon.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#89B4FA")
-        $icon.Margin = New-Object System.Windows.Thickness(0, 0, 8, 0)
-        $icon.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $row1.Children.Add($icon) | Out-Null
 
         $name = New-Object System.Windows.Controls.TextBlock
         $name.Text = $accName
@@ -160,7 +144,7 @@ function Load-Accounts-UI {
             $badge.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
 
             $bText = New-Object System.Windows.Controls.TextBlock
-            $bText.Text = "ÄANG Káº¾T Ná»I"
+            $bText.Text = "$([char]0x0110)ANG K$([char]0x1EBF)T N$([char]0x1ED0)I"
             $bText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6E3A1")
             $bText.FontSize = 10
             $bText.FontWeight = [System.Windows.FontWeights]::Bold
@@ -173,10 +157,10 @@ function Load-Accounts-UI {
         # Row 2: Quota Progress Bar
         $quotaRow = New-Object System.Windows.Controls.StackPanel
         $quotaRow.Orientation = [System.Windows.Controls.Orientation]::Horizontal
-        $quotaRow.Margin = New-Object System.Windows.Thickness(23, 8, 0, 0)
+        $quotaRow.Margin = New-Object System.Windows.Thickness(0, 8, 0, 0)
 
         $qLabel = New-Object System.Windows.Controls.TextBlock
-        $qLabel.Text = "Háº¡n má»©c Gemini 5H:"
+        $qLabel.Text = "H$([char]0x1EA1)n m$([char]0x1EE9)c Gemini 5H:"
         $qLabel.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#6C7086")
         $qLabel.FontSize = 12
         $qLabel.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
@@ -236,7 +220,7 @@ function Load-Accounts-UI {
         if (-not $isActive) {
             $btnSwitch = New-Object System.Windows.Controls.Button
             $btnSwitch.Style = $window.FindResource("SuccessBtn")
-            $btnSwitch.Content = "â¡ Chuyá»ƒn Thá»§ CĂ´ng"
+            $btnSwitch.Content = "$([char]0x26A1) Chuy$([char]0x1EC3)n Th$([char]0x1EE7) C$([char]0x00F4)ng"
             $btnSwitch.Margin = New-Object System.Windows.Thickness(0, 0, 8, 0)
             $btnSwitch.Add_Click({
                 Switch-ActiveAccount -targetAccountName $currName | Out-Null
@@ -247,11 +231,11 @@ function Load-Accounts-UI {
 
         $btnDel = New-Object System.Windows.Controls.Button
         $btnDel.Style = $window.FindResource("DangerBtn")
-        $btnDel.Content = "âœ• XĂ³a"
-        $btnDel.Padding = New-Object System.Windows.Thickness(8, 6, 8, 6)
-        $btnDel.ToolTip = "XĂ³a tĂ i khoáº£n khá»i kho xoay"
+        $btnDel.Content = "$([char]0x2715) X$([char]0x00F3)a"
+        $btnDel.Padding = New-Object System.Windows.Thickness(10, 6, 10, 6)
+        $btnDel.ToolTip = "X$([char]0x00F3)a t$([char]0x00E0)i kho$([char]0x1EA3)n"
         $btnDel.Add_Click({
-            $ans = [System.Windows.MessageBox]::Show("Báº¡n cĂ³ cháº¯c cháº¯n muá»‘n xĂ³a tĂ i khoáº£n '$currName' khá»i há»‡ thá»‘ng?", "XĂ¡c Nháº­n XĂ³a", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
+            $ans = [System.Windows.MessageBox]::Show("B$([char]0x1EA1)n c$([char]0x00F3) ch$([char]0x1EAF)c mu$([char]0x1ED1)n x$([char]0x00F3)a t$([char]0x00E0)i kho$([char]0x1EA3)n '$currName' kh$([char]0x1ECF)i h$([char]0x1EC7) th$([char]0x1ED1)ng?", "X$([char]0x00E1)c Nh$([char]0x1EAD)n X$([char]0x00F3)a", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
             if ($ans -eq [System.Windows.MessageBoxResult]::Yes) {
                 Remove-Item $currFile -Force -ErrorAction SilentlyContinue
                 Load-Accounts-UI
@@ -267,20 +251,18 @@ function Load-Accounts-UI {
     }
 }
 
-# Event: Refresh Button
 $btnRefresh.Add_Click({
     Load-Accounts-UI
 })
 
-# Event: Save Current Active Token
 $btnSaveCurrent.Add_Click({
     if (-not (Test-Path $geminiTokenPath)) {
-        [System.Windows.MessageBox]::Show("KhĂ´ng tĂ¬m tháº¥y token Ä‘Äƒng nháº­p hiá»‡n táº¡i trong Antigravity IDE.`nHĂ£y Ä‘áº£m báº£o báº¡n Ä‘Ă£ Ä‘Äƒng nháº­p Google trĂªn IDE.", "ThĂ´ng bĂ¡o", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        [System.Windows.MessageBox]::Show("Kh$([char]0x00F4)ng t$([char]0x00EC)m th$([char]0x1EA5)y token $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p hi$([char]0x1EC7)n t$([char]0x1EA1)i trong Antigravity IDE.`nH$([char]0x00E3)y $([char]0x0111)$([char]0x1EA3)m b$([char]0x1EA3)o b$([char]0x1EA1)n $([char]0x0111)$([char]0x00E3) $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p Google tr$([char]0x00EA)n IDE.", "Th$([char]0x00F4)ng b$([char]0x00E1)o", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
         return
     }
 
     $defaultName = "Acc_" + ((Get-ChildItem -Path $accDir -Filter "*.json" -ErrorAction SilentlyContinue).Count + 1)
-    $inputName = [Microsoft.VisualBasic.Interaction]::InputBox("Nháº­p tĂªn gá»£i nhá»› cho tĂ i khoáº£n Google Ä‘ang Ä‘Äƒng nháº­p (vĂ­ dá»¥: Acc_Chinh, Google_2, Gmail_Phu):", "LÆ°u TĂ i Khoáº£n VĂ o Kho", $defaultName)
+    $inputName = [Microsoft.VisualBasic.Interaction]::InputBox("Nh$([char]0x1EAD)p t$([char]0x00EA)n g$([char]0x1EE3)i nh$([char]0x1EDB) cho t$([char]0x00E0)i kho$([char]0x1EA3)n Google $([char]0x0111)$([char]0x0103)ng $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p (v$([char]0x00ED) d$([char]0x1EE5): Acc_Chinh, Google_2, Gmail_Phu):", "L$([char]0x01B0)u T$([char]0x00E0)i Kho$([char]0x1EA3)n V$([char]0x00E0)o Kho", $defaultName)
 
     if (-not [string]::IsNullOrWhiteSpace($inputName)) {
         $safeName = $inputName.Trim() -replace '[^a-zA-Z0-9_\-]', '_'
@@ -288,13 +270,13 @@ $btnSaveCurrent.Add_Click({
         Copy-Item $geminiTokenPath $targetFile -Force
         Set-Content -Path $activeFile -Value $safeName -Encoding ASCII
         Load-Accounts-UI
-        [System.Windows.MessageBox]::Show("ÄĂ£ lÆ°u tĂ i khoáº£n '$safeName' vĂ o kho xoay tua thĂ nh cĂ´ng!", "ThĂ nh CĂ´ng", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+        [System.Windows.MessageBox]::Show("$([char]0x0110)$([char]0x00E3) l$([char]0x01B0)u t$([char]0x00E0)i kho$([char]0x1EA3)n '$safeName' v$([char]0x00E0)o kho xoay tua th$([char]0x00E0)nh c$([char]0x00F4)ng!", "Th$([char]0x00E0)nh C$([char]0x00F4)ng", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
     }
 })
 
-# Event: Add Account (Logout & Sign In new)
 $btnAddAccount.Add_Click({
-    $confirm = [System.Windows.MessageBox]::Show("CĂ¡c bÆ°á»›c thĂªm tĂ i khoáº£n má»›i:`n`n1. Há»‡ thá»‘ng sáº½ táº¡m cáº¥t tĂ i khoáº£n cÅ©.`n2. Antigravity IDE sáº½ yĂªu cáº§u báº¡n Ä‘Äƒng nháº­p tĂ i khoáº£n Google má»›i.`n3. ÄÄƒng nháº­p xong, má»Ÿ láº¡i Hub vĂ  báº¥m 'LÆ°u Acc NĂ y'.`n`nBáº¡n muá»‘n thĂªm tĂ i khoáº£n má»›i ngay bĂ¢y giá»?", "ThĂªm TĂ i Khoáº£n Má»›i", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Information)
+    $msg = "C$([char]0x00E1)c b$([char]0x01B0;$([char]0x1EDB)c th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i:`n`n1. H$([char]0x1EC7) th$([char]0x1ED1)ng s$([char]0x1EBD) t$([char]0x1EA1)m c$([char]0x1EA5)t t$([char]0x00E0)i kho$([char]0x1EA3)n c$([char]0x0169);.`n2. Antigravity IDE s$([char]0x1EBD) y$([char]0x00EA)u c$([char]0x1EA7)u b$([char]0x1EA1)n $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i.`n3. $([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p xong, m$([char]0x1EDF) l$([char]0x1EA1)i Hub v$([char]0x00E0) b$([char]0x1EA5)m 'L$([char]0x1B0;u Acc N$([char]0x00E0)y'.`n`nB$([char]0x1EA1)n c$([char]0x00F3) mu$([char]0x1ED1)n th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i ngay b$([char]0x00E2)y gi$([char]0x1EDD) kh$([char]0x00F4)ng?"
+    $confirm = [System.Windows.MessageBox]::Show($msg, "Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Information)
     if ($confirm -eq [System.Windows.MessageBoxResult]::Yes) {
         if (Test-Path $geminiTokenPath) {
             $activeName = Get-CurrentActiveName
@@ -305,11 +287,10 @@ $btnAddAccount.Add_Click({
         }
         Set-Content -Path $activeFile -Value "Dang_Login_Acc_Moi" -Encoding ASCII
         Load-Accounts-UI
-        [System.Windows.MessageBox]::Show("Sáºµn sĂ ng! HĂ£y quay láº¡i Antigravity IDE vĂ  tiáº¿n hĂ nh ÄÄƒng nháº­p tĂ i khoáº£n Google má»›i cá»§a báº¡n.`n`nÄÄƒng nháº­p xong, má»Ÿ láº¡i Hub nĂ y vĂ  báº¥m 'LÆ°u Acc NĂ y'.", "Äang ÄÄƒng Nháº­p", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+        [System.Windows.MessageBox]::Show("S$([char]0x1EB5)n s$([char]0x00E0)ng! H$([char]0x00E3)y quay l$([char]0x1EA1)i Antigravity IDE v$([char]0x00E0) ti$([char]0x1EBF)n h$([char]0x00E0)nh $([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i.`n`n$([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p xong, m$([char]0x1EDF) l$([char]0x1EA1)i Hub n$([char]0x00E0)y v$([char]0x00E0) b$([char]0x1EA5)m 'L$([char]0x1B0;u Acc N$([char]0x00E0)y'.", "$([char]0x0110)ang $([char]0x0110)$([char]0x0103)ng Nh$([char]0x1EAD)p", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
     }
 })
 
-# Initial Load
 Load-Accounts-UI
 
 $window.ShowDialog() | Out-Null
