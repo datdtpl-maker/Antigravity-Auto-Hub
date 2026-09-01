@@ -1,0 +1,8 @@
+# Sensitive tokens & runtime files
+accounts/*.json
+!accounts/.gitkeep
+current_active.txt
+rotator.log
+*.log
+.DS_Store
+Thumbs.db
