@@ -1,6 +1,9 @@
 ﻿# ==============================================================================
 # ANTIGRAVITY MULTI-ACCOUNT HUB - FONT FIXED & LIVE AUTO-ROTATION
 # ==============================================================================
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Drawing, System.Windows.Forms, Microsoft.VisualBasic
 
 $baseDir = "D:\AntigravityAccounts"
@@ -8,6 +11,7 @@ $accDir = Join-Path $baseDir "accounts"
 $activeFile = Join-Path $baseDir "current_active.txt"
 $geminiTokenPath = "C:\Users\datdt\.gemini\jetski-standalone-oauth-token"
 $rotatorScript = Join-Path $baseDir "AutoRotator.ps1"
+$xamlFile = Join-Path $baseDir "MainWindow.xaml"
 
 if (-not (Test-Path $accDir)) {
     New-Item -ItemType Directory -Path $accDir -Force | Out-Null
@@ -33,208 +37,13 @@ function Start-AutoRotatorDaemon {
 # Auto start daemon on launch
 Start-AutoRotatorDaemon
 
-[xml]$xaml = @"
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Antigravity Auto-Account Hub"
-        Height="650" Width="820"
-        WindowStartupLocation="CenterScreen"
-        WindowStyle="None"
-        AllowsTransparency="True"
-        Background="Transparent"
-        FontFamily="Segoe UI, Arial, sans-serif">
+if (-not (Test-Path $xamlFile)) {
+    Write-Error "Khong tim thay file MainWindow.xaml tai $xamlFile"
+    exit 1
+}
 
-    <Window.Resources>
-        <Style TargetType="Button" x:Key="ModernBtn">
-            <Setter Property="Background" Value="#313244"/>
-            <Setter Property="Foreground" Value="#CDD6F4"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#45475A"/>
-                    <Setter Property="Foreground" Value="#FFFFFF"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="PrimaryBtn" BasedOn="{StaticResource ModernBtn}">
-            <Setter Property="Background" Value="#89B4FA"/>
-            <Setter Property="Foreground" Value="#11111B"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#B4BEFE"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="SuccessBtn" BasedOn="{StaticResource ModernBtn}">
-            <Setter Property="Background" Value="#A6E3A1"/>
-            <Setter Property="Foreground" Value="#11111B"/>
-            <Setter Property="Padding" Value="12,6"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#94E2D5"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="DangerBtn" BasedOn="{StaticResource ModernBtn}">
-            <Setter Property="Background" Value="#F38BA8"/>
-            <Setter Property="Foreground" Value="#11111B"/>
-            <Setter Property="Padding" Value="8,6"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#EBA0AC"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="TitleBtn">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#A6ADC8"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Width" Value="36"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#313244"/>
-                    <Setter Property="Foreground" Value="#FFFFFF"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="CloseBtn" BasedOn="{StaticResource TitleBtn}">
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#E78284"/>
-                    <Setter Property="Foreground" Value="#11111B"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </Window.Resources>
-
-    <Border Background="#181825"
-            CornerRadius="14"
-            BorderBrush="#313244"
-            BorderThickness="1.5">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="25" Color="#000000" Opacity="0.5" ShadowDepth="8"/>
-        </Border.Effect>
-
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="50"/>  <!-- Titlebar -->
-                <RowDefinition Height="95"/>  <!-- Status Banner & Top Toolbar -->
-                <RowDefinition Height="*"/>   <!-- Account List -->
-                <RowDefinition Height="45"/>  <!-- Footer -->
-            </Grid.RowDefinitions>
-
-            <!-- 1. Title Bar -->
-            <Border Grid.Row="0" Background="#11111B" CornerRadius="14,14,0,0" x:Name="TitleBar">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
-                        <TextBlock Text="â¡" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Antigravity Auto-Rotation Hub"
-                                   Foreground="#CDD6F4"
-                                   FontSize="14"
-                                   FontWeight="Bold"
-                                   VerticalAlignment="Center"/>
-                        <Border Background="#1E382B" CornerRadius="4" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="AUTO-PILOT KICH HOAT" Foreground="#A6E3A1" FontSize="11" FontWeight="Bold"/>
-                        </Border>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,0" VerticalAlignment="Center">
-                        <Button x:Name="BtnMinimize" Style="{StaticResource TitleBtn}" Content="â€”"/>
-                        <Button x:Name="BtnClose" Style="{StaticResource CloseBtn}" Content="âœ•"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 2. Header / Actions -->
-            <Border Grid.Row="1" Background="#1E1E2E" BorderBrush="#313244" BorderThickness="0,0,0,1" Padding="20,12">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Trang thai He thong: " Foreground="#A6ADC8" FontSize="13" VerticalAlignment="Center"/>
-                            <Border x:Name="BadgeDaemon" Background="#1E382B" CornerRadius="4" Padding="8,2" Margin="4,0,0,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="TxtDaemonStatus" Text="â— Tu dong dieu phoi ngam (60s)" Foreground="#A6E3A1" FontSize="12" FontWeight="Bold"/>
-                            </Border>
-                        </StackPanel>
-                        <TextBlock Text="He thong tu dong theo doi Quota 5H va tu chuyen tai khoan khi can quota."
-                                   Foreground="#6C7086" FontSize="11" Margin="0,5,0,0"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="BtnRefresh" Style="{StaticResource ModernBtn}" Content="đŸ”„ Quet Quota" Margin="0,0,8,0"/>
-                        <Button x:Name="BtnSaveCurrent" Style="{StaticResource ModernBtn}" Content="đŸ’¾ Luu Acc Nay" Margin="0,0,8,0"/>
-                        <Button x:Name="BtnAddAccount" Style="{StaticResource PrimaryBtn}" Content="â• Them Tai Khoan"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 3. Account List ScrollView -->
-            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="20,15">
-                <StackPanel x:Name="AccountsContainer">
-                    <!-- Dynamic Cards -->
-                </StackPanel>
-            </ScrollViewer>
-
-            <!-- 4. Footer -->
-            <Border Grid.Row="3" Background="#11111B" CornerRadius="0,0,14,14" Padding="20,0">
-                <Grid VerticalAlignment="Center">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Text="Thu muc luu tru: D:\AntigravityAccounts" Foreground="#585B70" FontSize="11" VerticalAlignment="Center"/>
-                    <Button x:Name="BtnOpenFolder" Grid.Column="1" Style="{StaticResource TitleBtn}" Width="Auto" Height="Auto" Padding="8,4" Content="đŸ“‚ Mo thu muc" Foreground="#89B4FA" FontSize="11"/>
-                </Grid>
-            </Border>
-        </Grid>
-    </Border>
-</Window>
-"@
-
-$reader = (New-Object System.Xml.XmlNodeReader $xaml)
+$xamlText = [System.IO.File]::ReadAllText($xamlFile, [System.Text.Encoding]::UTF8)
+$reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xamlText))
 $window = [System.Windows.Markup.XamlReader]::Load($reader)
 
 $titleBar = $window.FindName("TitleBar")
@@ -271,7 +80,7 @@ function Load-Accounts-UI {
 
     if ($accounts.Count -eq 0) {
         $empty = New-Object System.Windows.Controls.TextBlock
-        $empty.Text = "Chua co tai khoan nao duoc them vao he thong.`nHay bam 'â• Them Tai Khoan' o tren de bat dau."
+        $empty.Text = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::UTF8.GetBytes("ChÆ°a cĂ³ tĂ i khoáº£n nĂ o Ä‘Æ°á»£c thĂªm vĂ o há»‡ thá»‘ng.`nHĂ£y báº¥m 'â• ThĂªm TĂ i Khoáº£n Má»›i' á»Ÿ trĂªn Ä‘á»ƒ báº¯t Ä‘áº§u."))
         $empty.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#6C7086")
         $empty.FontSize = 13
         $empty.Margin = New-Object System.Windows.Thickness(0, 40, 0, 0)
@@ -285,7 +94,7 @@ function Load-Accounts-UI {
         $accName = $acc.AccountName
         $isActive = ($accName -eq $activeName)
         $geminiPct = [Math]::Max(0, [Math]::Round($acc.Gemini5H * 100))
-        $email = if ($acc.Email) { $acc.Email } else { "Dang xac thuc..." }
+        $email = if ($acc.Email) { $acc.Email } else { "Äang xĂ¡c thá»±c..." }
 
         # Card Border
         $card = New-Object System.Windows.Controls.Border
@@ -319,8 +128,9 @@ function Load-Accounts-UI {
         $row1.Orientation = [System.Windows.Controls.Orientation]::Horizontal
 
         $icon = New-Object System.Windows.Controls.TextBlock
-        $icon.Text = "đŸ‘¤"
-        $icon.FontSize = 15
+        $icon.Text = "[đŸ‘¤]"
+        $icon.FontSize = 13
+        $icon.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#89B4FA")
         $icon.Margin = New-Object System.Windows.Thickness(0, 0, 8, 0)
         $icon.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
         $row1.Children.Add($icon) | Out-Null
@@ -350,7 +160,7 @@ function Load-Accounts-UI {
             $badge.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
 
             $bText = New-Object System.Windows.Controls.TextBlock
-            $bText.Text = "DANG KET NOI"
+            $bText.Text = "ÄANG Káº¾T Ná»I"
             $bText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6E3A1")
             $bText.FontSize = 10
             $bText.FontWeight = [System.Windows.FontWeights]::Bold
@@ -366,7 +176,7 @@ function Load-Accounts-UI {
         $quotaRow.Margin = New-Object System.Windows.Thickness(23, 8, 0, 0)
 
         $qLabel = New-Object System.Windows.Controls.TextBlock
-        $qLabel.Text = "Gemini 5H Quota:"
+        $qLabel.Text = "Háº¡n má»©c Gemini 5H:"
         $qLabel.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#6C7086")
         $qLabel.FontSize = 12
         $qLabel.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
@@ -426,7 +236,7 @@ function Load-Accounts-UI {
         if (-not $isActive) {
             $btnSwitch = New-Object System.Windows.Controls.Button
             $btnSwitch.Style = $window.FindResource("SuccessBtn")
-            $btnSwitch.Content = "â¡ Chon Thu Cong"
+            $btnSwitch.Content = "â¡ Chuyá»ƒn Thá»§ CĂ´ng"
             $btnSwitch.Margin = New-Object System.Windows.Thickness(0, 0, 8, 0)
             $btnSwitch.Add_Click({
                 Switch-ActiveAccount -targetAccountName $currName | Out-Null
@@ -437,11 +247,11 @@ function Load-Accounts-UI {
 
         $btnDel = New-Object System.Windows.Controls.Button
         $btnDel.Style = $window.FindResource("DangerBtn")
-        $btnDel.Content = "đŸ—‘ï¸"
+        $btnDel.Content = "âœ• XĂ³a"
         $btnDel.Padding = New-Object System.Windows.Thickness(8, 6, 8, 6)
-        $btnDel.ToolTip = "Xoa tai khoan khoi kho xoay"
+        $btnDel.ToolTip = "XĂ³a tĂ i khoáº£n khá»i kho xoay"
         $btnDel.Add_Click({
-            $ans = [System.Windows.MessageBox]::Show("Ban co chac muon xoa tai khoan '$currName' khoi he thong?", "Xac Nhan", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
+            $ans = [System.Windows.MessageBox]::Show("Báº¡n cĂ³ cháº¯c cháº¯n muá»‘n xĂ³a tĂ i khoáº£n '$currName' khá»i há»‡ thá»‘ng?", "XĂ¡c Nháº­n XĂ³a", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
             if ($ans -eq [System.Windows.MessageBoxResult]::Yes) {
                 Remove-Item $currFile -Force -ErrorAction SilentlyContinue
                 Load-Accounts-UI
@@ -465,12 +275,12 @@ $btnRefresh.Add_Click({
 # Event: Save Current Active Token
 $btnSaveCurrent.Add_Click({
     if (-not (Test-Path $geminiTokenPath)) {
-        [System.Windows.MessageBox]::Show("Khong tim thay token dang nhap hien tai trong Antigravity IDE.`nHay dam bao ban da dang nhap Google tren IDE.", "Thong bao", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        [System.Windows.MessageBox]::Show("KhĂ´ng tĂ¬m tháº¥y token Ä‘Äƒng nháº­p hiá»‡n táº¡i trong Antigravity IDE.`nHĂ£y Ä‘áº£m báº£o báº¡n Ä‘Ă£ Ä‘Äƒng nháº­p Google trĂªn IDE.", "ThĂ´ng bĂ¡o", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
         return
     }
 
     $defaultName = "Acc_" + ((Get-ChildItem -Path $accDir -Filter "*.json" -ErrorAction SilentlyContinue).Count + 1)
-    $inputName = [Microsoft.VisualBasic.Interaction]::InputBox("Nhap ten goi nho cho tai khoan Google dang dang nhap (vi du: Acc_Chinh, Google_2, Gmail_Phu):", "Luu Tai Khoan Vao Kho", $defaultName)
+    $inputName = [Microsoft.VisualBasic.Interaction]::InputBox("Nháº­p tĂªn gá»£i nhá»› cho tĂ i khoáº£n Google Ä‘ang Ä‘Äƒng nháº­p (vĂ­ dá»¥: Acc_Chinh, Google_2, Gmail_Phu):", "LÆ°u TĂ i Khoáº£n VĂ o Kho", $defaultName)
 
     if (-not [string]::IsNullOrWhiteSpace($inputName)) {
         $safeName = $inputName.Trim() -replace '[^a-zA-Z0-9_\-]', '_'
@@ -478,13 +288,13 @@ $btnSaveCurrent.Add_Click({
         Copy-Item $geminiTokenPath $targetFile -Force
         Set-Content -Path $activeFile -Value $safeName -Encoding ASCII
         Load-Accounts-UI
-        [System.Windows.MessageBox]::Show("Da luu tai khoan '$safeName' vao kho xoay tua thanh cong!", "Thanh Cong", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+        [System.Windows.MessageBox]::Show("ÄĂ£ lÆ°u tĂ i khoáº£n '$safeName' vĂ o kho xoay tua thĂ nh cĂ´ng!", "ThĂ nh CĂ´ng", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
     }
 })
 
 # Event: Add Account (Logout & Sign In new)
 $btnAddAccount.Add_Click({
-    $confirm = [System.Windows.MessageBox]::Show("Cac buoc them tai khoan moi:`n`n1. He thong se tam cat tai khoan cu.`n2. Antigravity IDE se yeu cau ban dang nhap tai khoan Google moi.`n3. Dang nhap xong, mo lai Hub va bam 'Luu Acc Nay'.`n`nBan muon them tai khoan moi ngay bay gio?", "Them Tai Khoan", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Information)
+    $confirm = [System.Windows.MessageBox]::Show("CĂ¡c bÆ°á»›c thĂªm tĂ i khoáº£n má»›i:`n`n1. Há»‡ thá»‘ng sáº½ táº¡m cáº¥t tĂ i khoáº£n cÅ©.`n2. Antigravity IDE sáº½ yĂªu cáº§u báº¡n Ä‘Äƒng nháº­p tĂ i khoáº£n Google má»›i.`n3. ÄÄƒng nháº­p xong, má»Ÿ láº¡i Hub vĂ  báº¥m 'LÆ°u Acc NĂ y'.`n`nBáº¡n muá»‘n thĂªm tĂ i khoáº£n má»›i ngay bĂ¢y giá»?", "ThĂªm TĂ i Khoáº£n Má»›i", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Information)
     if ($confirm -eq [System.Windows.MessageBoxResult]::Yes) {
         if (Test-Path $geminiTokenPath) {
             $activeName = Get-CurrentActiveName
@@ -495,7 +305,7 @@ $btnAddAccount.Add_Click({
         }
         Set-Content -Path $activeFile -Value "Dang_Login_Acc_Moi" -Encoding ASCII
         Load-Accounts-UI
-        [System.Windows.MessageBox]::Show("San sang! Hay quay lai Antigravity IDE va tien hanh Dang nhap tai khoan Google moi.`n`nDang nhap xong, mo lai Hub nay va bam 'Luu Acc Nay'.", "Dang Dang Nhap", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+        [System.Windows.MessageBox]::Show("Sáºµn sĂ ng! HĂ£y quay láº¡i Antigravity IDE vĂ  tiáº¿n hĂ nh ÄÄƒng nháº­p tĂ i khoáº£n Google má»›i cá»§a báº¡n.`n`nÄÄƒng nháº­p xong, má»Ÿ láº¡i Hub nĂ y vĂ  báº¥m 'LÆ°u Acc NĂ y'.", "Äang ÄÄƒng Nháº­p", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
     }
 })
 
