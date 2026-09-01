@@ -1,4 +1,4 @@
-﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Antigravity Auto-Rotation Hub"
         Height="650" Width="820"
@@ -129,20 +129,20 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
-                        <TextBlock Text="[â¡]" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#F9E2AF"/>
+                        <TextBlock Text="[&#x26A1;]" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#F9E2AF"/>
                         <TextBlock Text="Antigravity Auto-Rotation Hub"
                                    Foreground="#CDD6F4"
                                    FontSize="14"
                                    FontWeight="Bold"
                                    VerticalAlignment="Center"/>
                         <Border Background="#1E382B" CornerRadius="4" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="AUTO-PILOT KĂCH HOáº T" Foreground="#A6E3A1" FontSize="11" FontWeight="Bold"/>
+                            <TextBlock Text="AUTO-PILOT K&#xCD;CH HO&#x1EA0;T" Foreground="#A6E3A1" FontSize="11" FontWeight="Bold"/>
                         </Border>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,0" VerticalAlignment="Center">
-                        <Button x:Name="BtnMinimize" Style="{StaticResource TitleBtn}" Content="â€”"/>
-                        <Button x:Name="BtnClose" Style="{StaticResource CloseBtn}" Content="âœ•"/>
+                        <Button x:Name="BtnMinimize" Style="{StaticResource TitleBtn}" Content="&#x2014;"/>
+                        <Button x:Name="BtnClose" Style="{StaticResource CloseBtn}" Content="&#x2715;"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -157,19 +157,19 @@
 
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Tráº¡ng thĂ¡i Há»‡ thá»‘ng: " Foreground="#A6ADC8" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="Tr&#x1EA1;ng th&#xE1;i H&#x1EC7; th&#x1ED1;ng: " Foreground="#A6ADC8" FontSize="13" VerticalAlignment="Center"/>
                             <Border x:Name="BadgeDaemon" Background="#1E382B" CornerRadius="4" Padding="8,2" Margin="4,0,0,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="TxtDaemonStatus" Text="â— Tá»± Ä‘á»™ng Ä‘iá»u phá»‘i ngáº§m (60s)" Foreground="#A6E3A1" FontSize="12" FontWeight="Bold"/>
+                                <TextBlock x:Name="TxtDaemonStatus" Text="&#x25CF; T&#x1EF1; &#x111;&#x1ED9;ng &#x111;i&#x1EC1;u ph&#x1ED1;i ng&#x1EA7;m (60s)" Foreground="#A6E3A1" FontSize="12" FontWeight="Bold"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="Há»‡ thá»‘ng tá»± Ä‘á»™ng theo dĂµi Quota 5H vĂ  tá»± chuyá»ƒn tĂ i khoáº£n khi cáº¡n quota."
+                        <TextBlock Text="H&#x1EC7; th&#x1ED1;ng t&#x1EF1; &#x111;&#x1ED9;ng theo d&#xF5;i Quota 5H v&#xE0; t&#x1EF1; chuy&#x1EC3;n t&#xE0;i kho&#x1EA3;n khi c&#x1EA1;n quota."
                                    Foreground="#6C7086" FontSize="11" Margin="0,5,0,0"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="BtnRefresh" Style="{StaticResource ModernBtn}" Content="đŸ”„ QuĂ©t Quota" Margin="0,0,8,0"/>
-                        <Button x:Name="BtnSaveCurrent" Style="{StaticResource ModernBtn}" Content="đŸ’¾ LÆ°u Acc NĂ y" Margin="0,0,8,0"/>
-                        <Button x:Name="BtnAddAccount" Style="{StaticResource PrimaryBtn}" Content="â• ThĂªm TĂ i Khoáº£n Má»›i"/>
+                        <Button x:Name="BtnRefresh" Style="{StaticResource ModernBtn}" Content="&#x21BB; Qu&#xE9;t Quota" Margin="0,0,8,0"/>
+                        <Button x:Name="BtnSaveCurrent" Style="{StaticResource ModernBtn}" Content="L&#x1B0;u Acc N&#xE0;y" Margin="0,0,8,0"/>
+                        <Button x:Name="BtnAddAccount" Style="{StaticResource PrimaryBtn}" Content="+ Th&#xEA;m T&#xE0;i Kho&#x1EA3;n M&#x1EDB;i"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -189,8 +189,8 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="ThÆ° má»¥c lÆ°u trá»¯: D:\AntigravityAccounts" Foreground="#585B70" FontSize="11" VerticalAlignment="Center"/>
-                    <Button x:Name="BtnOpenFolder" Grid.Column="1" Style="{StaticResource TitleBtn}" Width="Auto" Height="Auto" Padding="8,4" Content="đŸ“‚ Má»Ÿ thÆ° má»¥c" Foreground="#89B4FA" FontSize="11"/>
+                    <TextBlock Text="Th&#x1B0; m&#x1EE5;c l&#x1B0;u tr&#x1EEF;: D:\AntigravityAccounts" Foreground="#585B70" FontSize="11" VerticalAlignment="Center"/>
+                    <Button x:Name="BtnOpenFolder" Grid.Column="1" Style="{StaticResource TitleBtn}" Width="Auto" Height="Auto" Padding="8,4" Content="M&#x1EDF; th&#x1B0; m&#x1EE5;c" Foreground="#89B4FA" FontSize="11"/>
                 </Grid>
             </Border>
         </Grid>
