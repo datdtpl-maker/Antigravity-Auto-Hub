@@ -277,6 +277,16 @@ function Invoke-AutoRotationCheck {
 if ($RunOnce) {
     Invoke-AutoRotationCheck
 } elseif ($Daemon) {
+    $currentPid = $PID
+    $existing = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { 
+        $_.ProcessId -ne $currentPid -and 
+        $_.CommandLine -match "AutoRotator\.ps1" -and 
+        $_.CommandLine -match "-Daemon" -and 
+        $_.Name -eq "powershell.exe" 
+    }
+    if ($existing) {
+        exit 0
+    }
     Write-RotatorLog "KHOI CHAY ANTIGRAVITY AUTO-ROTATOR DAEMON (Chu ky: ${IntervalSeconds}s)"
     while ($true) {
         try {
