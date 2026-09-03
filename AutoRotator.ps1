@@ -278,6 +278,35 @@ function Switch-ActiveAccount {
     }
 }
 
+function Get-CurrentActiveName {
+    try {
+        $cred = [WinCred]::Read("gemini:antigravity")
+        if ($cred) {
+            $cJson = $cred | ConvertFrom-Json
+            $activeRt = $cJson.token.refresh_token
+            if (-not $activeRt) { $activeRt = $cJson.refresh_token }
+
+            if ($activeRt) {
+                foreach ($f in (Get-ChildItem $accDir -Filter "*.json" -ErrorAction SilentlyContinue)) {
+                    $fJson = Get-Content $f.FullName -Raw | ConvertFrom-Json
+                    $fRt = $fJson.token.refresh_token
+                    if (-not $fRt) { $fRt = $fJson.refresh_token }
+                    if ($fRt -eq $activeRt) {
+                        Set-Content -Path $activeFile -Value $f.BaseName -Encoding ASCII -ErrorAction SilentlyContinue
+                        return $f.BaseName
+                    }
+                }
+            }
+        }
+    } catch {}
+
+    if (Test-Path $activeFile) {
+        $name = (Get-Content $activeFile -Raw).Trim()
+        if ($name -ne "") { return $name }
+    }
+    return ""
+}
+
 function Invoke-AutoRotationCheck {
     $accounts = Get-AllAccountsQuota
     if ($accounts.Count -eq 0) {
@@ -285,10 +314,7 @@ function Invoke-AutoRotationCheck {
         return
     }
 
-    $currentActive = ""
-    if (Test-Path $activeFile) {
-        $currentActive = (Get-Content $activeFile -Raw).Trim()
-    }
+    $currentActive = Get-CurrentActiveName
 
     $currentObj = $accounts | Where-Object { $_.AccountName -eq $currentActive }
 
