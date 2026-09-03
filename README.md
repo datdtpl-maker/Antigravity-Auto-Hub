@@ -1,6 +1,7 @@
 # ⚡ Antigravity Auto-Rotation Hub (Auto-Pilot Multi-Account Quota Manager)
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Release-v1.1.0-blue?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
   <img src="https://img.shields.io/badge/Antigravity_IDE-Native_Integration-4285F4?style=for-the-badge&logo=google&logoColor=white" />
   <img src="https://img.shields.io/badge/Auto--Pilot-100%25_Background-10B981?style=for-the-badge" />
@@ -11,14 +12,21 @@ Hệ thống quản lý đa tài khoản Google và **tự động xoay tua hạ
 
 ---
 
-## 🌟 Tính Năng Nổi Bật
+## 🌟 Tính Năng Nổi Bật (Phiên bản v1.1.0)
 
-* 🚀 **Tích hợp trực tiếp Antigravity IDE (Không cần mở nhiều Profile/Window):** Hoạt động ngay trên cửa sổ Antigravity IDE hiện tại của bạn.
-* 🤖 **Auto-Pilot Quota Watcher (Chạy ngầm 24/7):** Tiến trình daemon ngầm tự động quét và đo hạn mức **Gemini 5H Quota** thời gian thực của toàn bộ tài khoản trong kho. Khi tài khoản active chạm ngưỡng $\le 10\%$, hệ thống tự động hoán đổi sang tài khoản còn nhiều Quota nhất mà không làm gián đoạn công việc.
+* 🚀 **Tích hợp trực tiếp Antigravity IDE (Không cần mở nhiều Profile/Window):** Hoạt động ngay trên cửa sổ Antigravity IDE chính của bạn, hoàn toàn không cần mở nhiều cửa sổ hay cài đặt phức tạp.
+* 🛡️ **Bảo vệ Kép Hạn Mức (Dual Quota Protection - 5H & Weekly):**
+  * Theo dõi song song cả 2 hạn mức thời gian thực: **Gemini 5H** và **Gemini Tuần (Weekly)**.
+  * Tự động xoay tài khoản khi: $\text{Quota 5H} \le 10\%$ **HOẶC** $\text{Quota Tuần} \le 5\%$, triệt tiêu hoàn toàn rủi ro bị khóa prompt do cạn hạn mức tuần.
+* 🔔 **Thông báo Windows (Native Toast Notifications):**
+  * Sử dụng WinRT Toast Notifications của Windows 10/11.
+  * Tự động hiển thị banner thông báo nhỏ góc phải màn hình kèm âm thanh mỗi khi tài khoản được xoay ngầm:  
+    `⚡ Antigravity Auto-Hub: Đã kết nối tài khoản [tên_tài_khoản] (5H: 100% | Tuần: 100%)`.
+* 🤖 **Tương thích 100% Mô hình Mới:** Hỗ trợ đầy đủ các mô hình Gemini mới nhất (**Gemini 3.8 Flash**, **Gemini 3.7 Flash**, **Gemini Pro**).
 * 🔐 **Tích hợp Native Windows Credential Manager:** Đọc & nạp Token trực tiếp qua API bảo mật `advapi32.dll` (`gemini:antigravity`), tự động nhận diện Email Google khi đăng nhập.
+* 🎨 **Giao diện WPF Dark Mode Hiện Đại & Chuẩn Quốc Tế:** Hiển thị song song 2 thanh tiến trình Quota (5H & Tuần) cho từng tài khoản, 100% chuẩn mã hóa Unicode không bao giờ lỗi font chữ.
 * 📦 **1-Click Portable Setup:** Chỉ cần clone repo về bất kỳ thư mục nào trên máy mới và chạy `Setup-Install.bat`, hệ thống tự tạo Shortcut Desktop và kích hoạt Service khởi động cùng Windows.
-* 🎨 **Giao diện WPF Dark Mode Hiện đại & Chuẩn Quốc Tế:** Giao diện trực quan, hỗ trợ theo dõi tiến trình Quota từng tài khoản, 100% chuẩn mã hóa Unicode không bao giờ lỗi font chữ.
-* 🛡️ **Bảo mật Tuyệt đối:** Toàn bộ OAuth tokens và thông tin tài khoản được lưu cục bộ trên máy bạn và được cấu hình `.gitignore` loại trừ triệt để, không bao giờ bị đẩy lên GitHub.
+* 🔒 **Bảo mật Tuyệt đối:** Toàn bộ OAuth tokens và thông tin tài khoản được lưu cục bộ trên máy bạn và được cấu hình `.gitignore` loại trừ triệt để, không bao giờ bị đẩy lên GitHub.
 
 ---
 
@@ -71,12 +79,13 @@ cd Antigravity-Auto-Hub
 ```mermaid
 graph TD
     A[AutoRotator Daemon Chạy Ngầm 60s/chu kỳ] --> B[Gọi API Google Quota: retrieveUserQuotaSummary]
-    B --> C{Tài khoản Active Quota <= 10%?}
+    B --> C{Tài khoản Active: Quota 5H <= 10% HOẶC Quota Tuần <= 5%?}
     C -->|Không| D[Tiếp tục giữ phiên làm việc hiện tại]
-    C -->|Có| E[Tìm tài khoản có Quota Gemini 5H cao nhất trong kho]
+    C -->|Có| E[Tìm tài khoản thỏa mãn: 5H > 10% VÀ Tuần > 5%]
     E --> F[Inject Token vào Windows Credential Manager: gemini:antigravity]
     F --> G[Cập nhật jetski-standalone-oauth-token]
-    G --> H[Antigravity IDE tự động sử dụng Quota mới]
+    G --> H[Bắn Windows Toast Notification góc phải màn hình]
+    H --> I[Antigravity IDE tự động sử dụng Quota mới mà không gián đoạn]
 ```
 
 ---
