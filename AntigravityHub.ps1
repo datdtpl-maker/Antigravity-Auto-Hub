@@ -92,7 +92,8 @@ function Load-Accounts-UI {
     foreach ($acc in $accounts) {
         $accName = $acc.AccountName
         $isActive = ($accName -eq $activeName)
-        $geminiPct = [Math]::Max(0, [Math]::Round($acc.Gemini5H * 100))
+        $gemini5hPct = [Math]::Max(0, [Math]::Round($acc.Gemini5H * 100))
+        $geminiWeeklyPct = [Math]::Max(0, [Math]::Round($acc.GeminiWeekly * 100))
         $email = if ($acc.Email) { $acc.Email } else { "$([char]0x0110)ang x$([char]0x00E1)c th$([char]0x1EF1)c..." }
 
         # Card Border
@@ -161,55 +162,97 @@ function Load-Accounts-UI {
 
         $info.Children.Add($row1) | Out-Null
 
-        # Row 2: Quota Progress Bar
+        # Row 2: Dual Quota Progress Bars (5H & Weekly)
         $quotaRow = New-Object System.Windows.Controls.StackPanel
         $quotaRow.Orientation = [System.Windows.Controls.Orientation]::Horizontal
         $quotaRow.Margin = New-Object System.Windows.Thickness(0, 8, 0, 0)
 
-        $qLabel = New-Object System.Windows.Controls.TextBlock
-        $qLabel.Text = "H$([char]0x1EA1)n m$([char]0x1EE9)c Gemini 5H:"
-        $qLabel.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#6C7086")
-        $qLabel.FontSize = 12
-        $qLabel.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $quotaRow.Children.Add($qLabel) | Out-Null
+        # 1. 5H Quota
+        $q5hLabel = New-Object System.Windows.Controls.TextBlock
+        $q5hLabel.Text = "5H:"
+        $q5hLabel.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6ADC8")
+        $q5hLabel.FontSize = 11
+        $q5hLabel.FontWeight = [System.Windows.FontWeights]::SemiBold
+        $q5hLabel.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+        $quotaRow.Children.Add($q5hLabel) | Out-Null
 
-        # Progress bar container
-        $pBorder = New-Object System.Windows.Controls.Border
-        $pBorder.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#313244")
-        $pBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
-        $pBorder.Width = 140
-        $pBorder.Height = 8
-        $pBorder.Margin = New-Object System.Windows.Thickness(8, 0, 8, 0)
-        $pBorder.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+        $p5hBorder = New-Object System.Windows.Controls.Border
+        $p5hBorder.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#313244")
+        $p5hBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
+        $p5hBorder.Width = 90
+        $p5hBorder.Height = 7
+        $p5hBorder.Margin = New-Object System.Windows.Thickness(6, 0, 6, 0)
+        $p5hBorder.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
 
-        $pFill = New-Object System.Windows.Controls.Border
-        $pFill.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Left
-        $pFill.Width = [Math]::Round(140 * ($geminiPct / 100))
-        $pFill.CornerRadius = New-Object System.Windows.CornerRadius(4)
-
-        if ($geminiPct -ge 50) {
-            $pFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6E3A1")
-        } elseif ($geminiPct -ge 20) {
-            $pFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F9E2AF")
+        $p5hFill = New-Object System.Windows.Controls.Border
+        $p5hFill.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Left
+        $p5hFill.Width = [Math]::Round(90 * ($gemini5hPct / 100))
+        $p5hFill.CornerRadius = New-Object System.Windows.CornerRadius(4)
+        if ($gemini5hPct -ge 50) {
+            $p5hFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6E3A1")
+        } elseif ($gemini5hPct -ge 20) {
+            $p5hFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F9E2AF")
         } else {
-            $pFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F38BA8")
+            $p5hFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F38BA8")
         }
-        $pBorder.Child = $pFill
-        $quotaRow.Children.Add($pBorder) | Out-Null
+        $p5hBorder.Child = $p5hFill
+        $quotaRow.Children.Add($p5hBorder) | Out-Null
 
-        $qPctText = New-Object System.Windows.Controls.TextBlock
-        $qPctText.Text = "$geminiPct%"
-        $qPctText.FontWeight = [System.Windows.FontWeights]::Bold
-        $qPctText.FontSize = 12
-        if ($geminiPct -ge 50) {
-            $qPctText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6E3A1")
-        } elseif ($geminiPct -ge 20) {
-            $qPctText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F9E2AF")
+        $q5hPctText = New-Object System.Windows.Controls.TextBlock
+        $q5hPctText.Text = "$gemini5hPct%"
+        $q5hPctText.FontWeight = [System.Windows.FontWeights]::Bold
+        $q5hPctText.FontSize = 11
+        $q5hPctText.Foreground = $p5hFill.Background
+        $q5hPctText.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+        $quotaRow.Children.Add($q5hPctText) | Out-Null
+
+        # Divider
+        $divider = New-Object System.Windows.Controls.TextBlock
+        $divider.Text = "|"
+        $divider.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#45475A")
+        $divider.FontSize = 11
+        $divider.Margin = New-Object System.Windows.Thickness(12, 0, 12, 0)
+        $divider.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+        $quotaRow.Children.Add($divider) | Out-Null
+
+        # 2. Weekly Quota
+        $qWLabel = New-Object System.Windows.Controls.TextBlock
+        $qWLabel.Text = "Tu$([char]0x1EA7)n:"
+        $qWLabel.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6ADC8")
+        $qWLabel.FontSize = 11
+        $qWLabel.FontWeight = [System.Windows.FontWeights]::SemiBold
+        $qWLabel.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+        $quotaRow.Children.Add($qWLabel) | Out-Null
+
+        $pWBorder = New-Object System.Windows.Controls.Border
+        $pWBorder.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#313244")
+        $pWBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
+        $pWBorder.Width = 90
+        $pWBorder.Height = 7
+        $pWBorder.Margin = New-Object System.Windows.Thickness(6, 0, 6, 0)
+        $pWBorder.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+
+        $pWFill = New-Object System.Windows.Controls.Border
+        $pWFill.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Left
+        $pWFill.Width = [Math]::Round(90 * ($geminiWeeklyPct / 100))
+        $pWFill.CornerRadius = New-Object System.Windows.CornerRadius(4)
+        if ($geminiWeeklyPct -ge 50) {
+            $pWFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#89B4FA")
+        } elseif ($geminiWeeklyPct -ge 20) {
+            $pWFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F9E2AF")
         } else {
-            $qPctText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F38BA8")
+            $pWFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F38BA8")
         }
-        $qPctText.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $quotaRow.Children.Add($qPctText) | Out-Null
+        $pWBorder.Child = $pWFill
+        $quotaRow.Children.Add($pWBorder) | Out-Null
+
+        $qWPctText = New-Object System.Windows.Controls.TextBlock
+        $qWPctText.Text = "$geminiWeeklyPct%"
+        $qWPctText.FontWeight = [System.Windows.FontWeights]::Bold
+        $qWPctText.FontSize = 11
+        $qWPctText.Foreground = $pWFill.Background
+        $qWPctText.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+        $quotaRow.Children.Add($qWPctText) | Out-Null
 
         $info.Children.Add($quotaRow) | Out-Null
 
@@ -230,7 +273,7 @@ function Load-Accounts-UI {
             $btnSwitch.Content = "$([char]0x26A1) Chuy$([char]0x1EC3)n Th$([char]0x1EE7) C$([char]0x00F4)ng"
             $btnSwitch.Margin = New-Object System.Windows.Thickness(0, 0, 8, 0)
             $btnSwitch.Add_Click({
-                Switch-ActiveAccount -targetAccountName $currName | Out-Null
+                Switch-ActiveAccount -targetAccountName $currName -Notify | Out-Null
                 Load-Accounts-UI
             }.GetNewClosure())
             $actions.Children.Add($btnSwitch) | Out-Null
