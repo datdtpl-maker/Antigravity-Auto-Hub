@@ -409,8 +409,11 @@ $btnAddAccount.Add_Click({
     if (-not $authUrl) {
         if ($proc -and -not $proc.HasExited) { $proc.Kill() }
         Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-        [System.Windows.MessageBox]::Show("Kh$([char]0x00F4)ng th$([char]0x1EC3) t$([char]0x1EA1)o $([char]0x0111)$([char]0x01B0)$([char]0x1EDD)ng d$([char]0x1EAB)n $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p Google. Vui l$([char]0x00F2)ng th$([char]0x1EED) l$([char]0x1EA1)i!", "L$([char]0x1ED7)i", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
         return
+    }
+
+    if ($authUrl -notmatch "prompt=") {
+        $authUrl += "&prompt=select_account"
     }
 
     Start-Process $authUrl
