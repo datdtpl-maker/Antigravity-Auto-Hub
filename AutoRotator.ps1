@@ -270,13 +270,15 @@ function Switch-ActiveAccount {
             $qInfo = Get-AccountQuotaInfo -tokenFilePath $srcFile
             $pct5h = if ($qInfo) { [Math]::Round($qInfo.Gemini5H * 100) } else { 100 }
             $pctWeekly = if ($qInfo) { [Math]::Round($qInfo.GeminiWeekly * 100) } else { 100 }
-            $toastTitle = "$([char]0x26A1) Antigravity Auto-Hub"
+            $nowStr = (Get-Date).ToString("HH:mm:ss")
+            $toastTitle = "$([char]0x26A1) T$([char]0x1EF1) $([char]0x0110)$([char]0x1ED9)ng Xoay Quota [$nowStr]"
             $toastMsg = if ($Reason) {
-                "$Reason`n$([char]0x2192) $([char]0x0110)$([char]0x00E3) xoay sang: $targetAccountName (5H: $pct5h% | Tu$([char]0x1EA7)n: $pctWeekly%)`n$([char]0x2192) B$([char]0x1EA5)m Ctrl+R tr$([char]0x00EA)n IDE $([char]0x0111)$([char]0x1EC3) nh$([char]0x1EAD)n Quota m$([char]0x1EDB)i!"
+                "$Reason`n$([char]0x2192) $([char]0x0110)$([char]0x00E3) n$([char]0x1EA1)p: $targetAccountName (5H: $pct5h% | Tu$([char]0x1EA7)n: $pctWeekly%)`n$([char]0x23F0) L$([char]0x00FA)c: $nowStr - B$([char]0x1EA5)m F5 / Ctrl+R tr$([char]0x00EA)n IDE $([char]0x0111)$([char]0x1EC3) d$([char]0x00F9)ng ngay!"
             } else {
-                "$([char]0x0110)$([char]0x00E3) k$([char]0x1EBF)t n$([char]0x1ED1)i t$([char]0x00E0)i kho$([char]0x1EA3)n: $targetAccountName`n$([char]0x2022) Gemini 5H: $pct5h% | Tu$([char]0x1EA7)n: $pctWeekly%"
+                "$([char]0x0110)$([char]0x00E3) k$([char]0x1EBF)t n$([char]0x1ED1)i: $targetAccountName (5H: $pct5h% | Tu$([char]0x1EA7)n: $pctWeekly%)`n$([char]0x23F0) L$([char]0x00FA)c: $nowStr - B$([char]0x1EA5)m F5 / Ctrl+R tr$([char]0x00EA)n IDE!"
             }
             Send-ToastNotification -Title $toastTitle -Message $toastMsg
+            try { [System.Media.SystemSounds]::Asterisk.Play() } catch {}
         }
         
         return $true
