@@ -400,14 +400,10 @@ function Invoke-AutoRotationCheck {
 if ($RunOnce) {
     Invoke-AutoRotationCheck
 } elseif ($Daemon) {
-    $currentPid = $PID
-    $existing = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { 
-        $_.ProcessId -ne $currentPid -and 
-        $_.CommandLine -match "AutoRotator\.ps1" -and 
-        $_.CommandLine -match "-Daemon" -and 
-        $_.Name -eq "powershell.exe" 
-    }
-    if ($existing) {
+    $createdNew = $false
+    $script:daemonMutex = New-Object System.Threading.Mutex($true, "Global\AntigravityAutoRotatorMutex", [ref]$createdNew)
+    if (-not $createdNew) {
+        Write-RotatorLog "Tien trinh AutoRotator Daemon da ton tai. Thoat tien trinh duplicate."
         exit 0
     }
     Write-RotatorLog "KHOI CHAY ANTIGRAVITY AUTO-ROTATOR DAEMON (Chu ky: ${IntervalSeconds}s | Nguong: $([Math]::Round($MinQuotaThreshold * 100))%)"
