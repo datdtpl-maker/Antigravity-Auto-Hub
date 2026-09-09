@@ -246,6 +246,7 @@ function Get-AllAccountsQuota {
 function Switch-ActiveAccount {
     param (
         [string]$targetAccountName,
+        [string]$Reason = "",
         [switch]$Notify
     )
 
@@ -263,13 +264,18 @@ function Switch-ActiveAccount {
         Set-Content -Path $activeFile -Value $targetAccountName -Encoding ASCII
         
         Write-RotatorLog ">>> DA TU DONG XOAY SANG TAI KHOAN: [$targetAccountName]"
+        $script:LastSwitchTime = Get-Date
         
         if ($Notify) {
             $qInfo = Get-AccountQuotaInfo -tokenFilePath $srcFile
             $pct5h = if ($qInfo) { [Math]::Round($qInfo.Gemini5H * 100) } else { 100 }
             $pctWeekly = if ($qInfo) { [Math]::Round($qInfo.GeminiWeekly * 100) } else { 100 }
             $toastTitle = "$([char]0x26A1) Antigravity Auto-Hub"
-            $toastMsg = "$([char]0x0110)$([char]0x00E3) k$([char]0x1EBF)t n$([char]0x1ED1)i t$([char]0x00E0)i kho$([char]0x1EA3)n: $targetAccountName`n$([char]0x2022) Gemini 5H: $pct5h% | Tu$([char]0x1EA7)n: $pctWeekly%"
+            $toastMsg = if ($Reason) {
+                "$Reason`n$([char]0x2192) $([char]0x0110)$([char]0x00E3) xoay sang: $targetAccountName (5H: $pct5h% | Tu$([char]0x1EA7)n: $pctWeekly%)`n$([char]0x2192) B$([char]0x1EA5)m Ctrl+R tr$([char]0x00EA)n IDE $([char]0x0111)$([char]0x1EC3) nh$([char]0x1EAD)n Quota m$([char]0x1EDB)i!"
+            } else {
+                "$([char]0x0110)$([char]0x00E3) k$([char]0x1EBF)t n$([char]0x1ED1)i t$([char]0x00E0)i kho$([char]0x1EA3)n: $targetAccountName`n$([char]0x2022) Gemini 5H: $pct5h% | Tu$([char]0x1EA7)n: $pctWeekly%"
+            }
             Send-ToastNotification -Title $toastTitle -Message $toastMsg
         }
         
@@ -311,6 +317,8 @@ function Get-CurrentActiveName {
     return ""
 }
 
+$script:LastSwitchTime = [DateTime]::MinValue
+
 function Invoke-AutoRotationCheck {
     $accounts = Get-AllAccountsQuota
     if ($accounts.Count -eq 0) {
@@ -333,8 +341,13 @@ function Invoke-AutoRotationCheck {
     }
 
     if ($detectedActive) {
-        $currentActive = $detectedActive
-        Set-Content -Path $activeFile -Value $detectedActive -Encoding ASCII -ErrorAction SilentlyContinue
+        $detObj = $accounts | Where-Object { $_.AccountName -eq $detectedActive }
+        if ($detObj -and $detObj.Gemini5H -gt $MinQuotaThreshold) {
+            $currentActive = $detectedActive
+            Set-Content -Path $activeFile -Value $detectedActive -Encoding ASCII -ErrorAction SilentlyContinue
+        } else {
+            $currentActive = Get-CurrentActiveName
+        }
     } else {
         $currentActive = Get-CurrentActiveName
     }
@@ -350,22 +363,29 @@ function Invoke-AutoRotationCheck {
     }
 
     # Kiem tra dieu kien xoay:
-    # 1. Tai khoan active sap cham nguong MinQuotaThreshold (<= 12%)
-    # 2. Hoac Quota Weekly sap het (<= 8%)
-    # 3. Hoac bat ky tai khoan nao dang can kiet o muc <= 12% ma IDE van dang ket noi
     $needSwitch = $false
+    $switchReason = ""
     if (-not $currentObj -or -not $currentObj.Success) {
         $needSwitch = $true
+        $switchReason = "Kh$([char]0x00F4)ng c$([char]0x00F3) t$([char]0x00E0)i kho$([char]0x1EA3)n k$([char]0x1EBF)t n$([char]0x1ED1)i h$([char]0x1EE3)p l$([char]0x1EC7)"
         Write-RotatorLog "Chua co tai khoan active hop le. Dang tu dong chon tai khoan..."
     } elseif ($currentObj.Gemini5H -le $MinQuotaThreshold) {
         $needSwitch = $true
+        $switchReason = "T$([char]0x00E0)i kho$([char]0x1EA3)n c$([char]0x0169) [$currentActive] s$([char]0x1EAF)p h$([char]0x1EBF)t Quota 5H ($([Math]::Round($currentObj.Gemini5H * 100))%)"
         Write-RotatorLog "CANH BAO SO: Tai khoan [$currentActive] con $([Math]::Round($currentObj.Gemini5H * 100))% Quota 5H (<= $([Math]::Round($MinQuotaThreshold * 100))%). Chuyen ngay de khong bi can ve 0%!"
     } elseif ($currentObj.GeminiWeekly -le $MinWeeklyThreshold) {
         $needSwitch = $true
+        $switchReason = "T$([char]0x00E0)i kho$([char]0x1EA3)n c$([char]0x0169) [$currentActive] s$([char]0x1EAF)p h$([char]0x1EBF)t Quota Tu$([char]0x1EA7)n ($([Math]::Round($currentObj.GeminiWeekly * 100))%)"
         Write-RotatorLog "CANH BAO: Tai khoan [$currentActive] con $([Math]::Round($currentObj.GeminiWeekly * 100))% Quota Tuan (<= $([Math]::Round($MinWeeklyThreshold * 100))%). Chuyen sang tai khoan moi!"
     }
 
     if ($needSwitch) {
+        $secondsSinceLast = ((Get-Date) - $script:LastSwitchTime).TotalSeconds
+        if ($secondsSinceLast -lt 60) {
+            Write-RotatorLog "Dang trong thoi gian cooldown ($([Math]::Round($secondsSinceLast))s < 60s). Bo qua de tranh spam thong bao."
+            return
+        }
+
         # Tim cac tai khoan con doi dao quota: 5H > 15% VA Weekly > 10%
         $eligible = $accounts | Where-Object { 
             $_.Success -and 
@@ -381,13 +401,13 @@ function Invoke-AutoRotationCheck {
             $p5 = [Math]::Round($bestAccount.Gemini5H * 100)
             $pw = [Math]::Round($bestAccount.GeminiWeekly * 100)
             Write-RotatorLog "-> KICH HOAT XOAY SANG: [$($bestAccount.AccountName)] voi 5H: $p5% | Tuan: $pw%"
-            Switch-ActiveAccount -targetAccountName $bestAccount.AccountName -Notify | Out-Null
+            Switch-ActiveAccount -targetAccountName $bestAccount.AccountName -Reason $switchReason -Notify | Out-Null
         } else {
             Write-RotatorLog "Tat ca tai khoan trong pool deu duoi nguong. Dang tim tai khoan co 5H cao nhat..."
             $fallback = $accounts | Where-Object { $_.Success -and $_.AccountName -ne $currentActive } | Sort-Object -Property @{ Expression = "Gemini5H"; Descending = $true } | Select-Object -First 1
             if ($fallback) {
                 Write-RotatorLog "Fallback sang: [$($fallback.AccountName)]"
-                Switch-ActiveAccount -targetAccountName $fallback.AccountName -Notify | Out-Null
+                Switch-ActiveAccount -targetAccountName $fallback.AccountName -Reason $switchReason -Notify | Out-Null
             }
         }
     } else {
