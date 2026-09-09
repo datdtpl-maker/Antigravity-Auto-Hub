@@ -1,7 +1,7 @@
 # ⚡ Antigravity Auto-Rotation Hub (Auto-Pilot Multi-Account Quota Manager)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v1.2.0-blue?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Release-v1.3.0-blue?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
   <img src="https://img.shields.io/badge/Antigravity_IDE-Native_Integration-4285F4?style=for-the-badge&logo=google&logoColor=white" />
   <img src="https://img.shields.io/badge/Auto--Pilot-100%25_Background-10B981?style=for-the-badge" />
@@ -12,18 +12,21 @@ Hệ thống quản lý đa tài khoản Google và **tự động xoay tua hạ
 
 ---
 
-## 🌟 Tính Năng Nổi Bật (Phiên bản v1.2.0)
+## 🌟 Tính Năng Nổi Bật (Phiên bản v1.3.0)
 
+* 🌐 **Thêm Tài Khoản 1-Click Trực Tiếp Qua Trình Duyệt (Direct Browser OAuth):**
+  * Không cần mở Antigravity IDE hay đăng nhập thủ công phức tạp.
+  * Chỉ cần bấm **`+ Thêm Tài Khoản Mới`**, trình duyệt tự động bật lên màn hình chọn tài khoản Google (`prompt=select_account`).
+  * Sau khi bấm chọn tài khoản, Tool Hub tự động bắt Token, tự nhận diện Email và lưu vào kho xoay tua ngay lập tức!
 * ⚡ **Xoay Sớm Thông Minh (Early Auto-Rotation - Không Bao Giờ Cạn 0%):**
   * Tự động kích hoạt đổi tài khoản ngay khi Quota 5H còn **10% - 12%** (hoặc Quota Tuần $\le 8\%$).
   * Tuyệt đối không để tài khoản rơi về 0%, bảo toàn trạng thái prompt mượt mà liên tục.
 * ⏱️ **Tần Suất Quét Siêu Tốc (Fast-Scan Cycle 25s):**
-  * Chu kỳ kiểm tra ngầm được rút ngắn từ 60 giây xuống **25 giây/lần**, bắt kịp tốc độ prompting của các phiên chat cường độ cao.
+  * Chu kỳ kiểm tra ngầm được rút ngắn xuống **25 giây/lần**, bắt kịp tốc độ prompting của các phiên chat cường độ cao.
 * 🧠 **Bộ Nhận Diện Tiêu Thụ Thực Tế (Smart Consumption Tracker):**
   * Tự động phát hiện tài khoản nào đang thực sự bị trừ Quota trong Antigravity IDE qua từng chu kỳ để điều phối chuẩn xác 100%.
 * 🚀 **Tích hợp trực tiếp Antigravity IDE (Không cần mở nhiều Profile/Window):** Hoạt động ngay trên cửa sổ Antigravity IDE chính của bạn.
 * 🔔 **Thông báo Windows (Native Toast Notifications):**
-  * Sử dụng WinRT Toast Notifications của Windows 10/11.
   * Tự động hiển thị banner thông báo nhỏ góc phải màn hình kèm âm thanh mỗi khi tài khoản được xoay ngầm:  
     `⚡ Antigravity Auto-Hub: Đã kết nối tài khoản [tên_tài_khoản] (5H: 100% | Tuần: 100%)`.
 * 🤖 **Tương thích 100% Mô hình Mới:** Hỗ trợ đầy đủ các mô hình Gemini mới nhất (**Gemini 3.8 Flash**, **Gemini 3.7 Flash**, **Gemini Pro**).
@@ -69,12 +72,12 @@ cd Antigravity-Auto-Hub
 
 ---
 
-## 💡 Cách Thêm Tài Khoản Google Vào Kho Xoay Tua
+## 💡 Cách Thêm Tài Khoản Google Vào Kho Xoay Tua (1-Click Tự Động)
 
-1. Mở **`Antigravity Auto-Hub`** ngoài Desktop $\rightarrow$ Bấm **`+ Thêm Tài Khoản Mới`**.
-2. Quay lại Antigravity IDE $\rightarrow$ Tiến hành Đăng nhập tài khoản Google mới.
-3. Đăng nhập xong trên IDE $\rightarrow$ Mở lại Hub và bấm **`Lưu Acc Này`**.
-4. Hệ thống sẽ tự động nhận diện Email Google và nạp vào danh sách xoay tua!
+1. Mở **`Antigravity Auto-Hub`** ngoài Desktop $\rightarrow$ Bấm **`+ Thêm Tài Khoản Mới`** $\rightarrow$ Bấm **`Yes`**.
+2. **Trình duyệt (Chrome / Edge) sẽ tự động bật lên** bảng chọn tài khoản Google.
+3. Bạn nhấp chọn tài khoản Google muốn thêm (hoặc đăng nhập tài khoản mới).
+4. **Hoàn tất!** Tool sẽ tự động nhận diện Email, tải token và tạo thẻ lưu vào kho xoay tua ngay lập tức mà không cần làm gì thêm!
 
 ---
 
