@@ -68,40 +68,26 @@ $btnMinimize.Add_Click({ $window.WindowState = [System.Windows.WindowState]::Min
 $btnClose.Add_Click({ $window.Close() })
 $btnOpenFolder.Add_Click({ Start-Process "explorer.exe" $baseDir })
 
-function Get-CurrentActiveName {
-    try {
-        $cred = [WinCred]::Read("gemini:antigravity")
-        if ($cred) {
-            $cJson = $cred | ConvertFrom-Json
-            $activeRt = $cJson.token.refresh_token
-            if (-not $activeRt) { $activeRt = $cJson.refresh_token }
-
-            if ($activeRt) {
-                foreach ($f in (Get-ChildItem $accDir -Filter "*.json" -ErrorAction SilentlyContinue)) {
-                    $fJson = Get-Content $f.FullName -Raw | ConvertFrom-Json
-                    $fRt = $fJson.token.refresh_token
-                    if (-not $fRt) { $fRt = $fJson.refresh_token }
-                    if ($fRt -eq $activeRt) {
-                        Set-Content -Path $activeFile -Value $f.BaseName -Encoding ASCII -ErrorAction SilentlyContinue
-                        return $f.BaseName
-                    }
-                }
-            }
-        }
-    } catch {}
-
-    if (Test-Path $activeFile) {
-        $name = (Get-Content $activeFile -Raw).Trim()
-        if ($name -ne "") { return $name }
-    }
-    return ""
-}
-
 function Load-Accounts-UI {
     $accountsContainer.Children.Clear()
     
-    $accounts = Get-AllAccountsQuota
-    $activeName = Get-CurrentActiveName
+    $accounts = @(Get-AllAccountsQuota)
+    $runtime = $null
+    try { $runtime = Get-RuntimeIdentity } catch { }
+    $activeEmail = if ($runtime) { $runtime.Email } else { '' }
+    $state = Read-RotationState
+    $daemonText = $window.FindName('TxtDaemonStatus')
+    if ($state.Status -in @('Switching','NeedsAttention')) {
+        $daemonText.Text = "C$([char]0x1EA7)n ki$([char]0x1EC3)m tra chuy$([char]0x1EC3)n t$([char]0x00E0)i kho$([char]0x1EA3)n"
+    } elseif (-not $runtime) {
+        $daemonText.Text = "Ch$([char]0x01B0)a x$([char]0x00E1)c minh IDE"
+    } elseif (-not (Get-DaemonStatus)) {
+        $daemonText.Text = "Daemon ch$([char]0x01B0)a ch$([char]0x1EA1)y"
+    } elseif (-not $runtime.Idle) {
+        $daemonText.Text = "IDE $([char]0x0111)ang ch$([char]0x1EA1)y t$([char]0x00E1)c v$([char]0x1EE5)"
+    } else {
+        $daemonText.Text = "S$([char]0x1EB5)n s$([char]0x00E0)ng xoay khi quota th$([char]0x1EA5)p"
+    }
 
     if ($accounts.Count -eq 0) {
         $empty = New-Object System.Windows.Controls.TextBlock
@@ -117,7 +103,7 @@ function Load-Accounts-UI {
 
     foreach ($acc in $accounts) {
         $accName = $acc.AccountName
-        $isActive = ($accName -eq $activeName)
+        $isActive = ($activeEmail -and $acc.Email -eq $activeEmail)
         $gemini5hPct = [Math]::Max(0, [Math]::Round($acc.Gemini5H * 100))
         $geminiWeeklyPct = [Math]::Max(0, [Math]::Round($acc.GeminiWeekly * 100))
         $email = if ($acc.Email) { $acc.Email } else { "$([char]0x0110)ang x$([char]0x00E1)c th$([char]0x1EF1)c..." }
@@ -225,7 +211,7 @@ function Load-Accounts-UI {
         $quotaRow.Children.Add($p5hBorder) | Out-Null
 
         $q5hPctText = New-Object System.Windows.Controls.TextBlock
-        $q5hPctText.Text = "$gemini5hPct%"
+        $q5hPctText.Text = if ($acc.Success) { "$gemini5hPct%" } else { "N/A" }
         $q5hPctText.FontWeight = [System.Windows.FontWeights]::Bold
         $q5hPctText.FontSize = 11
         $q5hPctText.Foreground = $p5hFill.Background
@@ -273,7 +259,7 @@ function Load-Accounts-UI {
         $quotaRow.Children.Add($pWBorder) | Out-Null
 
         $qWPctText = New-Object System.Windows.Controls.TextBlock
-        $qWPctText.Text = "$geminiWeeklyPct%"
+        $qWPctText.Text = if ($acc.Success) { "$geminiWeeklyPct%" } else { "N/A" }
         $qWPctText.FontWeight = [System.Windows.FontWeights]::Bold
         $qWPctText.FontSize = 11
         $qWPctText.Foreground = $pWFill.Background
@@ -297,6 +283,7 @@ function Load-Accounts-UI {
             $btnSwitch = New-Object System.Windows.Controls.Button
             $btnSwitch.Style = $window.FindResource("SuccessBtn")
             $btnSwitch.Content = "$([char]0x26A1) Chuy$([char]0x1EC3)n Th$([char]0x1EE7) C$([char]0x00F4)ng"
+            $btnSwitch.IsEnabled = $acc.Success
             $btnSwitch.Margin = New-Object System.Windows.Thickness(0, 0, 8, 0)
             $btnSwitch.Add_Click({
                 Switch-ActiveAccount -targetAccountName $currName -Notify | Out-Null
@@ -328,6 +315,7 @@ function Load-Accounts-UI {
 }
 
 $btnRefresh.Add_Click({
+    Repair-RotationState | Out-Null
     Load-Accounts-UI
 })
 
@@ -359,29 +347,67 @@ $btnSaveCurrent.Add_Click({
 
     $targetFile = Join-Path $accDir "$cleanName.json"
     [System.IO.File]::WriteAllText($targetFile, $cred, [System.Text.Encoding]::UTF8)
-    Set-Content -Path $activeFile -Value $cleanName -Encoding ASCII
     
     Load-Accounts-UI
     $displayEmail = if ($email) { $email } else { $cleanName }
     [System.Windows.MessageBox]::Show("$([char]0x0110)$([char]0x00E3) t$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng nh$([char]0x1EAD)n di$([char]0x1EC7)n v$([char]0x00E0) l$([char]0x01B0)u t$([char]0x00E0)i kho$([char]0x1EA3)n: $displayEmail v$([char]0x00E0)o kho xoay tua th$([char]0x00E0)nh c$([char]0x00F4)ng!", "Th$([char]0x00E0)nh C$([char]0x00F4)ng", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
 })
 
-$btnAddAccount.Add_Click({
-    $currentCred = [WinCred]::Read("gemini:antigravity")
-    $activeName = Get-CurrentActiveName
-    if ($currentCred -and $activeName -ne "") {
-        [System.IO.File]::WriteAllText((Join-Path $accDir "$activeName.json"), $currentCred, [System.Text.Encoding]::UTF8)
-    }
+function Remove-LoginTempDirectory {
+    param([string]$Path)
+    if (-not $Path) { return }
+    $resolved = [IO.Path]::GetFullPath($Path)
+    $tempRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
+    if (-not $resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or
+        [IO.Path]::GetFileName($resolved) -notmatch '^ag_login_[0-9]+$') { return }
+    Remove-Item -LiteralPath $resolved -Recurse -Force -ErrorAction SilentlyContinue
+}
 
+function Complete-AccountLogin {
+    if (-not $script:loginProtection) { return }
+    try {
+        if ($script:activeLoginTimer) { $script:activeLoginTimer.Stop() }
+        if ($script:activeLoginProc -and -not $script:activeLoginProc.HasExited) { $script:activeLoginProc.Kill() }
+        # The official helper can write the shared keyring despite its temporary gemini_dir.
+        # Restore the pre-login selection while holding the same lock as the rotator.
+        if ($script:loginOldCredential) { Restore-StoredCredential $script:loginOldCredential }
+        else { [WinCred]::Delete('gemini:antigravity') | Out-Null }
+        if ($null -ne $script:loginOldFallback) { Write-AtomicText $geminiTokenPath $script:loginOldFallback }
+        elseif (Test-Path -LiteralPath $geminiTokenPath) { [IO.File]::Delete($geminiTokenPath) }
+    } catch {
+        Set-RotationState 'NeedsAttention'
+        Write-RotatorLog 'Login cleanup requires verification; automatic rotation paused.'
+    } finally {
+        Remove-LoginTempDirectory $script:activeLoginTempDir
+        $script:loginProtection.ReleaseMutex()
+        $script:loginProtection.Dispose()
+        $script:loginProtection=$null
+        $script:loginOldCredential=$null; $script:loginOldFallback=$null
+        $accountsContainer.IsEnabled=$true; $btnAddAccount.IsEnabled=$true; $btnSaveCurrent.IsEnabled=$true
+    }
+}
+$window.Add_Closed({ Complete-AccountLogin })
+
+$btnAddAccount.Add_Click({
     $msg = "B$([char]0x1EA1)n c$([char]0x00F3) mu$([char]0x1ED1)n m$([char]0x1EDF) tr$([char]0x00EC)nh duy$([char]0x1EC7)t $([char]0x0111)$([char]0x1EC3) $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i ngay b$([char]0x00E2)y gi$([char]0x1EDD) kh$([char]0x00F4)ng?`n`n(Sau khi b$([char]0x1EA5)m Yes, tr$([char]0x00EC)nh duy$([char]0x1EC7)t s$([char]0x1EBD) t$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng b$([char]0x1EAD)t l$([char]0x00EA)n trang $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p Google v$([char]0x00E0) t$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng l$([char]0x01B0)u khi b$([char]0x1EA1)n ch$([char]0x1ECD)n xong)"
     $confirm = [System.Windows.MessageBox]::Show($msg, "Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
     if ($confirm -ne [System.Windows.MessageBoxResult]::Yes) { return }
 
-    $lsPath = "C:\Users\datdt\AppData\Local\Programs\Antigravity\resources\bin\language_server.exe"
+    $lsPath = Join-Path $env:LOCALAPPDATA "Programs\Antigravity\resources\bin\language_server.exe"
     if (-not (Test-Path $lsPath)) {
         [System.Windows.MessageBox]::Show("Kh$([char]0x00F4)ng t$([char]0x00EC)m th$([char]0x1EA5)y language_server.exe t$([char]0x1EA1)i $lsPath", "L$([char]0x1ED7)i", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
         return
     }
+
+    $loginLock=[Threading.Mutex]::new($false, 'Local\AntigravityAutoHub.Switch')
+    $loginLocked=$false
+    try { $loginLocked=$loginLock.WaitOne(0) } catch [Threading.AbandonedMutexException] { $loginLocked=$true }
+    if (-not $loginLocked) { $loginLock.Dispose(); return }
+    $script:loginProtection=$loginLock
+    $script:loginOldCredential=Get-StoredCredential
+    $script:loginOldFallback=$null
+    if (Test-Path -LiteralPath $geminiTokenPath) { $script:loginOldFallback=[IO.File]::ReadAllText($geminiTokenPath) }
+    $accountsContainer.IsEnabled=$false; $btnAddAccount.IsEnabled=$false; $btnSaveCurrent.IsEnabled=$false
 
     $tempDir = Join-Path $env:TEMP ("ag_login_" + (Get-Random))
     New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
@@ -394,14 +420,19 @@ $btnAddAccount.Add_Click({
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
 
-    $proc = [System.Diagnostics.Process]::Start($psi)
+    try { $proc = [System.Diagnostics.Process]::Start($psi) }
+    catch { Complete-AccountLogin; return }
     $script:activeLoginProc = $proc
     $authUrl = $null
     $start = Get-Date
 
     $urlPattern = "https://accounts\.google\.com/o/oauth2/auth\?[a-zA-Z0-9\-._~%!$&'()*+,;=:@/?]+"
+    $lineTask = $proc.StandardError.ReadLineAsync()
     while ((-not $proc.HasExited) -and ((Get-Date) - $start).TotalSeconds -lt 15) {
-        $line = $proc.StandardError.ReadLine()
+        if (-not $lineTask.Wait(100)) { continue }
+        $line = $lineTask.Result
+        if ($null -eq $line) { break }
+        $lineTask = $proc.StandardError.ReadLineAsync()
         if ($line) {
             $match = [regex]::Match($line, $urlPattern)
             if ($match.Success) {
@@ -412,8 +443,7 @@ $btnAddAccount.Add_Click({
     }
 
     if (-not $authUrl) {
-        if ($proc -and -not $proc.HasExited) { $proc.Kill() }
-        Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        Complete-AccountLogin
         return
     }
 
@@ -439,8 +469,7 @@ $btnAddAccount.Add_Click({
 
         if (Test-Path $tFile) {
             $foundTokenFile = $tFile
-        } elseif ((Test-Path $geminiTokenPath) -and ((Get-Item $geminiTokenPath).LastWriteTime -ge $script:loginStartTime)) {
-            $foundTokenFile = $geminiTokenPath
+
         }
 
         if ($foundTokenFile) {
@@ -467,10 +496,8 @@ $btnAddAccount.Add_Click({
                 $cleanName = if ($email) { $email.Split('@')[0] } else { "GoogleAccount_" + (Get-Date -Format "HHmmss") }
                 $targetFile = Join-Path $accDir "$cleanName.json"
                 [System.IO.File]::WriteAllText($targetFile, $rawToken, [System.Text.Encoding]::UTF8)
-                [WinCred]::Write("gemini:antigravity", "antigravity", $rawToken) | Out-Null
-                [System.IO.File]::WriteAllText($geminiTokenPath, $rawToken, [System.Text.Encoding]::UTF8)
-                Set-Content -Path $activeFile -Value $cleanName -Encoding ASCII
 
+                Complete-AccountLogin
                 Load-Accounts-UI
 
                 $toastTitle = "$([char]0x26A1) Antigravity Auto-Hub"
@@ -481,13 +508,11 @@ $btnAddAccount.Add_Click({
             } catch {
                 [System.Windows.MessageBox]::Show("L$([char]0x1ED7)i khi l$([char]0x01B0)u token: $_", "L$([char]0x1ED7)i", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
             } finally {
-                if ($script:activeLoginProc -and -not $script:activeLoginProc.HasExited) { $script:activeLoginProc.Kill() }
-                Remove-Item $script:activeLoginTempDir -Recurse -Force -ErrorAction SilentlyContinue
+                Complete-AccountLogin
             }
         } elseif ($script:loginElapsed -ge 180) {
             $script:activeLoginTimer.Stop()
-            if ($script:activeLoginProc -and -not $script:activeLoginProc.HasExited) { $script:activeLoginProc.Kill() }
-            Remove-Item $script:activeLoginTempDir -Recurse -Force -ErrorAction SilentlyContinue
+            Complete-AccountLogin
         }
     })
     $loginTimer.Start()

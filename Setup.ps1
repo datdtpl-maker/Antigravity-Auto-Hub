@@ -43,8 +43,8 @@ $startupLnk = Join-Path $startupPath "AntigravityAutoRotator.lnk"
 
 $rotatorScript = Join-Path $baseDir "AutoRotator.ps1"
 $sShortcut = $wsh.CreateShortcut($startupLnk)
-$sShortcut.TargetPath = "powershell.exe"
-$sShortcut.Arguments = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File ""$rotatorScript"" -Daemon -IntervalSeconds 25"
+$sShortcut.TargetPath = "wscript.exe"
+$sShortcut.Arguments = """$(Join-Path $baseDir 'launch-rotator-daemon.vbs')"""
 $sShortcut.WorkingDirectory = $baseDir
 $sShortcut.Description = "Antigravity Auto-Rotator Daemon Service"
 if ($hasIde) {
@@ -60,7 +60,7 @@ $procs = Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%AutoRotator.p
 if ($procs.Count -eq 0) {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = "powershell.exe"
-    $psi.Arguments = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File ""$rotatorScript"" -Daemon -IntervalSeconds 60"
+    $psi.Arguments = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File ""$rotatorScript"" -Daemon -IntervalSeconds 25"
     $psi.CreateNoWindow = $true
     $psi.UseShellExecute = $false
     [System.Diagnostics.Process]::Start($psi) | Out-Null

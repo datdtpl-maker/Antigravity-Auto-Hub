@@ -1,6 +1,11 @@
 # Sensitive tokens & runtime files
 accounts/*.json
+accounts/**
 !accounts/.gitkeep
+work/
+oauth.local.clixml
+rotation-state.json
+*.tmp
 current_active.txt
 rotator.log
 *.log

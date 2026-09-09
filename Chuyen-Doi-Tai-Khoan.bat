@@ -1,2 +1,2 @@
 @echo off
-start "" wscript.exe "D:\AntigravityAccounts\launch-switcher.vbs"
+start "" wscript.exe "%~dp0launch-switcher.vbs"

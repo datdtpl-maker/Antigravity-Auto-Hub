@@ -4,9 +4,10 @@
 param (
     [switch]$RunOnce,
     [switch]$Daemon,
-    [int]$IntervalSeconds = 25,
-    [double]$MinQuotaThreshold = 0.12,
-    [double]$MinWeeklyThreshold = 0.08
+    [switch]$Reconcile,
+    [ValidateRange(10,3600)][int]$IntervalSeconds = 25,
+    [ValidateRange(0,0.95)][double]$MinQuotaThreshold = 0.12,
+    [ValidateRange(0,0.95)][double]$MinWeeklyThreshold = 0.08
 )
 
 $baseDir = $PSScriptRoot
@@ -20,6 +21,7 @@ if (-not (Test-Path $accDir)) {
     New-Item -ItemType Directory -Path $accDir -Force | Out-Null
 }
 
+if (-not ("WinCred" -as [type])) {
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
@@ -94,13 +96,7 @@ public class WinCred {
     }
 }
 "@
-
-$cidBytes = @(107, 106, 109, 107, 106, 106, 108, 106, 108, 106, 111, 99, 107, 119, 46, 55, 50, 41, 41, 51, 52, 104, 50, 104, 107, 54, 57, 40, 63, 104, 105, 111, 44, 46, 53, 54, 53, 48, 50, 110, 61, 110, 106, 105, 63, 42, 116, 59, 42, 42, 41, 116, 61, 53, 53, 61, 54, 63, 47, 41, 63, 40, 57, 53, 52, 46, 63, 52, 46, 116, 57, 53, 55)
-$secBytes = @(29, 21, 25, 9, 10, 2, 119, 17, 111, 98, 28, 13, 8, 110, 98, 108, 22, 62, 22, 16, 107, 55, 22, 24, 98, 41, 2, 25, 110, 32, 108, 43, 30, 27, 60)
-$script:GoogleClientId = [System.Text.Encoding]::ASCII.GetString(($cidBytes | ForEach-Object { [byte]($_ -bxor 0x5A) }))
-$script:GoogleClientSecret = [System.Text.Encoding]::ASCII.GetString(($secBytes | ForEach-Object { [byte]($_ -bxor 0x5A) }))
-
-$script:PreviousQuotas = @{}
+}
 
 function Write-RotatorLog {
     param ([string]$msg)
@@ -152,290 +148,42 @@ function Send-ToastNotification {
     }
 }
 
-function Get-AccountQuotaInfo {
-    param ([string]$tokenFilePath)
-    
-    if (-not (Test-Path $tokenFilePath)) { return $null }
-
-    try {
-        $tokenRaw = Get-Content $tokenFilePath -Raw | ConvertFrom-Json
-        $refreshToken = $tokenRaw.token.refresh_token
-        if (-not $refreshToken) { $refreshToken = $tokenRaw.refresh_token }
-        if (-not $refreshToken) { return $null }
-
-        $tokenResp = Invoke-RestMethod -Uri "https://oauth2.googleapis.com/token" -Method Post -Body @{
-            client_id = $script:GoogleClientId
-            client_secret = $script:GoogleClientSecret
-            refresh_token = $refreshToken
-            grant_type = "refresh_token"
-        } -TimeoutSec 10
-
-        $accessToken = $tokenResp.access_token
-        if (-not $accessToken) { return $null }
-
-        $loadResp = Invoke-RestMethod -Uri "https://daily-cloudcode-pa.googleapis.com/v1internal:loadCodeAssist" -Method Post -Headers @{
-            Authorization = "Bearer $accessToken"
-            "User-Agent" = "antigravity/1.11.9 windows/amd64"
-        } -Body "{}" -ContentType "application/json" -TimeoutSec 10
-
-        $projectID = $loadResp.cloudaicompanionProject
-        if (-not $projectID) { $projectID = $loadResp.project }
-        if (-not $projectID) { $projectID = "aicode-consumers" }
-
-        $quotaResp = Invoke-RestMethod -Uri "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary" -Method Post -Headers @{
-            Authorization = "Bearer $accessToken"
-            "User-Agent" = "antigravity/1.11.9 windows/amd64"
-        } -Body (@{ project = $projectID } | ConvertTo-Json) -ContentType "application/json" -TimeoutSec 10
-
-        $gemini5h = 1.0
-        $geminiWeekly = 1.0
-        $resetTime = $null
-
-        foreach ($group in $quotaResp.groups) {
-            $gName = "$($group.displayName) $($group.description)".ToLower()
-            if ($gName -match "gemini") {
-                foreach ($bucket in $group.buckets) {
-                    $w = "$($bucket.window)".ToLower()
-                    if ($w -match "5h") {
-                        $gemini5h = [double]$bucket.remainingFraction
-                        $resetTime = $bucket.resetTime
-                    } elseif ($w -match "week") {
-                        $geminiWeekly = [double]$bucket.remainingFraction
-                    }
-                }
-            }
-        }
-
-        $email = ""
+$stateFile = Join-Path $baseDir 'rotation-state.json'
+$script:GoogleClientId = $env:ANTIGRAVITY_GOOGLE_CLIENT_ID
+$script:GoogleClientSecret = $env:ANTIGRAVITY_GOOGLE_CLIENT_SECRET
+if (-not $script:GoogleClientId -or -not $script:GoogleClientSecret) {
+    $localConfig = Join-Path $baseDir 'oauth.local.clixml'
+    if (Test-Path -LiteralPath $localConfig) {
         try {
-            $uinfo = Invoke-RestMethod -Uri "https://www.googleapis.com/oauth2/v3/userinfo" -Headers @{ Authorization = "Bearer $accessToken" } -TimeoutSec 5
-            $email = $uinfo.email
-        } catch {}
-
-        return [PSCustomObject]@{
-            Success = $true
-            Email = $email
-            Gemini5H = $gemini5h
-            GeminiWeekly = $geminiWeekly
-            ResetTime = $resetTime
-            TokenPath = $tokenFilePath
-            AccountName = [System.IO.Path]::GetFileNameWithoutExtension($tokenFilePath)
-        }
-    } catch {
-        return [PSCustomObject]@{
-            Success = $false
-            Error = $_.Exception.Message
-            Gemini5H = -1.0
-            GeminiWeekly = -1.0
-            TokenPath = $tokenFilePath
-            AccountName = [System.IO.Path]::GetFileNameWithoutExtension($tokenFilePath)
-        }
+            $config = Import-Clixml -LiteralPath $localConfig
+            $script:GoogleClientId = $config.UserName
+            $script:GoogleClientSecret = $config.GetNetworkCredential().Password
+        } catch { Write-Warning 'Local OAuth configuration cannot be decrypted by this Windows user.' }
     }
 }
+. (Join-Path $baseDir 'RuntimeBridge.ps1')
+. (Join-Path $baseDir 'RotationCore.ps1')
+$script:LastSwitchTime = [datetime]::MinValue
 
-function Get-AllAccountsQuota {
-    $files = Get-ChildItem -Path $accDir -Filter "*.json"
-    $list = @()
-    foreach ($f in $files) {
-        $q = Get-AccountQuotaInfo -tokenFilePath $f.FullName
-        if ($q) { $list += $q }
-    }
-    return $list
-}
-
-function Switch-ActiveAccount {
-    param (
-        [string]$targetAccountName,
-        [string]$Reason = "",
-        [switch]$Notify
-    )
-
-    $srcFile = Join-Path $accDir "$targetAccountName.json"
-    if (-not (Test-Path $srcFile)) {
-        Write-RotatorLog "Loi: File token $srcFile khong ton tai."
-        return $false
-    }
-
-    try {
-        $tokenContent = [System.IO.File]::ReadAllText($srcFile, [System.Text.Encoding]::UTF8)
-        
-        [WinCred]::Write("gemini:antigravity", "antigravity", $tokenContent) | Out-Null
-        [System.IO.File]::WriteAllText($geminiTokenPath, $tokenContent, [System.Text.Encoding]::UTF8)
-        Set-Content -Path $activeFile -Value $targetAccountName -Encoding ASCII
-        
-        Write-RotatorLog ">>> DA TU DONG XOAY SANG TAI KHOAN: [$targetAccountName]"
-        $script:LastSwitchTime = Get-Date
-        
-        if ($Notify) {
-            $qInfo = Get-AccountQuotaInfo -tokenFilePath $srcFile
-            $pct5h = if ($qInfo) { [Math]::Round($qInfo.Gemini5H * 100) } else { 100 }
-            $pctWeekly = if ($qInfo) { [Math]::Round($qInfo.GeminiWeekly * 100) } else { 100 }
-            $nowStr = (Get-Date).ToString("HH:mm:ss")
-            $toastTitle = "$([char]0x26A1) T$([char]0x1EF1) $([char]0x0110)$([char]0x1ED9)ng Xoay Quota [$nowStr]"
-            $toastMsg = if ($Reason) {
-                "$Reason`n$([char]0x2192) $([char]0x0110)$([char]0x00E3) n$([char]0x1EA1)p: $targetAccountName (5H: $pct5h% | Tu$([char]0x1EA7)n: $pctWeekly%)`n$([char]0x23F0) L$([char]0x00FA)c: $nowStr - B$([char]0x1EA5)m F5 / Ctrl+R tr$([char]0x00EA)n IDE $([char]0x0111)$([char]0x1EC3) d$([char]0x00F9)ng ngay!"
-            } else {
-                "$([char]0x0110)$([char]0x00E3) k$([char]0x1EBF)t n$([char]0x1ED1)i: $targetAccountName (5H: $pct5h% | Tu$([char]0x1EA7)n: $pctWeekly%)`n$([char]0x23F0) L$([char]0x00FA)c: $nowStr - B$([char]0x1EA5)m F5 / Ctrl+R tr$([char]0x00EA)n IDE!"
-            }
-            Send-ToastNotification -Title $toastTitle -Message $toastMsg
-            try { [System.Media.SystemSounds]::Asterisk.Play() } catch {}
-        }
-        
-        return $true
-    } catch {
-        Write-RotatorLog "Loi khi chuyen doi tai khoan: $_"
-        return $false
-    }
-}
-
-function Get-CurrentActiveName {
-    # 1. Thu tim account khop voi token dang luu trong Windows Credential Manager
-    try {
-        $cred = [WinCred]::Read("gemini:antigravity")
-        if ($cred) {
-            $cJson = $cred | ConvertFrom-Json
-            $activeRt = $cJson.token.refresh_token
-            if (-not $activeRt) { $activeRt = $cJson.refresh_token }
-
-            if ($activeRt) {
-                foreach ($f in (Get-ChildItem $accDir -Filter "*.json" -ErrorAction SilentlyContinue)) {
-                    $fJson = Get-Content $f.FullName -Raw | ConvertFrom-Json
-                    $fRt = $fJson.token.refresh_token
-                    if (-not $fRt) { $fRt = $fJson.refresh_token }
-                    if ($fRt -eq $activeRt) {
-                        Set-Content -Path $activeFile -Value $f.BaseName -Encoding ASCII -ErrorAction SilentlyContinue
-                        return $f.BaseName
-                    }
-                }
-            }
-        }
-    } catch {}
-
-    # 2. Fallback sang file current_active.txt
-    if (Test-Path $activeFile) {
-        $name = (Get-Content $activeFile -Raw).Trim()
-        if ($name -ne "") { return $name }
-    }
-    return ""
-}
-
-$script:LastSwitchTime = [DateTime]::MinValue
-
-function Invoke-AutoRotationCheck {
-    $accounts = Get-AllAccountsQuota
-    if ($accounts.Count -eq 0) {
-        Write-RotatorLog "Chua co tai khoan nao trong danh sach $accDir."
-        return
-    }
-
-    # 1. Phat hien tai khoan dang thuc su bi tieu thu Quota
-    $detectedActive = $null
-    foreach ($acc in $accounts) {
-        if ($script:PreviousQuotas.ContainsKey($acc.AccountName)) {
-            $prev = $script:PreviousQuotas[$acc.AccountName]
-            # Neu quota giam, tai khoan nay chac chan dang duoc Antigravity IDE su dung
-            if ($acc.Gemini5H -lt ($prev - 0.005)) {
-                $detectedActive = $acc.AccountName
-                Write-RotatorLog "-> Phat hien Quota [$($acc.AccountName)] giam: $([Math]::Round($prev * 100))% -> $([Math]::Round($acc.Gemini5H * 100))% (Dang duoc IDE su dung)"
-            }
-        }
-        $script:PreviousQuotas[$acc.AccountName] = $acc.Gemini5H
-    }
-
-    if ($detectedActive) {
-        $detObj = $accounts | Where-Object { $_.AccountName -eq $detectedActive }
-        if ($detObj -and $detObj.Gemini5H -gt $MinQuotaThreshold) {
-            $currentActive = $detectedActive
-            Set-Content -Path $activeFile -Value $detectedActive -Encoding ASCII -ErrorAction SilentlyContinue
-        } else {
-            $currentActive = Get-CurrentActiveName
-        }
-    } else {
-        $currentActive = Get-CurrentActiveName
-    }
-
-    $currentObj = $accounts | Where-Object { $_.AccountName -eq $currentActive }
-
-    Write-RotatorLog "=== KIEM TRA QUOTA (Threshold: 5H <= $([Math]::Round($MinQuotaThreshold * 100))% | Tuan <= $([Math]::Round($MinWeeklyThreshold * 100))%) ==="
-    foreach ($acc in $accounts) {
-        $pct5h = [Math]::Round($acc.Gemini5H * 100)
-        $pctWeekly = [Math]::Round($acc.GeminiWeekly * 100)
-        $tag = if ($acc.AccountName -eq $currentActive) { "[DANG DUNG]" } else { "           " }
-        Write-RotatorLog "$tag $($acc.AccountName) ($($acc.Email)) -> 5H: $pct5h% | Tuan: $pctWeekly%"
-    }
-
-    # Kiem tra dieu kien xoay:
-    $needSwitch = $false
-    $switchReason = ""
-    if (-not $currentObj -or -not $currentObj.Success) {
-        $needSwitch = $true
-        $switchReason = "Kh$([char]0x00F4)ng c$([char]0x00F3) t$([char]0x00E0)i kho$([char]0x1EA3)n k$([char]0x1EBF)t n$([char]0x1ED1)i h$([char]0x1EE3)p l$([char]0x1EC7)"
-        Write-RotatorLog "Chua co tai khoan active hop le. Dang tu dong chon tai khoan..."
-    } elseif ($currentObj.Gemini5H -le $MinQuotaThreshold) {
-        $needSwitch = $true
-        $switchReason = "T$([char]0x00E0)i kho$([char]0x1EA3)n c$([char]0x0169) [$currentActive] s$([char]0x1EAF)p h$([char]0x1EBF)t Quota 5H ($([Math]::Round($currentObj.Gemini5H * 100))%)"
-        Write-RotatorLog "CANH BAO SO: Tai khoan [$currentActive] con $([Math]::Round($currentObj.Gemini5H * 100))% Quota 5H (<= $([Math]::Round($MinQuotaThreshold * 100))%). Chuyen ngay de khong bi can ve 0%!"
-    } elseif ($currentObj.GeminiWeekly -le $MinWeeklyThreshold) {
-        $needSwitch = $true
-        $switchReason = "T$([char]0x00E0)i kho$([char]0x1EA3)n c$([char]0x0169) [$currentActive] s$([char]0x1EAF)p h$([char]0x1EBF)t Quota Tu$([char]0x1EA7)n ($([Math]::Round($currentObj.GeminiWeekly * 100))%)"
-        Write-RotatorLog "CANH BAO: Tai khoan [$currentActive] con $([Math]::Round($currentObj.GeminiWeekly * 100))% Quota Tuan (<= $([Math]::Round($MinWeeklyThreshold * 100))%). Chuyen sang tai khoan moi!"
-    }
-
-    if ($needSwitch) {
-        $secondsSinceLast = ((Get-Date) - $script:LastSwitchTime).TotalSeconds
-        if ($secondsSinceLast -lt 60) {
-            Write-RotatorLog "Dang trong thoi gian cooldown ($([Math]::Round($secondsSinceLast))s < 60s). Bo qua de tranh spam thong bao."
-            return
-        }
-
-        # Tim cac tai khoan con doi dao quota: 5H > 15% VA Weekly > 10%
-        $eligible = $accounts | Where-Object { 
-            $_.Success -and 
-            $_.Gemini5H -gt 0.15 -and 
-            $_.GeminiWeekly -gt 0.10 -and
-            $_.AccountName -ne $currentActive
-        }
-
-        # Uu tien sap xep: 5H cao nhat, sau do den Weekly cao nhat
-        $bestAccount = $eligible | Sort-Object -Property @{ Expression = "Gemini5H"; Descending = $true }, @{ Expression = "GeminiWeekly"; Descending = $true } | Select-Object -First 1
-
-        if ($bestAccount) {
-            $p5 = [Math]::Round($bestAccount.Gemini5H * 100)
-            $pw = [Math]::Round($bestAccount.GeminiWeekly * 100)
-            Write-RotatorLog "-> KICH HOAT XOAY SANG: [$($bestAccount.AccountName)] voi 5H: $p5% | Tuan: $pw%"
-            Switch-ActiveAccount -targetAccountName $bestAccount.AccountName -Reason $switchReason -Notify | Out-Null
-        } else {
-            Write-RotatorLog "Tat ca tai khoan trong pool deu duoi nguong. Dang tim tai khoan co 5H cao nhat..."
-            $fallback = $accounts | Where-Object { $_.Success -and $_.AccountName -ne $currentActive } | Sort-Object -Property @{ Expression = "Gemini5H"; Descending = $true } | Select-Object -First 1
-            if ($fallback) {
-                Write-RotatorLog "Fallback sang: [$($fallback.AccountName)]"
-                Switch-ActiveAccount -targetAccountName $fallback.AccountName -Reason $switchReason -Notify | Out-Null
-            }
-        }
-    } else {
-        $p5 = [Math]::Round($currentObj.Gemini5H * 100)
-        $pw = [Math]::Round($currentObj.GeminiWeekly * 100)
-        Write-RotatorLog "Tai khoan [$currentActive] con du an toan (5H: $p5% > $([Math]::Round($MinQuotaThreshold * 100))% | Tuan: $pw% > $([Math]::Round($MinWeeklyThreshold * 100))%). Giu nguyen."
-    }
-}
-
-if ($RunOnce) {
+if ($Reconcile) {
+    Repair-RotationState
+} elseif ($RunOnce) {
     Invoke-AutoRotationCheck
 } elseif ($Daemon) {
-    $myPid = $PID
-    $otherProcs = Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%AutoRotator.ps1%Daemon%'" -ErrorAction SilentlyContinue | Where-Object { $_.ProcessId -ne $myPid }
-    if ($otherProcs -and $otherProcs.Count -gt 0) {
-        $otherPid = ($otherProcs | Select-Object -First 1).ProcessId
-        Write-RotatorLog "Tien trinh AutoRotator Daemon da ton tai (PID: $otherPid). Thoat tien trinh duplicate."
-        exit 0
-    }
-    Write-RotatorLog "KHOI CHAY ANTIGRAVITY AUTO-ROTATOR DAEMON (Chu ky: ${IntervalSeconds}s | Nguong: $([Math]::Round($MinQuotaThreshold * 100))%)"
-    while ($true) {
-        try {
-            Invoke-AutoRotationCheck
-        } catch {
-            Write-RotatorLog "Loi ngoai le trong chu trinh: $_"
+    $daemonMutex = [Threading.Mutex]::new($false, 'Local\AntigravityAutoHub.Daemon')
+    $daemonLocked = $false
+    try {
+        try { $daemonLocked = $daemonMutex.WaitOne(0) }
+        catch [Threading.AbandonedMutexException] { $daemonLocked = $true }
+        if (-not $daemonLocked) { return }
+        Write-RotatorLog "Daemon started; interval ${IntervalSeconds}s after each completed scan."
+        while ($true) {
+            try { Invoke-AutoRotationCheck }
+            catch { Write-RotatorLog 'Scan failed; retrying on next interval.' }
+            Start-Sleep -Seconds $IntervalSeconds
         }
-        Start-Sleep -Seconds $IntervalSeconds
+    } finally {
+        if ($daemonLocked) { $daemonMutex.ReleaseMutex() }
+        $daemonMutex.Dispose()
     }
 }

@@ -1,0 +1,12 @@
+name: Windows validation
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PowerShell 5.1 and WPF
+        shell: powershell
+        run: powershell.exe -NoProfile -STA -File tests/Validate.ps1
