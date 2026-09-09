@@ -416,6 +416,7 @@ $btnAddAccount.Add_Click({
         $authUrl += "&prompt=select_account"
     }
 
+    $script:loginStartTime = Get-Date
     Start-Process $authUrl
 
     if ($script:activeLoginTimer) { $script:activeLoginTimer.Stop() }
@@ -429,12 +430,19 @@ $btnAddAccount.Add_Click({
         $tempPath = $script:activeLoginTempDir
         if (-not $tempPath) { return }
         $tFile = Join-Path $tempPath "jetski-standalone-oauth-token"
+        $foundTokenFile = $null
 
         if (Test-Path $tFile) {
+            $foundTokenFile = $tFile
+        } elseif ((Test-Path $geminiTokenPath) -and ((Get-Item $geminiTokenPath).LastWriteTime -ge $script:loginStartTime)) {
+            $foundTokenFile = $geminiTokenPath
+        }
+
+        if ($foundTokenFile) {
             $script:activeLoginTimer.Stop()
             try {
                 Start-Sleep -Milliseconds 500
-                $rawToken = [System.IO.File]::ReadAllText($tFile, [System.Text.Encoding]::UTF8)
+                $rawToken = [System.IO.File]::ReadAllText($foundTokenFile, [System.Text.Encoding]::UTF8)
                 $j = $rawToken | ConvertFrom-Json
                 $rt = $j.token.refresh_token
                 if (-not $rt) { $rt = $j.refresh_token }
