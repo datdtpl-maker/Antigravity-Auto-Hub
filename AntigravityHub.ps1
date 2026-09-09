@@ -368,15 +368,109 @@ $btnAddAccount.Add_Click({
         [System.IO.File]::WriteAllText((Join-Path $accDir "$activeName.json"), $currentCred, [System.Text.Encoding]::UTF8)
     }
 
-    $msg = "C$([char]0x00E1)c b$([char]0x01B0)$([char]0x1EDB)c th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i:`n`n1. H$([char]0x1EC7) th$([char]0x1ED1)ng $([char]0x0111)$([char]0x00E3) sao l$([char]0x01B0)u t$([char]0x00E0)i kho$([char]0x1EA3)n hi$([char]0x1EC7)n t$([char]0x1EA1)i an to$([char]0x00E0)n.`n2. Antigravity IDE s$([char]0x1EBD) y$([char]0x00EA)u c$([char]0x1EA7)u b$([char]0x1EA1)n $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i.`n3. $([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p xong tr$([char]0x00EA)n IDE, quay l$([char]0x1EA1)i Hub n$([char]0x00E0)y v$([char]0x00E0) b$([char]0x1EA5)m 'L$([char]0x01B0)u Acc N$([char]0x00E0)y'.`n`nB$([char]0x1EA1)n c$([char]0x00F3) mu$([char]0x1ED1)n b$([char]0x1EAF)t $([char]0x0111)$([char]0x1EA7)u $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i ngay b$([char]0x00E2)y gi$([char]0x1EDD) kh$([char]0x00F4)ng?"
-    $confirm = [System.Windows.MessageBox]::Show($msg, "Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Information)
-    if ($confirm -eq [System.Windows.MessageBoxResult]::Yes) {
-        [WinCred]::Delete("gemini:antigravity") | Out-Null
-        Remove-Item $geminiTokenPath -Force -ErrorAction SilentlyContinue
-        Set-Content -Path $activeFile -Value "Dang_Login_Acc_Moi" -Encoding ASCII
-        Load-Accounts-UI
-        [System.Windows.MessageBox]::Show("S$([char]0x1EB5)n s$([char]0x00E0)ng! H$([char]0x00E3)y quay l$([char]0x1EA1)i Antigravity IDE v$([char]0x00E0) ti$([char]0x1EBF)n h$([char]0x00E0)nh $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i.`n`n$([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p xong, m$([char]0x1EDF) l$([char]0x1EA1)i Hub n$([char]0x00E0)y v$([char]0x00E0) b$([char]0x1EA5)m 'L$([char]0x01B0)u Acc N$([char]0x00E0)y'.", "$([char]0x0110)ang $([char]0x0110)$([char]0x0103)ng Nh$([char]0x1EAD)p", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+    $msg = "B$([char]0x1EA1)n c$([char]0x00F3) mu$([char]0x1ED1)n m$([char]0x1EDF) tr$([char]0x00EC)nh duy$([char]0x1EC7)t $([char]0x0111)$([char]0x1EC3) $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i ngay b$([char]0x00E2)y gi$([char]0x1EDD) kh$([char]0x00F4)ng?`n`n(Sau khi b$([char]0x1EA5)m Yes, tr$([char]0x00EC)nh duy$([char]0x1EC7)t s$([char]0x1EBD) t$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng b$([char]0x1EAD)t l$([char]0x00EA)n trang $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p Google v$([char]0x00E0) t$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng l$([char]0x01B0)u khi b$([char]0x1EA1)n ch$([char]0x1ECD)n xong)"
+    $confirm = [System.Windows.MessageBox]::Show($msg, "Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
+    if ($confirm -ne [System.Windows.MessageBoxResult]::Yes) { return }
+
+    $lsPath = "C:\Users\datdt\AppData\Local\Programs\Antigravity\resources\bin\language_server.exe"
+    if (-not (Test-Path $lsPath)) {
+        [System.Windows.MessageBox]::Show("Kh$([char]0x00F4)ng t$([char]0x00EC)m th$([char]0x1EA5)y language_server.exe t$([char]0x1EA1)i $lsPath", "L$([char]0x1ED7)i", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+        return
     }
+
+    $tempDir = Join-Path $env:TEMP ("ag_login_" + (Get-Random))
+    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+    $script:activeLoginTempDir = $tempDir
+
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $lsPath
+    $psi.Arguments = "--standalone --gemini_dir=""$tempDir"" --app_data_dir=""app"""
+    $psi.RedirectStandardError = $true
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $script:activeLoginProc = $proc
+    $authUrl = $null
+    $start = Get-Date
+
+    while ((-not $proc.HasExited) -and ((Get-Date) - $start).TotalSeconds -lt 15) {
+        $line = $proc.StandardError.ReadLine()
+        if ($line -match "(https://accounts\.google\.com/o/oauth2/auth[^\s]+)") {
+            $authUrl = $matches[1]
+            break
+        }
+    }
+
+    if (-not $authUrl) {
+        if ($proc -and -not $proc.HasExited) { $proc.Kill() }
+        Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        [System.Windows.MessageBox]::Show("Kh$([char]0x00F4)ng th$([char]0x1EC3) t$([char]0x1EA1)o $([char]0x0111)$([char]0x01B0)$([char]0x1EDD)ng d$([char]0x1EAB)n $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p Google. Vui l$([char]0x00F2)ng th$([char]0x1EED) l$([char]0x1EA1)i!", "L$([char]0x1ED7)i", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+        return
+    }
+
+    Start-Process $authUrl
+
+    if ($script:activeLoginTimer) { $script:activeLoginTimer.Stop() }
+    $loginTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $loginTimer.Interval = [TimeSpan]::FromSeconds(1)
+    $script:activeLoginTimer = $loginTimer
+    $script:loginElapsed = 0
+
+    $loginTimer.Add_Tick({
+        $script:loginElapsed += 1
+        $tempPath = $script:activeLoginTempDir
+        if (-not $tempPath) { return }
+        $tFile = Join-Path $tempPath "jetski-standalone-oauth-token"
+
+        if (Test-Path $tFile) {
+            $script:activeLoginTimer.Stop()
+            try {
+                Start-Sleep -Milliseconds 500
+                $rawToken = [System.IO.File]::ReadAllText($tFile, [System.Text.Encoding]::UTF8)
+                $j = $rawToken | ConvertFrom-Json
+                $rt = $j.token.refresh_token
+                if (-not $rt) { $rt = $j.refresh_token }
+
+                $email = ""
+                if ($rt) {
+                    $tResp = Invoke-RestMethod -Uri "https://oauth2.googleapis.com/token" -Method Post -Body @{
+                        client_id = $script:GoogleClientId
+                        client_secret = $script:GoogleClientSecret
+                        refresh_token = $rt
+                        grant_type = "refresh_token"
+                    } -TimeoutSec 10
+                    $uinfo = Invoke-RestMethod -Uri "https://www.googleapis.com/oauth2/v3/userinfo" -Headers @{ Authorization = "Bearer $($tResp.access_token)" } -TimeoutSec 5
+                    $email = $uinfo.email
+                }
+
+                $cleanName = if ($email) { $email.Split('@')[0] } else { "GoogleAccount_" + (Get-Date -Format "HHmmss") }
+                $targetFile = Join-Path $accDir "$cleanName.json"
+                [System.IO.File]::WriteAllText($targetFile, $rawToken, [System.Text.Encoding]::UTF8)
+                [WinCred]::Write("gemini:antigravity", "antigravity", $rawToken) | Out-Null
+                [System.IO.File]::WriteAllText($geminiTokenPath, $rawToken, [System.Text.Encoding]::UTF8)
+                Set-Content -Path $activeFile -Value $cleanName -Encoding ASCII
+
+                Load-Accounts-UI
+
+                $toastTitle = "$([char]0x26A1) Antigravity Auto-Hub"
+                $toastMsg = "$([char]0x0110)$([char]0x00E3) th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i: $cleanName ($email)"
+                Send-ToastNotification -Title $toastTitle -Message $toastMsg
+
+                [System.Windows.MessageBox]::Show("$([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p th$([char]0x00E0)nh c$([char]0x00F4)ng!`n`n$([char]0x0110)$([char]0x00E3) t$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n: $cleanName ($email) v$([char]0x00E0)o kho xoay tua.", "Th$([char]0x00E0)nh C$([char]0x00F4)ng", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+            } catch {
+                [System.Windows.MessageBox]::Show("L$([char]0x1ED7)i khi l$([char]0x01B0)u token: $_", "L$([char]0x1ED7)i", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+            } finally {
+                if ($script:activeLoginProc -and -not $script:activeLoginProc.HasExited) { $script:activeLoginProc.Kill() }
+                Remove-Item $script:activeLoginTempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        } elseif ($script:loginElapsed -ge 180) {
+            $script:activeLoginTimer.Stop()
+            if ($script:activeLoginProc -and -not $script:activeLoginProc.HasExited) { $script:activeLoginProc.Kill() }
+            Remove-Item $script:activeLoginTempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    })
+    $loginTimer.Start()
 })
 
 Load-Accounts-UI
