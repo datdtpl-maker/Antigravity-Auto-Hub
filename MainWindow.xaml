@@ -159,10 +159,10 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Tr&#x1EA1;ng th&#xE1;i H&#x1EC7; th&#x1ED1;ng: " Foreground="#A6ADC8" FontSize="13" VerticalAlignment="Center"/>
                             <Border x:Name="BadgeDaemon" Background="#1E382B" CornerRadius="4" Padding="8,2" Margin="4,0,0,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="TxtDaemonStatus" Text="&#x25CF; T&#x1EF1; &#x111;&#x1ED9;ng &#x111;i&#x1EC1;u ph&#x1ED1;i ng&#x1EA7;m (60s)" Foreground="#A6E3A1" FontSize="12" FontWeight="Bold"/>
+                                <TextBlock x:Name="TxtDaemonStatus" Text="&#x25CF; T&#x1EF1; &#x111;&#x1ED9;ng &#x111;i&#x1EC1;u ph&#x1ED1;i ng&#x1EA7;m (25s)" Foreground="#A6E3A1" FontSize="12" FontWeight="Bold"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="H&#x1EC7; th&#x1ED1;ng t&#x1EF1; &#x111;&#x1ED9;ng theo d&#xF5;i Quota 5H v&#xE0; t&#x1EF1; chuy&#x1EC3;n t&#xE0;i kho&#x1EA3;n khi c&#x1EA1;n quota."
+                        <TextBlock Text="H&#x1EC7; th&#x1ED1;ng t&#x1EF1; &#x111;&#x1ED9;ng theo d&#xF5;i Quota 5H &amp; Tu&#x1EA7;n, t&#x1EF1; chuy&#x1EC3;n khi c&#xF2;n 10-12% &#x111;&#x1EC3; kh&#xF4;ng b&#x1ECB; c&#x1EA1;n."
                                    Foreground="#6C7086" FontSize="11" Margin="0,5,0,0"/>
                     </StackPanel>
 
