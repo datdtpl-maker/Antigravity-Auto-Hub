@@ -124,6 +124,14 @@ function Set-StoredCredential {
 
 function Get-StoredCredential { [WinCred]::Read('gemini:antigravity') }
 
+function Get-CredentialEmail {
+    param([string]$Content)
+    $token=Get-FreshToken ($Content | ConvertFrom-Json)
+    $user=Invoke-RestMethod 'https://www.googleapis.com/oauth2/v3/userinfo' -Headers @{Authorization="Bearer $($token.token.access_token)"} -TimeoutSec 10 -ErrorAction Stop
+    if (-not $user.email) { throw 'Rollback credential identity unavailable.' }
+    return $user.email
+}
+
 function Restore-StoredCredential {
     param([string]$Content)
     if (-not [WinCred]::Write('gemini:antigravity','antigravity',$Content)) { throw 'Rollback failed.' }
@@ -132,6 +140,7 @@ function Restore-StoredCredential {
 
 function Switch-ActiveAccount {
     param([string]$targetAccountName, [string]$Reason='', [switch]$Notify)
+    $ErrorActionPreference='Stop'
     $mutex = [Threading.Mutex]::new($false, 'Local\AntigravityAutoHub.Switch')
     $locked=$false; $written=$false; $oldCredential=$null; $oldFile=$null; $oldEmail=''
     try {
@@ -159,6 +168,7 @@ function Switch-ActiveAccount {
         if ($runtime) { $oldEmail=$runtime.Email }
         $oldCredential=Get-StoredCredential
         if (-not $oldCredential) { throw 'Missing rollback credential.' }
+        if ($runtime -and (Get-CredentialEmail $oldCredential) -ne $oldEmail) { throw 'Stored credential does not match the runtime; reconcile before switching.' }
         if (Test-Path -LiteralPath $geminiTokenPath) { $oldFile=[IO.File]::ReadAllText($geminiTokenPath) }
         Set-RotationState 'Switching' $targetAccountName $quota.Email
         $written=$true

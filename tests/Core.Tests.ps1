@@ -29,6 +29,7 @@ function Get-RuntimeIdentity { $script:FixtureRuntime }
 function Get-RuntimeWindows { param($Runtime) @([pscustomobject]@{Safe=$script:SafeWindow}) }
 function Restore-RuntimeWindows { param($SavedWindows) $script:RestoredWindows++ }
 function Get-StoredCredential { 'old-fixture' }
+function Get-CredentialEmail { param($Content) $script:StoredEmail }
 function Set-StoredCredential { param($Content) $script:Writes++; if($script:FailWrite){throw 'fixture write failure'} }
 function Restore-StoredCredential { param($Content) $script:Rollbacks++ }
 function Restart-AntigravityRuntime { param($Runtime) $script:Restarts++ }
@@ -37,6 +38,7 @@ function Reset-Fixture {
     $script:FixtureRuntime=[pscustomobject]@{Email='old@example.test';Idle=$true;Runtimes=@([pscustomobject]@{ProcessId=0})}
     $script:Writes=0; $script:Rollbacks=0; $script:Restarts=0; $script:RestoredWindows=0
     $script:Verified=$true; $script:FailWrite=$false; $script:SafeWindow=$true
+    $script:StoredEmail='old@example.test'
     if (Test-Path -LiteralPath $stateFile) { Remove-Item -LiteralPath $stateFile }
     Write-AtomicText $geminiTokenPath 'old-fallback'
     Write-AtomicText $activeFile 'old-account'
@@ -66,4 +68,7 @@ Assert (Switch-ActiveAccount 'target') 'Closed IDE prepares account'
 Assert ((Read-RotationState).Status -eq 'Prepared' -and $script:Restarts -eq 0 -and (Get-Content $activeFile -Raw) -eq 'old-account') 'Prepared account is not reported as active'
 Reset-Fixture
 Assert (-not (Switch-ActiveAccount '../outside') -and $script:Writes -eq 0) 'Account path traversal rejected'
+Reset-Fixture
+$script:StoredEmail='different@example.test'
+Assert (-not (Switch-ActiveAccount 'target') -and $script:Writes -eq 0) 'Rollback credential must match runtime identity'
 if ($script:Failed) { throw "$script:Failed test(s) failed" }

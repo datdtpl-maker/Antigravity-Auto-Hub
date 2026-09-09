@@ -32,7 +32,7 @@ Không tìm thấy RPC thay token trong service descriptor đã kiểm tra. Có 
 
 ## Kiểm chứng và việc còn lại
 
-Xem README cho module, cấu hình DPAPI và lệnh kiểm tra. 25 kiểm thử mock + PowerShell 5.1 parser/ASCII + WPF XAML đã đạt. Đã đọc quota thật cả 5 tài khoản, runtime email và kiểm tra CDP.
+Xem README cho module, cấu hình DPAPI và lệnh kiểm tra. 26 kiểm thử mock + PowerShell 5.1 parser/ASCII + WPF XAML đã đạt. Đã đọc quota thật cả 5 tài khoản, runtime email và kiểm tra CDP.
 
 **Còn cần kiểm thử thực tế:** chuyển khi mọi agent idle, không có ô nhập đang chọn/nội dung chưa gửi; đối chiếu email trước/sau, URL và một lượt làm việc mới. Phiên nâng cấp không ép dừng tác vụ đang chạy để thực hiện bước này. Luồng thêm tài khoản tương tác chưa được kiểm thử lại.
 

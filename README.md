@@ -61,7 +61,7 @@ Lệnh chỉ bỏ trạng thái chờ khi email runtime khớp credential và t�
 powershell.exe -NoProfile -STA -File .\tests\Validate.ps1
 ```
 
-Kiểm tra cú pháp/ASCII PowerShell, nạp WPF XAML và 25 kiểm thử quyết định/giao dịch. Kiểm thử dùng file tạm trong `work/` và mock credential/process, không đổi tài khoản thật. GitHub Actions chạy cùng bộ kiểm tra trên Windows.
+Kiểm tra cú pháp/ASCII PowerShell, nạp WPF XAML và 26 kiểm thử quyết định/giao dịch. Kiểm thử dùng file tạm trong `work/` và mock credential/process, không đổi tài khoản thật. GitHub Actions chạy cùng bộ kiểm tra trên Windows.
 
 **Bằng chứng ngày 09/09/2026:** đọc được email runtime, trạng thái tác vụ, boolean ô nhập qua CDP và quota thật của 5 tài khoản. Chưa kiểm thử chuyển tài khoản thật xuyên suốt vì IDE có tác vụ hoạt động và cửa sổ chưa đạt điều kiện chuyển. Đăng nhập Google tương tác cũng chưa được kiểm thử lại trong phiên nâng cấp này. Không coi kiểm thử mock là bằng chứng chuyển thành công trên IDE thật.
 

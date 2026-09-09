@@ -367,7 +367,10 @@ function Complete-AccountLogin {
     if (-not $script:loginProtection) { return }
     try {
         if ($script:activeLoginTimer) { $script:activeLoginTimer.Stop() }
-        if ($script:activeLoginProc -and -not $script:activeLoginProc.HasExited) { $script:activeLoginProc.Kill() }
+        if ($script:activeLoginProc -and -not $script:activeLoginProc.HasExited) {
+            $script:activeLoginProc.Kill()
+            if (-not $script:activeLoginProc.WaitForExit(5000)) { throw 'Login helper did not exit.' }
+        }
         # The official helper can write the shared keyring despite its temporary gemini_dir.
         # Restore the pre-login selection while holding the same lock as the rotator.
         if ($script:loginOldCredential) { Restore-StoredCredential $script:loginOldCredential }
