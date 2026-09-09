@@ -136,7 +136,7 @@
                                    FontWeight="Bold"
                                    VerticalAlignment="Center"/>
                         <Border Background="#1E382B" CornerRadius="4" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="AUTO-PILOT K&#xCD;CH HO&#x1EA0;T" Foreground="#A6E3A1" FontSize="11" FontWeight="Bold"/>
+                            <TextBlock Text="XOAY KHI IDE R&#x1EA2;NH" Foreground="#A6E3A1" FontSize="11" FontWeight="Bold"/>
                         </Border>
                     </StackPanel>
 
@@ -162,7 +162,7 @@
                                 <TextBlock x:Name="TxtDaemonStatus" Text="&#x25CF; T&#x1EF1; &#x111;&#x1ED9;ng &#x111;i&#x1EC1;u ph&#x1ED1;i ng&#x1EA7;m (25s)" Foreground="#A6E3A1" FontSize="12" FontWeight="Bold"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="H&#x1EC7; th&#x1ED1;ng t&#x1EF1; &#x111;&#x1ED9;ng theo d&#xF5;i Quota 5H &amp; Tu&#x1EA7;n, t&#x1EF1; chuy&#x1EC3;n khi c&#xF2;n 10-12% &#x111;&#x1EC3; kh&#xF4;ng b&#x1ECB; c&#x1EA1;n."
+                        <TextBlock Text="Theo d&#xF5;i quota; ch&#x1EDD; t&#xE1;c v&#x1EE5; xong r&#x1ED3;i chuy&#x1EC3;n v&#xE0; x&#xE1;c minh t&#xE0;i kho&#x1EA3;n."
                                    Foreground="#6C7086" FontSize="11" Margin="0,5,0,0"/>
                     </StackPanel>
 

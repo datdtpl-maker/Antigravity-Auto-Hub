@@ -1,108 +1,79 @@
-# ⚡ Antigravity Auto-Rotation Hub (Auto-Pilot Multi-Account Quota Manager)
+# Antigravity Auto-Hub
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Release-v1.3.0-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
-  <img src="https://img.shields.io/badge/Antigravity_IDE-Native_Integration-4285F4?style=for-the-badge&logo=google&logoColor=white" />
-  <img src="https://img.shields.io/badge/Auto--Pilot-100%25_Background-10B981?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" />
-</p>
+Quản lý tài khoản Google và chuyển tài khoản khi quota thấp trên Windows. Tích hợp với **Antigravity Desktop 2.12.2** và Windows PowerShell 5.1.
 
-Hệ thống quản lý đa tài khoản Google và **tự động xoay tua hạn mức (Quota Auto-Pilot) 100% ngầm** dành riêng cho **Antigravity IDE** trên Windows.
+## Khả năng và giới hạn
 
----
+Hub kiểm tra quota, chờ tác vụ rảnh, nạp credential mới, khởi động lại **language_server do Antigravity quản lý**, khôi phục đường dẫn cửa sổ và xác minh email bằng API của phiên IDE mới. Không cần bấm F5 để áp dụng token.
 
-## 🌟 Tính Năng Nổi Bật (Phiên bản v1.3.0)
+Đây là chuyển tài khoản giữa các lượt làm việc, **không phải proxy cân bằng tải từng request**. Có khoảng nối lại khi tiến trình khởi động. Không bảo đảm quota luôn 100%, không bảo đảm prompt đang chạy tiếp tục bằng tài khoản khác, và không tự gửi lại prompt.
 
-* 🌐 **Thêm Tài Khoản 1-Click Trực Tiếp Qua Trình Duyệt (Direct Browser OAuth):**
-  * Không cần mở Antigravity IDE hay đăng nhập thủ công phức tạp.
-  * Chỉ cần bấm **`+ Thêm Tài Khoản Mới`**, trình duyệt tự động bật lên màn hình chọn tài khoản Google (`prompt=select_account`).
-  * Sau khi bấm chọn tài khoản, Tool Hub tự động bắt Token, tự nhận diện Email và lưu vào kho xoay tua ngay lập tức!
-* ⚡ **Xoay Sớm Thông Minh (Early Auto-Rotation - Không Bao Giờ Cạn 0%):**
-  * Tự động kích hoạt đổi tài khoản ngay khi Quota 5H còn **10% - 12%** (hoặc Quota Tuần $\le 8\%$).
-  * Tuyệt đối không để tài khoản rơi về 0%, bảo toàn trạng thái prompt mượt mà liên tục.
-* ⏱️ **Tần Suất Quét Siêu Tốc (Fast-Scan Cycle 25s):**
-  * Chu kỳ kiểm tra ngầm được rút ngắn xuống **25 giây/lần**, bắt kịp tốc độ prompting của các phiên chat cường độ cao.
-* 🧠 **Bộ Nhận Diện Tiêu Thụ Thực Tế (Smart Consumption Tracker):**
-  * Tự động phát hiện tài khoản nào đang thực sự bị trừ Quota trong Antigravity IDE qua từng chu kỳ để điều phối chuẩn xác 100%.
-* 🚀 **Tích hợp trực tiếp Antigravity IDE (Không cần mở nhiều Profile/Window):** Hoạt động ngay trên cửa sổ Antigravity IDE chính của bạn.
-* 🔔 **Thông báo Windows (Native Toast Notifications):**
-  * Tự động hiển thị banner thông báo nhỏ góc phải màn hình kèm âm thanh mỗi khi tài khoản được xoay ngầm:  
-    `⚡ Antigravity Auto-Hub: Đã kết nối tài khoản [tên_tài_khoản] (5H: 100% | Tuần: 100%)`.
-* 🤖 **Tương thích 100% Mô hình Mới:** Hỗ trợ đầy đủ các mô hình Gemini mới nhất (**Gemini 3.8 Flash**, **Gemini 3.7 Flash**, **Gemini Pro**).
-* 🔐 **Tích hợp Native Windows Credential Manager:** Đọc & nạp Token trực tiếp qua API bảo mật `advapi32.dll` (`gemini:antigravity`), tự động nhận diện Email Google khi đăng nhập.
-* 🎨 **Giao diện WPF Dark Mode Hiện Đại & Chuẩn Quốc Tế:** Hiển thị song song 2 thanh tiến trình Quota (5H & Tuần) cho từng tài khoản, 100% chuẩn mã hóa Unicode không bao giờ lỗi font chữ.
-* 📦 **1-Click Portable Setup:** Chỉ cần clone repo về bất kỳ thư mục nào trên máy mới và chạy `Setup-Install.bat`, hệ thống tự tạo Shortcut Desktop và kích hoạt Service khởi động cùng Windows.
-* 🔒 **Bảo mật Tuyệt đối:** Toàn bộ OAuth tokens và thông tin tài khoản được lưu cục bộ trên máy bạn và được cấu hình `.gitignore` loại trừ triệt để, không bao giờ bị đẩy lên GitHub.
+- Xoay khi quota Gemini 5H ≤ 12% hoặc tuần ≤ 8%.
+- Chọn tài khoản có 5H > 15% và tuần > 10%, ưu tiên quota cao nhất.
+- Quota thiếu, lỗi mạng, email không rõ hoặc pool cạn: giữ nguyên.
+- Tác vụ đang chạy, trạng thái không nhận diện được, ô nhập đang được chọn hoặc có nội dung chưa gửi: hoãn chuyển.
+- Xác minh PID, cổng localhost, phiên bản và email; không suy đoán qua biến động quota.
+- Chỉ hỗ trợ một runtime desktop. Phiên bản khác 2.12.2 hoặc thiếu CDP: hoãn chuyển.
+- Cooldown 120 giây lưu trên đĩa; mutex chung giữa daemon, chuyển thủ công và thêm tài khoản.
+- Ghi credential thất bại hoặc không xác minh được phiên mới: cố khôi phục credential cũ và chuyển trạng thái `NeedsAttention`.
 
----
+Kiểm tra trạng thái rảnh và dừng tiến trình không phải một thao tác nguyên tử của IDE. Tránh bắt đầu tác vụ mới trong khoảng chuyển. Khôi phục URL không sao lưu mọi trạng thái trong RAM; cơ chế giữ bản nháp là hoãn chuyển, không sao chép nội dung.
 
-## 📂 Cấu Trúc Dự Án (Project Architecture)
+## Cài đặt và OAuth
 
-```text
-Antigravity-Auto-Hub/
-├── accounts/                  # Thư mục lưu token các tài khoản Google (Được bảo vệ bởi .gitignore)
-├── MainWindow.xaml            # Giao diện WPF Dark Mode (Chuẩn XML Entity Unicode)
-├── AntigravityHub.ps1         # Bảng điều khiển quản trị tài khoản & Quota Dashboard
-├── AutoRotator.ps1            # Engine theo dõi Quota thời gian thực & Auto-Rotation ngầm
-├── launch-switcher.vbs        # VBScript khởi chạy giao diện hoàn toàn ẩn
-├── Chuyen-Doi-Tai-Khoan.bat   # Phím tắt mở Hub nhanh
-├── Setup-Install.bat          # Kịch bản cài đặt 1-Click cho máy mới
-├── Setup.ps1                  # Trình thiết lập Shortcut & Startup Service
-├── .gitignore                 # Chặn rò rỉ token OAuth & logs
-└── README.md                  # Hướng dẫn sử dụng chi tiết
-```
-
----
-
-## 🚀 Hướng Dẫn Cài Đặt & Sử Dụng Trên Máy Mới
-
-### 1. Clone Kho Mã Nguồn
 ```powershell
 git clone https://github.com/datdtpl-maker/Antigravity-Auto-Hub.git
 cd Antigravity-Auto-Hub
+.\Setup-Install.bat
 ```
 
-### 2. Cài Đặt 1-Click
-* Nhấp đúp chuột vào file **`Setup-Install.bat`**.
-* Hệ thống sẽ tự động:
-  1. Tạo phím tắt **`Antigravity Auto-Hub`** ngoài màn hình Desktop.
-  2. Đăng ký Service ngầm **`AutoRotator.ps1`** vào thư mục Windows Startup để tự khởi động cùng máy.
-  3. Mở ngay giao diện điều khiển.
+Setup tạo shortcut Desktop/Startup và chạy daemon ẩn. Chu kỳ nghỉ mặc định 25 giây **sau mỗi lần quét**; thời gian gọi API cộng thêm vào chu kỳ.
 
----
+Không còn client secret XOR trong source. Dùng OAuth client tương thích với refresh token:
 
-## 💡 Cách Thêm Tài Khoản Google Vào Kho Xoay Tua (1-Click Tự Động)
-
-1. Mở **`Antigravity Auto-Hub`** ngoài Desktop $\rightarrow$ Bấm **`+ Thêm Tài Khoản Mới`** $\rightarrow$ Bấm **`Yes`**.
-2. **Trình duyệt (Chrome / Edge) sẽ tự động bật lên** bảng chọn tài khoản Google.
-3. Bạn nhấp chọn tài khoản Google muốn thêm (hoặc đăng nhập tài khoản mới).
-4. **Hoàn tất!** Tool sẽ tự động nhận diện Email, tải token và tạo thẻ lưu vào kho xoay tua ngay lập tức mà không cần làm gì thêm!
-
----
-
-## ⚙️ Cơ Chế Tự Động Xoay Tua (Auto-Pilot Logic)
-
-```mermaid
-graph TD
-    A[AutoRotator Daemon Chạy Ngầm 60s/chu kỳ] --> B[Gọi API Google Quota: retrieveUserQuotaSummary]
-    B --> C{Tài khoản Active: Quota 5H <= 10% HOẶC Quota Tuần <= 5%?}
-    C -->|Không| D[Tiếp tục giữ phiên làm việc hiện tại]
-    C -->|Có| E[Tìm tài khoản thỏa mãn: 5H > 10% VÀ Tuần > 5%]
-    E --> F[Inject Token vào Windows Credential Manager: gemini:antigravity]
-    F --> G[Cập nhật jetski-standalone-oauth-token]
-    G --> H[Bắn Windows Toast Notification góc phải màn hình]
-    H --> I[Antigravity IDE tự động sử dụng Quota mới mà không gián đoạn]
+```powershell
+powershell.exe -NoProfile -File .\Configure-OAuth.ps1
 ```
 
----
+Script hỏi client ID/secret, lưu `oauth.local.clixml` bằng Windows DPAPI cho người dùng Windows hiện tại. Khởi động lại Hub/daemon sau khi cấu hình. Có thể dùng biến môi trường `ANTIGRAVITY_GOOGLE_CLIENT_ID` và `ANTIGRAVITY_GOOGLE_CLIENT_SECRET`. Không đưa secret lên dòng lệnh, Git hoặc log.
 
-## 🔒 Bảo Mật & Quyền Riêng Tư
+Trên máy đã nâng cấp, cấu hình cũ được chuyển sang file DPAPI cục bộ. Clone mới không chứa cấu hình này. Refresh token đã cấp cho một client không thể dùng tùy ý với client khác.
 
-* Dự án **KHÔNG** gửi bất kỳ dữ liệu hay Token nào về máy chủ bên thứ ba. Toàn bộ Token chỉ giao tiếp trực tiếp với máy chủ chính thức của Google (`oauth2.googleapis.com` & `cloudcode-pa.googleapis.com`).
-* File `.gitignore` đã loại trừ toàn bộ thư mục `accounts/*.json`, `current_active.txt` và `*.log`. Bạn có thể yên tâm chia sẻ hoặc commit mã nguồn lên GitHub công khai.
+## Sử dụng
 
----
+Mở `Chuyen-Doi-Tai-Khoan.bat`. Thêm tài khoản qua trình đăng nhập Google có sẵn hoặc “Lưu Acc Này”. Tài khoản mới được lưu vào pool; bước thêm tài khoản khôi phục lựa chọn credential trước khi đăng nhập và không tự khởi động lại IDE. Không đóng cưỡng bức Hub trong lúc đăng nhập.
 
-## 📄 Bản Quyền
-Phát hành theo giấy phép [MIT License](LICENSE).
+“Chuyển Thủ Công” cũng kiểm tra quota, tác vụ và bản nháp. Khi IDE đóng, tài khoản chỉ được đánh dấu `Prepared` cho lần khởi động sau, chưa được báo đang kết nối. “Quét Quota” cập nhật trạng thái và thử đối chiếu giao dịch cần kiểm tra.
+
+### Khôi phục sau chuyển không thành công
+
+Xem `rotator.log` và `rotation-state.json`. Nếu credential đã khôi phục nhưng runtime còn dùng tài khoản khác, hoàn tất công việc rồi đóng/mở Antigravity. Bấm “Quét Quota”, hoặc chạy:
+
+```powershell
+powershell.exe -NoProfile -File .\AutoRotator.ps1 -Reconcile
+```
+
+Lệnh chỉ bỏ trạng thái chờ khi email runtime khớp credential và tài khoản trong pool. Không ép đổi tài khoản, khởi động lại hoặc bỏ qua xác minh.
+
+## Kiểm tra
+
+```powershell
+powershell.exe -NoProfile -STA -File .\tests\Validate.ps1
+```
+
+Kiểm tra cú pháp/ASCII PowerShell, nạp WPF XAML và 25 kiểm thử quyết định/giao dịch. Kiểm thử dùng file tạm trong `work/` và mock credential/process, không đổi tài khoản thật. GitHub Actions chạy cùng bộ kiểm tra trên Windows.
+
+**Bằng chứng ngày 09/09/2026:** đọc được email runtime, trạng thái tác vụ, boolean ô nhập qua CDP và quota thật của 5 tài khoản. Chưa kiểm thử chuyển tài khoản thật xuyên suốt vì IDE có tác vụ hoạt động và cửa sổ chưa đạt điều kiện chuyển. Đăng nhập Google tương tác cũng chưa được kiểm thử lại trong phiên nâng cấp này. Không coi kiểm thử mock là bằng chứng chuyển thành công trên IDE thật.
+
+## Cấu trúc
+
+| File | Vai trò |
+|---|---|
+| `AutoRotator.ps1` | Cấu hình, Credential Manager, toast, daemon singleton |
+| `RotationCore.ps1` | Quota, lựa chọn, giao dịch, rollback, đối chiếu trạng thái |
+| `RuntimeBridge.ps1` | API localhost, runtime, CDP, chờ rảnh và nối lại |
+| `AntigravityHub.ps1`, `MainWindow.xaml` | Hub tài khoản |
+| `Configure-OAuth.ps1` | Cấu hình OAuth được DPAPI mã hóa |
+| `tests/` | Kiểm thử Windows |
+
+`accounts/`, cấu hình OAuth, log, trạng thái và `work/` được loại khỏi Git. Token tài khoản vẫn là file cục bộ: bảo vệ tài khoản Windows và thư mục này. Loại secret khỏi source hiện tại không xóa lịch sử Git cũ.
