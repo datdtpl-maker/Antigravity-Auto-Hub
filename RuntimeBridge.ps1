@@ -1,6 +1,8 @@
 # Local Antigravity 2.x language-server bridge. Never exports CSRF or token data.
 if (-not ('AntigravityLocalRpc' -as [type])) {
-    Add-Type @"
+    # .NET 8 marks HttpWebRequest obsolete; retain its per-request certificate callback
+    # for Windows PowerShell 5.1 compatibility without changing global TLS validation.
+    Add-Type -IgnoreWarnings -WarningAction SilentlyContinue @"
 using System;
 using System.IO;
 using System.Net;
