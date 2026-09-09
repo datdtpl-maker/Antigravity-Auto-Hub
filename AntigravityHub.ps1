@@ -394,11 +394,15 @@ $btnAddAccount.Add_Click({
     $authUrl = $null
     $start = Get-Date
 
+    $urlPattern = "https://accounts\.google\.com/o/oauth2/auth\?[a-zA-Z0-9\-._~%!$&'()*+,;=:@/?]+"
     while ((-not $proc.HasExited) -and ((Get-Date) - $start).TotalSeconds -lt 15) {
         $line = $proc.StandardError.ReadLine()
-        if ($line -match "(https://accounts\.google\.com/o/oauth2/auth[^\s]+)") {
-            $authUrl = $matches[1]
-            break
+        if ($line) {
+            $match = [regex]::Match($line, $urlPattern)
+            if ($match.Success) {
+                $authUrl = $match.Value
+                break
+            }
         }
     }
 
