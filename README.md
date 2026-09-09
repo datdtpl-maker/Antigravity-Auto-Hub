@@ -1,7 +1,7 @@
 # ⚡ Antigravity Auto-Rotation Hub (Auto-Pilot Multi-Account Quota Manager)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v1.1.0-blue?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Release-v1.2.0-blue?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
   <img src="https://img.shields.io/badge/Antigravity_IDE-Native_Integration-4285F4?style=for-the-badge&logo=google&logoColor=white" />
   <img src="https://img.shields.io/badge/Auto--Pilot-100%25_Background-10B981?style=for-the-badge" />
@@ -12,12 +12,16 @@ Hệ thống quản lý đa tài khoản Google và **tự động xoay tua hạ
 
 ---
 
-## 🌟 Tính Năng Nổi Bật (Phiên bản v1.1.0)
+## 🌟 Tính Năng Nổi Bật (Phiên bản v1.2.0)
 
-* 🚀 **Tích hợp trực tiếp Antigravity IDE (Không cần mở nhiều Profile/Window):** Hoạt động ngay trên cửa sổ Antigravity IDE chính của bạn, hoàn toàn không cần mở nhiều cửa sổ hay cài đặt phức tạp.
-* 🛡️ **Bảo vệ Kép Hạn Mức (Dual Quota Protection - 5H & Weekly):**
-  * Theo dõi song song cả 2 hạn mức thời gian thực: **Gemini 5H** và **Gemini Tuần (Weekly)**.
-  * Tự động xoay tài khoản khi: $\text{Quota 5H} \le 10\%$ **HOẶC** $\text{Quota Tuần} \le 5\%$, triệt tiêu hoàn toàn rủi ro bị khóa prompt do cạn hạn mức tuần.
+* ⚡ **Xoay Sớm Thông Minh (Early Auto-Rotation - Không Bao Giờ Cạn 0%):**
+  * Tự động kích hoạt đổi tài khoản ngay khi Quota 5H còn **10% - 12%** (hoặc Quota Tuần $\le 8\%$).
+  * Tuyệt đối không để tài khoản rơi về 0%, bảo toàn trạng thái prompt mượt mà liên tục.
+* ⏱️ **Tần Suất Quét Siêu Tốc (Fast-Scan Cycle 25s):**
+  * Chu kỳ kiểm tra ngầm được rút ngắn từ 60 giây xuống **25 giây/lần**, bắt kịp tốc độ prompting của các phiên chat cường độ cao.
+* 🧠 **Bộ Nhận Diện Tiêu Thụ Thực Tế (Smart Consumption Tracker):**
+  * Tự động phát hiện tài khoản nào đang thực sự bị trừ Quota trong Antigravity IDE qua từng chu kỳ để điều phối chuẩn xác 100%.
+* 🚀 **Tích hợp trực tiếp Antigravity IDE (Không cần mở nhiều Profile/Window):** Hoạt động ngay trên cửa sổ Antigravity IDE chính của bạn.
 * 🔔 **Thông báo Windows (Native Toast Notifications):**
   * Sử dụng WinRT Toast Notifications của Windows 10/11.
   * Tự động hiển thị banner thông báo nhỏ góc phải màn hình kèm âm thanh mỗi khi tài khoản được xoay ngầm:  

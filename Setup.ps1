@@ -44,7 +44,7 @@ $startupLnk = Join-Path $startupPath "AntigravityAutoRotator.lnk"
 $rotatorScript = Join-Path $baseDir "AutoRotator.ps1"
 $sShortcut = $wsh.CreateShortcut($startupLnk)
 $sShortcut.TargetPath = "powershell.exe"
-$sShortcut.Arguments = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File ""$rotatorScript"" -Daemon -IntervalSeconds 60"
+$sShortcut.Arguments = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File ""$rotatorScript"" -Daemon -IntervalSeconds 25"
 $sShortcut.WorkingDirectory = $baseDir
 $sShortcut.Description = "Antigravity Auto-Rotator Daemon Service"
 if ($hasIde) {
