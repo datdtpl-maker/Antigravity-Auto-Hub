@@ -422,10 +422,11 @@ function Invoke-AutoRotationCheck {
 if ($RunOnce) {
     Invoke-AutoRotationCheck
 } elseif ($Daemon) {
-    $createdNew = $false
-    $script:daemonMutex = New-Object System.Threading.Mutex($true, "Global\AntigravityAutoRotatorMutex", [ref]$createdNew)
-    if (-not $createdNew) {
-        Write-RotatorLog "Tien trinh AutoRotator Daemon da ton tai. Thoat tien trinh duplicate."
+    $myPid = $PID
+    $otherProcs = Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%AutoRotator.ps1%Daemon%'" -ErrorAction SilentlyContinue | Where-Object { $_.ProcessId -ne $myPid }
+    if ($otherProcs -and $otherProcs.Count -gt 0) {
+        $otherPid = ($otherProcs | Select-Object -First 1).ProcessId
+        Write-RotatorLog "Tien trinh AutoRotator Daemon da ton tai (PID: $otherPid). Thoat tien trinh duplicate."
         exit 0
     }
     Write-RotatorLog "KHOI CHAY ANTIGRAVITY AUTO-ROTATOR DAEMON (Chu ky: ${IntervalSeconds}s | Nguong: $([Math]::Round($MinQuotaThreshold * 100))%)"
