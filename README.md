@@ -1,6 +1,6 @@
 # Antigravity Auto-Hub
 
-Quản lý tài khoản Google và chuyển tài khoản khi quota thấp trên Windows. Tích hợp với **Antigravity Desktop 2.12.2** và Windows PowerShell 5.1.
+Quản lý tài khoản Google và chuyển tài khoản khi quota thấp trên Windows. Tích hợp với **Antigravity Desktop 2.12.2 / 2.13.0** và Windows PowerShell 5.1.
 
 ## Khả năng và giới hạn
 
@@ -13,7 +13,7 @@ Hub kiểm tra quota, chờ tác vụ rảnh, nạp credential mới, khởi đ�
 - Quota thiếu, lỗi mạng, email không rõ hoặc pool cạn: giữ nguyên.
 - Tác vụ đang chạy, trạng thái không nhận diện được, ô nhập đang được chọn hoặc có nội dung chưa gửi: hoãn chuyển.
 - Xác minh PID, cổng localhost, phiên bản và email; không suy đoán qua biến động quota.
-- Chỉ hỗ trợ một runtime desktop. Phiên bản khác 2.12.2 hoặc thiếu CDP: hoãn chuyển.
+- Chỉ hỗ trợ một runtime desktop. Phiên bản ngoài 2.12.2 / 2.13.0 hoặc thiếu CDP: hoãn chuyển. Hub hiển thị rõ phiên bản chưa hỗ trợ.
 - Cooldown 120 giây lưu trên đĩa; mutex chung giữa daemon, chuyển thủ công và thêm tài khoản.
 - Ghi credential thất bại hoặc không xác minh được phiên mới: cố khôi phục credential cũ và chuyển trạng thái `NeedsAttention`.
 
@@ -61,7 +61,7 @@ Lệnh chỉ bỏ trạng thái chờ khi email runtime khớp credential và t�
 powershell.exe -NoProfile -STA -File .\tests\Validate.ps1
 ```
 
-Kiểm tra cú pháp/ASCII PowerShell, nạp WPF XAML và 26 kiểm thử quyết định/giao dịch. Kiểm thử dùng file tạm trong `work/` và mock credential/process, không đổi tài khoản thật. GitHub Actions chạy cùng bộ kiểm tra trên Windows.
+Kiểm tra cú pháp/ASCII PowerShell, nạp WPF XAML và 35 kiểm thử quyết định/giao dịch/tương thích phiên bản. Kiểm thử dùng file tạm trong `work/` và mock credential/process, không đổi tài khoản thật. GitHub Actions chạy cùng bộ kiểm tra trên Windows.
 
 **Bằng chứng ngày 09/09/2026:** đọc được email runtime, trạng thái tác vụ, boolean ô nhập qua CDP và quota thật của 5 tài khoản. Chưa kiểm thử chuyển tài khoản thật xuyên suốt vì IDE có tác vụ hoạt động và cửa sổ chưa đạt điều kiện chuyển. Đăng nhập Google tương tác cũng chưa được kiểm thử lại trong phiên nâng cấp này. Không coi kiểm thử mock là bằng chứng chuyển thành công trên IDE thật.
 
