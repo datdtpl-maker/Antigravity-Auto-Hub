@@ -18,3 +18,5 @@ Write-Host 'PASS: ASCII, PowerShell syntax and WPF XAML load'
 if ($LASTEXITCODE) { throw 'Rotation tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Core.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Core tests failed' }
+& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Compatibility.Tests.ps1')
+if ($LASTEXITCODE) { throw 'Compatibility tests failed' }

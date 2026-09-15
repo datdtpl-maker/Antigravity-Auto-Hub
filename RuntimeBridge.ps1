@@ -62,6 +62,25 @@ public static class AntigravityLocalRpc {
 "@
 }
 
+function Assert-AntigravityVersion {
+    param([string]$Version)
+    $parsed=$null
+    if ([version]::TryParse($Version, [ref]$parsed) -and
+        $parsed.ToString(3) -in @('2.12.2','2.13.0') -and $parsed.Revision -in @(-1,0)) { return }
+    $error=[InvalidOperationException]::new('Antigravity version has not been validated for supervised restart.')
+    $error.Data['HubReason']='UnsupportedVersion'
+    $error.Data['Version']=if ($parsed) { $parsed.ToString() } else { '?' }
+    throw $error
+}
+
+function Get-RuntimeFailureMessage {
+    param($Failure)
+    if ($Failure.Exception.Data['HubReason'] -eq 'UnsupportedVersion') {
+        return "IDE $($Failure.Exception.Data['Version']): ch$([char]0x01B0)a h$([char]0x1ED7) tr$([char]0x1EE3)"
+    }
+    return "Kh$([char]0x00F4)ng k$([char]0x1EBF)t n$([char]0x1ED1)i $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c IDE"
+}
+
 function Get-AntigravityRuntime {
     $parents = @(Get-CimInstance Win32_Process -Filter "Name = 'Antigravity.exe'" -ErrorAction Stop)
     $servers = @(Get-CimInstance Win32_Process -Filter "Name = 'language_server.exe'" -ErrorAction Stop)
@@ -71,9 +90,7 @@ function Get-AntigravityRuntime {
         if (-not $parent -or -not $parent.ExecutablePath) { continue }
         $expected = Join-Path (Split-Path $parent.ExecutablePath) 'resources\bin\language_server.exe'
         if ($server.ExecutablePath -ne $expected -or $server.CommandLine -notmatch '--standalone') { continue }
-        if ((Get-Item -LiteralPath $parent.ExecutablePath).VersionInfo.ProductVersion -notlike '2.12.2*') {
-            throw 'This Antigravity version has not been validated for supervised restart.'
-        }
+        Assert-AntigravityVersion (Get-Item -LiteralPath $parent.ExecutablePath).VersionInfo.ProductVersion
         $csrfMatch = [regex]::Match($server.CommandLine, '--csrf_token(?:=|\s+)"?([^\s"]+)')
         if (-not $csrfMatch.Success) { throw 'Runtime CSRF unavailable; rotation deferred.' }
         $ports = @(Get-NetTCPConnection -OwningProcess $server.ProcessId -State Listen -ErrorAction Stop |
@@ -133,7 +150,7 @@ function Restart-AntigravityRuntime {
     if (-not (Test-RuntimeIdle $Runtime)) { throw 'An agent became active; switch deferred.' }
     $windows = @(Get-RuntimeWindows $Runtime)
     if (@($windows | Where-Object { -not $_.Safe }).Count) { throw 'An editor is active; switch deferred.' }
-    # Antigravity 2.12.2 supervises this child and reconnects its windows itself.
+    # Validated desktop versions supervise this child and reconnect their windows.
     Stop-Process -Id $Runtime.ProcessId -ErrorAction Stop
 }
 

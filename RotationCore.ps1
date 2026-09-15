@@ -219,7 +219,7 @@ function Invoke-AutoRotationCheck {
         return
     }
     if ($state.UpdatedAt -and ([datetime]::UtcNow - [datetime]$state.UpdatedAt).TotalSeconds -lt 120) { return }
-    try { $runtime=Get-RuntimeIdentity } catch { Write-RotatorLog 'Runtime unavailable; no rotation.'; return }
+    try { $runtime=Get-RuntimeIdentity } catch { Write-RotatorLog (Get-RuntimeFailureMessage $_); return }
     if (-not $runtime) { Write-RotatorLog 'IDE is closed; monitoring only.'; return }
     $accounts = @(Get-AllAccountsQuota)
     $current = $accounts | Where-Object { $_.Email -eq $runtime.Email } | Select-Object -First 1

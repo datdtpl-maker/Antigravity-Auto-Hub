@@ -1,5 +1,9 @@
 # Bàn giao Antigravity Auto-Hub — 09/09/2026
 
+## Cập nhật 15/09/2026
+
+Antigravity cập nhật lên 2.13.0.0 khiến whitelist 2.12.2 cũ chặn nhận diện, dù quota vẫn đọc được. Đã kiểm tra code giám sát/khởi động lại language server và nối lại cửa sổ trong app.asar 2.13.0; bổ sung phiên bản này vào danh sách hỗ trợ chính xác, không mở cho mọi bản tương lai. API thật xác minh được email và trạng thái idle. Hub/log hiển thị rõ phiên bản chưa hỗ trợ thay vì nuốt lỗi. Bộ kiểm thử local tăng lên 35, parser/ASCII và WPF đều đạt. Chưa dùng việc nhận diện thành công làm bằng chứng chuyển tài khoản thật.
+
 Repo: `D:\AntigravityAccounts`, remote `https://github.com/datdtpl-maker/Antigravity-Auto-Hub.git`, nhánh `main`. Bản trước sửa: `1c1b2de`. Tài liệu cũ nằm trong lịch sử Git tại commit đó.
 
 ## Kết luận về bản cũ

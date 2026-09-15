@@ -73,12 +73,15 @@ function Load-Accounts-UI {
     
     $accounts = @(Get-AllAccountsQuota)
     $runtime = $null
-    try { $runtime = Get-RuntimeIdentity } catch { }
+    $runtimeFailure = $null
+    try { $runtime = Get-RuntimeIdentity } catch { $runtimeFailure = Get-RuntimeFailureMessage $_ }
     $activeEmail = if ($runtime) { $runtime.Email } else { '' }
     $state = Read-RotationState
     $daemonText = $window.FindName('TxtDaemonStatus')
     if ($state.Status -in @('Switching','NeedsAttention')) {
         $daemonText.Text = "C$([char]0x1EA7)n ki$([char]0x1EC3)m tra chuy$([char]0x1EC3)n t$([char]0x00E0)i kho$([char]0x1EA3)n"
+    } elseif ($runtimeFailure) {
+        $daemonText.Text = $runtimeFailure
     } elseif (-not $runtime) {
         $daemonText.Text = "Ch$([char]0x01B0)a x$([char]0x00E1)c minh IDE"
     } elseif (-not (Get-DaemonStatus)) {
