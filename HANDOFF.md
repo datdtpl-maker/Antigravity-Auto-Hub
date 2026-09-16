@@ -1,5 +1,9 @@
 # Bàn giao Antigravity Auto-Hub — 09/09/2026
 
+## MCP — 16/09/2026
+
+Thêm `AntigravityMcp.ps1` (stdio JSON-RPC, mặc định chỉ đọc) và `Configure-Mcp.ps1` (sinh cấu hình portable). Các mutation yêu cầu `-AllowSwitch`, vẫn đi qua engine/khóa giao dịch hiện có. Tài liệu `MCP.md` mô tả cách clone, OAuth, cấu hình và giới hạn. Chỉ điều khiển Desktop cục bộ; chưa có adapter đổi token của một MCP Antigravity độc lập. Chưa kiểm chứng OmniLogin; không quảng bá cấu hình stdio là endpoint HTTP hay proxy model. `tests/Mcp.Tests.ps1` kiểm thử giao thức, bảo mật projection và tiến trình stdio từ thư mục không có credential.
+
 ## Cập nhật 15/09/2026
 
 Antigravity cập nhật lên 2.13.0.0 khiến whitelist 2.12.2 cũ chặn nhận diện, dù quota vẫn đọc được. Đã kiểm tra code giám sát/khởi động lại language server và nối lại cửa sổ trong app.asar 2.13.0; bổ sung phiên bản này vào danh sách hỗ trợ chính xác, không mở cho mọi bản tương lai. API thật xác minh được email và trạng thái idle. Hub/log hiển thị rõ phiên bản chưa hỗ trợ thay vì nuốt lỗi. Bộ kiểm thử local tăng lên 35, parser/ASCII và WPF đều đạt. Chưa dùng việc nhận diện thành công làm bằng chứng chuyển tài khoản thật.
