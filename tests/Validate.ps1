@@ -20,3 +20,5 @@ if ($LASTEXITCODE) { throw 'Rotation tests failed' }
 if ($LASTEXITCODE) { throw 'Core tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Compatibility.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Compatibility tests failed' }
+& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Mcp.Tests.ps1')
+if ($LASTEXITCODE) { throw 'MCP tests failed' }

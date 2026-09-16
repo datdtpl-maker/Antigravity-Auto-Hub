@@ -41,6 +41,12 @@ Trên máy đã nâng cấp, cấu hình cũ được chuyển sang file DPAPI c
 
 ## Sử dụng
 
+### Kết nối MCP / OmniLogin
+
+Repo có MCP server stdio để client trên Windows đọc quota và yêu cầu engine xoay tài khoản **Antigravity Desktop cục bộ**. Chạy `powershell.exe -NoProfile -File .\Configure-Mcp.ps1 -AllowSwitch` để sinh cấu hình theo đúng đường dẫn clone. Xem [MCP.md](MCP.md) cho cài đặt và cách kết nối.
+
+Không tự đổi credential của MCP Antigravity độc lập hoặc dịch vụ từ xa. OmniLogin phải hỗ trợ MCP stdio; chưa kiểm chứng kết nối OmniLogin thực tế. Tài khoản/OAuth do mỗi người dùng tự cấu hình sau khi clone.
+
 Mở `Chuyen-Doi-Tai-Khoan.bat`. Thêm tài khoản qua trình đăng nhập Google có sẵn hoặc “Lưu Acc Này”. Tài khoản mới được lưu vào pool; bước thêm tài khoản khôi phục lựa chọn credential trước khi đăng nhập và không tự khởi động lại IDE. Không đóng cưỡng bức Hub trong lúc đăng nhập.
 
 “Chuyển Thủ Công” cũng kiểm tra quota, tác vụ và bản nháp. Khi IDE đóng, tài khoản chỉ được đánh dấu `Prepared` cho lần khởi động sau, chưa được báo đang kết nối. “Quét Quota” cập nhật trạng thái và thử đối chiếu giao dịch cần kiểm tra.
@@ -61,7 +67,7 @@ Lệnh chỉ bỏ trạng thái chờ khi email runtime khớp credential và t�
 powershell.exe -NoProfile -STA -File .\tests\Validate.ps1
 ```
 
-Kiểm tra cú pháp/ASCII PowerShell, nạp WPF XAML và 35 kiểm thử quyết định/giao dịch/tương thích phiên bản. Kiểm thử dùng file tạm trong `work/` và mock credential/process, không đổi tài khoản thật. GitHub Actions chạy cùng bộ kiểm tra trên Windows.
+Kiểm tra cú pháp/ASCII PowerShell, nạp WPF XAML và 61 kiểm thử: 35 kiểm thử engine/tương thích phiên bản cùng 26 kiểm thử MCP. Kiểm thử dùng file tạm trong `work/` và mock credential/process, không đổi tài khoản thật. Workflow GitHub Actions chạy cùng bộ kiểm tra trên Windows khi code được đẩy lên.
 
 **Bằng chứng ngày 09/09/2026:** đọc được email runtime, trạng thái tác vụ, boolean ô nhập qua CDP và quota thật của 5 tài khoản. Chưa kiểm thử chuyển tài khoản thật xuyên suốt vì IDE có tác vụ hoạt động và cửa sổ chưa đạt điều kiện chuyển. Đăng nhập Google tương tác cũng chưa được kiểm thử lại trong phiên nâng cấp này. Không coi kiểm thử mock là bằng chứng chuyển thành công trên IDE thật.
 
@@ -74,6 +80,7 @@ Kiểm tra cú pháp/ASCII PowerShell, nạp WPF XAML và 35 kiểm thử quyế
 | `RuntimeBridge.ps1` | API localhost, runtime, CDP, chờ rảnh và nối lại |
 | `AntigravityHub.ps1`, `MainWindow.xaml` | Hub tài khoản |
 | `Configure-OAuth.ps1` | Cấu hình OAuth được DPAPI mã hóa |
+| `AntigravityMcp.ps1`, `Configure-Mcp.ps1` | MCP stdio và sinh cấu hình theo đường dẫn clone |
 | `tests/` | Kiểm thử Windows |
 
 `accounts/`, cấu hình OAuth, log, trạng thái và `work/` được loại khỏi Git. Token tài khoản vẫn là file cục bộ: bảo vệ tài khoản Windows và thư mục này. Loại secret khỏi source hiện tại không xóa lịch sử Git cũ.
