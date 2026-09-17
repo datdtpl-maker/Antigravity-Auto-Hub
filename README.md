@@ -6,7 +6,7 @@
 
 Auto-Hub cung cấp giao diện WPF, tiến trình giám sát nền và MCP server chạy cục bộ. Engine chỉ thực hiện chuyển khi xác định được tài khoản đang dùng, quota đạt điều kiện và phiên làm việc cho phép chuyển.
 
-> **Trạng thái kiểm chứng:** 66 kiểm thử tự động đã đạt trên máy phát triển; bản MCP trước đó đạt 61 kiểm thử trên CI Windows. Đã đọc được quota, danh tính phiên Antigravity và trạng thái qua MCP thật. Chưa kiểm chứng chuyển tài khoản thật xuyên suốt hoặc tích hợp OmniLogin thực tế. Xem [Kiểm thử và mức độ kiểm chứng](#kiểm-thử-và-mức-độ-kiểm-chứng).
+> **Trạng thái kiểm chứng:** 69 kiểm thử tự động đã đạt trên máy phát triển; bản hỗ trợ 2.14.0 đạt 66 kiểm thử trên CI Windows. Đã đọc được quota, danh tính phiên Antigravity và trạng thái qua MCP thật. Chưa kiểm chứng chuyển tài khoản thật xuyên suốt hoặc tích hợp OmniLogin thực tế. Xem [Kiểm thử và mức độ kiểm chứng](#kiểm-thử-và-mức-độ-kiểm-chứng).
 
 ## Mục lục
 
@@ -218,17 +218,18 @@ Source hiện tại không chứa client secret dùng sẵn. Việc loại secre
 powershell.exe -NoProfile -STA -File .\tests\Validate.ps1
 ```
 
-Bộ kiểm tra gồm cú pháp và ASCII của script PowerShell, nạp WPF XAML, cùng **66 kiểm thử**:
+Bộ kiểm tra gồm cú pháp và ASCII của script PowerShell, nạp WPF XAML, cùng **69 kiểm thử**:
 
 - **40 kiểm thử engine và tương thích:** quota, điều kiện xoay, rollback, trạng thái, phiên bản.
+- **3 kiểm thử trạng thái daemon:** nhận diện khi có 0, 1 hoặc 2 tiến trình trên PowerShell 5.1.
 - **26 kiểm thử MCP:** giao thức, quyền chỉ đọc, validation, lọc dữ liệu nhạy cảm, UTF-8 BOM và tiến trình stdio thật từ thư mục không có credential.
 
 Workflow [Windows validation](.github/workflows/validate.yml) chạy cùng bộ kiểm tra khi push hoặc mở pull request. Các thao tác chuyển trong kiểm thử dùng mock, không thay tài khoản thật.
 
 | Hạng mục | Bằng chứng hiện có |
 | --- | --- |
-| Kiểm thử local | 66 kiểm thử đạt ngày 17/09/2026, bao gồm tương thích 2.14.0 |
-| CI Windows | 61 kiểm thử đạt tại bản MCP ngày 16/09/2026; bản sửa 2.14.0 chưa chạy CI |
+| Kiểm thử local | 69 kiểm thử đạt ngày 17/09/2026, bao gồm tương thích 2.14.0 và trạng thái daemon |
+| CI Windows | 66 kiểm thử đạt tại commit `2130406`; bản sửa nhãn daemon chưa chạy CI |
 | Quota Google và email runtime | Đã đọc được trên máy phát triển |
 | Trạng thái tác vụ và kiểm tra ô nhập qua CDP | Đã truy vấn trên runtime thật |
 | MCP `antigravity_status` qua stdio | Đã đọc được runtime thật ở chế độ chỉ đọc |
