@@ -18,7 +18,7 @@ if (-not (Test-Path $accDir)) {
 . $rotatorScript
 
 function Get-DaemonStatus {
-    $procs = Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%AutoRotator.ps1%Daemon%'" -ErrorAction SilentlyContinue
+    $procs = @(Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%AutoRotator.ps1%Daemon%'" -ErrorAction SilentlyContinue)
     return ($procs.Count -gt 0)
 }
 
