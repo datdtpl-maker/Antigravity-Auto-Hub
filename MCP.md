@@ -19,7 +19,7 @@ powershell.exe -NoProfile -File .\Configure-OAuth.ps1
 .\Setup-Install.bat
 ```
 
-1. Cài Antigravity Desktop bản được hỗ trợ: 2.12.2 hoặc 2.13.0.
+1. Cài Antigravity Desktop bản được hỗ trợ: 2.12.2, 2.13.0 hoặc 2.14.0 (bao gồm hậu tố `.0`).
 2. Cấu hình OAuth client tương thích với refresh token của bạn. Không dùng credential của tác giả repo.
 3. Mở Hub, đăng nhập và lưu các tài khoản Google vào pool trên máy bạn.
 4. Để Antigravity Desktop đang mở. Không dùng phiên bản không hỗ trợ hoặc nhiều runtime đồng thời.
