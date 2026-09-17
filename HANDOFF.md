@@ -1,5 +1,13 @@
 # Bàn giao Antigravity Auto-Hub — 09/09/2026
 
+## Tương thích Antigravity 2.14.0 — 17/09/2026
+
+Sửa lỗi `IDE 2.14.0.0: chưa hỗ trợ` bằng cách thêm chính xác 2.14.0 và 2.14.0.0 vào whitelist. `dist/languageServer.js` và `dist/main.js` trong app.asar đang cài không đổi so với bản trích xuất 2.13.0 trước đó. Vẫn chặn các bản chưa xác minh như 2.14.1 hoặc revision khác 0.
+
+Bộ kiểm tra local đạt 66/66, gồm parser/ASCII và nạp WPF. API thật đọc được email, trạng thái idle và CDP trả về trạng thái ô nhập không an toàn để chuyển. Không ép chuyển tài khoản; chưa kiểm chứng chuyển thật xuyên suốt. Bản sửa này chưa chạy CI.
+
+Đã đóng Hub bình thường và nạp lại Hub/daemon; xác minh mỗi loại chỉ có một tiến trình. Log chu kỳ mới lúc 09:25:37 đọc được quota tài khoản active: 5H=60%, week=75%, không còn bị chặn bởi phiên bản 2.14.0.0.
+
 ## MCP — 16/09/2026
 
 Thêm `AntigravityMcp.ps1` (stdio JSON-RPC, mặc định chỉ đọc) và `Configure-Mcp.ps1` (sinh cấu hình portable). Các mutation yêu cầu `-AllowSwitch`, vẫn đi qua engine/khóa giao dịch hiện có. Tài liệu `MCP.md` mô tả cách clone, OAuth, cấu hình và giới hạn. Chỉ điều khiển Desktop cục bộ; chưa có adapter đổi token của một MCP Antigravity độc lập. Chưa kiểm chứng OmniLogin; không quảng bá cấu hình stdio là endpoint HTTP hay proxy model. `tests/Mcp.Tests.ps1` kiểm thử giao thức, bảo mật projection và tiến trình stdio từ thư mục không có credential.

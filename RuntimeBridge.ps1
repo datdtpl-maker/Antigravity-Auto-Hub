@@ -66,7 +66,7 @@ function Assert-AntigravityVersion {
     param([string]$Version)
     $parsed=$null
     if ([version]::TryParse($Version, [ref]$parsed) -and
-        $parsed.ToString(3) -in @('2.12.2','2.13.0') -and $parsed.Revision -in @(-1,0)) { return }
+        $parsed.ToString(3) -in @('2.12.2','2.13.0','2.14.0') -and $parsed.Revision -in @(-1,0)) { return }
     $error=[InvalidOperationException]::new('Antigravity version has not been validated for supervised restart.')
     $error.Data['HubReason']='UnsupportedVersion'
     $error.Data['Version']=if ($parsed) { $parsed.ToString() } else { '?' }
