@@ -1,5 +1,13 @@
 # Bàn giao Antigravity Auto-Hub — 09/09/2026
 
+## Tương thích Antigravity 2.15.1 — 23/09/2026
+
+Tái hiện lỗi `IDE 2.15.1.0: chưa hỗ trợ` trên bản cài thực tế. Đối chiếu `dist/languageServer.js` và `dist/main.js` từ app.asar 2.15.1 với bản trích xuất 2.14.0: nội dung không đổi sau chuẩn hóa xuống dòng. Bổ sung chính xác 2.15.1/2.15.1.0; vẫn chặn bản chưa kiểm tra như 2.15.0.0, 2.15.1.1 và 2.15.2.0.
+
+Kiểm thử tương thích thất bại trước sửa, đạt sau sửa. Bộ kiểm tra local đạt 74/74, parser/ASCII và WPF đạt. API thật xác minh được danh tính một runtime, trạng thái idle và CDP trả về `Safe=True`. Chưa thực hiện chuyển tài khoản thật xuyên suốt; bản sửa chưa chạy CI.
+
+Đã nạp lại Hub/daemon, xác minh mỗi loại có một tiến trình. Log chu kỳ mới lúc 10:11:51 nhận diện tài khoản active và đọc quota 5H=100%, week=100%; không còn bị chặn ở bước kiểm tra phiên bản.
+
 ## Sửa nhãn daemon — 17/09/2026
 
 Hub báo `Daemon chưa chạy` dù tiến trình nền vẫn quét quota. Nguyên nhân: khi truy vấn CIM chỉ trả một tiến trình, đối tượng đơn không có `.Count` trên Windows PowerShell 5.1. `Get-DaemonStatus` được sửa để luôn dùng mảng trước khi đếm. Kiểm thử hồi quy dùng đối tượng CIM thật trong bộ giả lập truy vấn, kiểm tra 0/1/2 tiến trình; trường hợp 1 thất bại trước sửa và đạt sau sửa. Bộ kiểm tra local đạt 69/69; kiểm tra trên daemon đang chạy trả về `True`.
