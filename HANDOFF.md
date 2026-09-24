@@ -1,5 +1,11 @@
 # Bàn giao Antigravity Auto-Hub — 09/09/2026
 
+## Tự thích ứng phiên bản — 24/09/2026
+
+Lỗi `IDE 2.16.0.0: chưa hỗ trợ` được tái hiện. Không tiếp tục thêm whitelist thủ công: Hub giờ đọc `resources/app.asar`, kiểm tra các năng lực `startAndMonitorLanguageServer`, `killLanguageServer`, `getLsProcess`, `LS_BINARY`, `onPortChanged` và cơ chế `window-all-closed`. Phiên bản 2.x từ 2.12 trở lên được nhận khi các năng lực này còn nguyên; revision khác 0, major khác 2 hoặc app.asar thiếu cấu trúc sẽ bị từ chối an toàn.
+
+App.asar 2.16.0 có thay đổi WSL nhưng vẫn giữ hợp đồng restart cần thiết. Kiểm tra local xác nhận 2.16.0.0, email runtime, trạng thái idle và CDP. Bộ kiểm tra đạt 73/73 trên máy có IDE; CI sẽ bỏ qua riêng kiểm tra runtime cục bộ. Cơ chế này tự thích ứng theo năng lực, nhưng không thể tự sửa một thay đổi giao thức/đăng nhập hoàn toàn mới; khi đó Hub sẽ báo cần cập nhật adapter thay vì tự chuyển thiếu kiểm chứng.
+
 ## Tương thích Antigravity 2.15.1 — 23/09/2026
 
 Tái hiện lỗi `IDE 2.15.1.0: chưa hỗ trợ` trên bản cài thực tế. Đối chiếu `dist/languageServer.js` và `dist/main.js` từ app.asar 2.15.1 với bản trích xuất 2.14.0: nội dung không đổi sau chuẩn hóa xuống dòng. Bổ sung chính xác 2.15.1/2.15.1.0; vẫn chặn bản chưa kiểm tra như 2.15.0.0, 2.15.1.1 và 2.15.2.0.

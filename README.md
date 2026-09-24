@@ -6,7 +6,7 @@
 
 Auto-Hub cung cấp giao diện WPF, tiến trình giám sát nền và MCP server chạy cục bộ. Engine chỉ thực hiện chuyển khi xác định được tài khoản đang dùng, quota đạt điều kiện và phiên làm việc cho phép chuyển.
 
-> **Trạng thái kiểm chứng:** 74 kiểm thử tự động đã đạt trên máy phát triển; bản sửa nhãn daemon trước đó đạt 69 kiểm thử trên CI Windows. Đã đọc được quota, danh tính phiên Antigravity và trạng thái qua MCP thật. Chưa kiểm chứng chuyển tài khoản thật xuyên suốt hoặc tích hợp OmniLogin thực tế. Xem [Kiểm thử và mức độ kiểm chứng](#kiểm-thử-và-mức-độ-kiểm-chứng).
+> **Trạng thái kiểm chứng:** Bộ kiểm tra local đạt 73 mục PASS, gồm kiểm tra cú pháp/WPF và bản IDE đang cài. Hub kiểm tra các tên hàm liên quan trong `app.asar` để tự nhận bản 2.x mới. Đây là kiểm tra sơ bộ, không chứng minh hành vi của các hàm không đổi; không bảo đảm tương thích mọi cập nhật tương lai. Chưa kiểm chứng chuyển tài khoản thật xuyên suốt hoặc tích hợp OmniLogin thực tế.
 
 ## Mục lục
 
@@ -36,7 +36,7 @@ Auto-Hub cung cấp giao diện WPF, tiến trình giám sát nền và MCP serv
 | --- | --- |
 | Hệ điều hành | Windows, chạy dưới người dùng đang sử dụng Antigravity |
 | PowerShell | Windows PowerShell 5.1 (`powershell.exe`) |
-| Antigravity Desktop | Phiên bản được chấp nhận: **2.12.2 / 2.13.0 / 2.14.0 / 2.15.1**, bao gồm hậu tố `.0` |
+| Antigravity Desktop | Antigravity **2.x từ 2.12 trở lên**; Hub tự xác minh năng lực trong `app.asar` trước khi chuyển |
 | Phiên làm việc | Một runtime Desktop cục bộ; API nội bộ và CDP phải truy cập được |
 | Tài khoản | Tài khoản Google đăng nhập hợp lệ, được lưu vào pool trên máy |
 | OAuth | Client ID/secret tương thích với refresh token của các tài khoản |
@@ -218,9 +218,9 @@ Source hiện tại không chứa client secret dùng sẵn. Việc loại secre
 powershell.exe -NoProfile -STA -File .\tests\Validate.ps1
 ```
 
-Bộ kiểm tra gồm cú pháp và ASCII của script PowerShell, nạp WPF XAML, cùng **74 kiểm thử**:
+Bộ kiểm tra có **73 mục PASS** trên máy phát triển: một mục kiểm tra cú pháp/ASCII và WPF, cùng các kiểm thử sau:
 
-- **45 kiểm thử engine và tương thích:** quota, điều kiện xoay, rollback, trạng thái, phiên bản.
+- **43 kiểm thử engine và tương thích:** quota, điều kiện xoay, rollback, trạng thái, phiên bản và chính sách tự thích ứng.
 - **3 kiểm thử trạng thái daemon:** nhận diện khi có 0, 1 hoặc 2 tiến trình trên PowerShell 5.1.
 - **26 kiểm thử MCP:** giao thức, quyền chỉ đọc, validation, lọc dữ liệu nhạy cảm, UTF-8 BOM và tiến trình stdio thật từ thư mục không có credential.
 
@@ -228,8 +228,8 @@ Workflow [Windows validation](.github/workflows/validate.yml) chạy cùng bộ 
 
 | Hạng mục | Bằng chứng hiện có |
 | --- | --- |
-| Kiểm thử local | 74 kiểm thử đạt ngày 23/09/2026, bao gồm tương thích 2.15.1 và trạng thái daemon |
-| CI Windows | 69 kiểm thử đạt tại commit `77f6266`; bản hỗ trợ 2.15.1 chưa chạy CI |
+| Kiểm thử local | 73 kiểm thử đạt ngày 24/09/2026, bao gồm kiểm tra capability của IDE đang cài |
+| CI Windows | Commit `e81ffad` đã đạt CI; xem badge đầu trang cho kết quả mới nhất. Bộ kiểm tra hiện tại có 72 mục PASS khi runner không có Antigravity, do bỏ qua kiểm tra bản IDE đang cài |
 | Quota Google và email runtime | Đã đọc được trên máy phát triển |
 | Trạng thái tác vụ và kiểm tra ô nhập qua CDP | Đã truy vấn trên runtime thật |
 | MCP `antigravity_status` qua stdio | Đã đọc được runtime thật ở chế độ chỉ đọc |
