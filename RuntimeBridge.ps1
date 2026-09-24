@@ -62,19 +62,66 @@ public static class AntigravityLocalRpc {
 "@
 }
 
+function Get-AsarText {
+    param([string]$ArchivePath, [string]$InternalPath)
+    if (-not (Test-Path -LiteralPath $ArchivePath)) { return $null }
+    $stream = [IO.File]::OpenRead($ArchivePath)
+    try {
+        $header = New-Object byte[] 16
+        if ($stream.Read($header, 0, 16) -ne 16) { return $null }
+        $jsonLength = [BitConverter]::ToInt32($header, 12)
+        $jsonHeaderLength = [BitConverter]::ToInt32($header, 4)
+        if ($jsonLength -le 0 -or $jsonLength -gt 16MB -or $jsonHeaderLength -lt 8) { return $null }
+        $jsonBytes = New-Object byte[] $jsonLength
+        if ($stream.Read($jsonBytes, 0, $jsonLength) -ne $jsonLength) { return $null }
+        $root = [Text.Encoding]::UTF8.GetString($jsonBytes) | ConvertFrom-Json
+        $node = $root
+        foreach ($part in $InternalPath -split '/') {
+            $property = $node.files.PSObject.Properties[$part]
+            if (-not $property) { return $null }
+            $node = $property.Value
+        }
+        if ($node.unpacked -or $null -eq $node.offset -or $node.size -le 0) { return $null }
+        $payloadOffset = 8 + $jsonHeaderLength + [int64]$node.offset
+        $stream.Position = $payloadOffset
+        $payload = New-Object byte[] ([int]$node.size)
+        if ($stream.Read($payload, 0, $payload.Length) -ne $payload.Length) { return $null }
+        return [Text.Encoding]::UTF8.GetString($payload)
+    } catch { return $null }
+    finally { $stream.Dispose() }
+}
+
+function Test-AntigravityRestartCompatibility {
+    param([string]$ExecutablePath)
+    $appAsar = Join-Path (Join-Path (Split-Path $ExecutablePath) 'resources') 'app.asar'
+    $languageServer = Get-AsarText $appAsar 'dist/languageServer.js'
+    $main = Get-AsarText $appAsar 'dist/main.js'
+    if (-not $languageServer -or -not $main) { return $false }
+    $languageRequirements = @('startAndMonitorLanguageServer','killLanguageServer','getLsProcess','LS_BINARY')
+    $mainRequirements = @('startAndMonitorLanguageServer','onPortChanged','window-all-closed')
+    foreach ($needle in $languageRequirements) { if ($languageServer.IndexOf($needle, [StringComparison]::Ordinal) -lt 0) { return $false } }
+    foreach ($needle in $mainRequirements) { if ($main.IndexOf($needle, [StringComparison]::Ordinal) -lt 0) { return $false } }
+    return $true
+}
+
 function Assert-AntigravityVersion {
-    param([string]$Version)
+    param([string]$Version, [string]$ExecutablePath)
     $parsed=$null
-    if ([version]::TryParse($Version, [ref]$parsed) -and
-        $parsed.ToString(3) -in @('2.12.2','2.13.0','2.14.0','2.15.1') -and $parsed.Revision -in @(-1,0)) { return }
-    $error=[InvalidOperationException]::new('Antigravity version has not been validated for supervised restart.')
-    $error.Data['HubReason']='UnsupportedVersion'
+    $versionShape = [version]::TryParse($Version, [ref]$parsed) -and $parsed.Major -eq 2 -and $parsed.Minor -ge 12 -and $parsed.Revision -in @(-1,0)
+    $valid = $versionShape
+    if ($valid -and $ExecutablePath) { $valid = Test-AntigravityRestartCompatibility $ExecutablePath }
+    if ($valid) { return }
+    $error=[InvalidOperationException]::new('Antigravity version or restart capabilities have not been validated.')
+    $error.Data['HubReason']=if ($versionShape) { 'UnsupportedRuntime' } else { 'UnsupportedVersion' }
     $error.Data['Version']=if ($parsed) { $parsed.ToString() } else { '?' }
     throw $error
 }
 
 function Get-RuntimeFailureMessage {
     param($Failure)
+    if ($Failure.Exception.Data['HubReason'] -eq 'UnsupportedRuntime') {
+        return "IDE $($Failure.Exception.Data['Version']): ch$([char]0x01B0)a t$([char]0x01B0)$([char]0x01A1)ng th$([char]0x00ED)ch gi$([char]0x00E1)m s$([char]0x00E1)t c$([char]0x01A1) ch$([char]0x1EBF) kh$([char]0x1EDF)i $([char]0x0111)$([char]0x1ED9)ng l$([char]0x1EA1)i"
+    }
     if ($Failure.Exception.Data['HubReason'] -eq 'UnsupportedVersion') {
         return "IDE $($Failure.Exception.Data['Version']): ch$([char]0x01B0)a h$([char]0x1ED7) tr$([char]0x1EE3)"
     }
@@ -90,7 +137,7 @@ function Get-AntigravityRuntime {
         if (-not $parent -or -not $parent.ExecutablePath) { continue }
         $expected = Join-Path (Split-Path $parent.ExecutablePath) 'resources\bin\language_server.exe'
         if ($server.ExecutablePath -ne $expected -or $server.CommandLine -notmatch '--standalone') { continue }
-        Assert-AntigravityVersion (Get-Item -LiteralPath $parent.ExecutablePath).VersionInfo.ProductVersion
+        Assert-AntigravityVersion (Get-Item -LiteralPath $parent.ExecutablePath).VersionInfo.ProductVersion $parent.ExecutablePath
         $csrfMatch = [regex]::Match($server.CommandLine, '--csrf_token(?:=|\s+)"?([^\s"]+)')
         if (-not $csrfMatch.Success) { throw 'Runtime CSRF unavailable; rotation deferred.' }
         $ports = @(Get-NetTCPConnection -OwningProcess $server.ProcessId -State Listen -ErrorAction Stop |
