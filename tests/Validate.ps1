@@ -18,9 +18,13 @@ Write-Host 'PASS: ASCII, PowerShell syntax and WPF XAML load'
 if ($LASTEXITCODE) { throw 'Rotation tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Core.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Core tests failed' }
+& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Quota.Tests.ps1')
+if ($LASTEXITCODE) { throw 'Quota tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Compatibility.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Compatibility tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Daemon.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Daemon status tests failed' }
+& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Login.Tests.ps1')
+if ($LASTEXITCODE) { throw 'Account login tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Mcp.Tests.ps1')
 if ($LASTEXITCODE) { throw 'MCP tests failed' }

@@ -49,7 +49,7 @@ function Get-AccountQuotaInfo {
     $result = [ordered]@{
         Success=$false; Email=''; Gemini5H=-1.0; GeminiWeekly=-1.0
         TokenPath=$tokenFilePath; AccountName=[IO.Path]::GetFileNameWithoutExtension($tokenFilePath)
-        Error='Quota unavailable'
+        Error='Quota unavailable'; ErrorCode='QuotaUnavailable'; VerificationUrl=$null
     }
     try {
         $token = Get-FreshToken (Get-Content -LiteralPath $tokenFilePath -Raw -Encoding UTF8 | ConvertFrom-Json)
@@ -65,8 +65,40 @@ function Get-AccountQuotaInfo {
         $response = Invoke-RestMethod -Uri 'https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary' -Method Post -Headers $headers -Body (@{project=$projectId} | ConvertTo-Json -Compress) -ContentType 'application/json' -TimeoutSec 10 -ErrorAction Stop
         $quota = Convert-QuotaSummary $response
         $result.Gemini5H=$quota.Gemini5H; $result.GeminiWeekly=$quota.GeminiWeekly
-        $result.Success=$true; $result.Error=''
-    } catch { } # Never log HTTP bodies, token content or OAuth error descriptions.
+        $result.Success=$true; $result.Error=''; $result.ErrorCode=''
+    } catch {
+        # Read only the documented error discriminator; never log provider bodies.
+        $quotaFailure=$_
+        try {
+            $errorBody=$quotaFailure.ErrorDetails.Message
+            # Windows PowerShell 5.1 leaves ErrorDetails empty for this 403.
+            if(-not $errorBody -and $quotaFailure.Exception.Response -is [Net.HttpWebResponse]) {
+                $reader=[IO.StreamReader]::new($quotaFailure.Exception.Response.GetResponseStream())
+                try {
+                    $buffer=New-Object char[] 4096
+                    $text=[Text.StringBuilder]::new()
+                    while(($count=$reader.Read($buffer,0,$buffer.Length)) -gt 0) {
+                        if($text.Length+$count -gt 65536){throw 'Quota error response too large'}
+                        $null=$text.Append($buffer,0,$count)
+                    }
+                    $errorBody=$text.ToString()
+                } finally { $reader.Dispose() }
+            }
+            $failure=$errorBody | ConvertFrom-Json -ErrorAction Stop
+            foreach($detail in $failure.error.details) {
+                if($detail.'@type' -ne 'type.googleapis.com/google.rpc.ErrorInfo' -or $detail.reason -ne 'VALIDATION_REQUIRED'){continue}
+                $result.ErrorCode='AccountVerificationRequired'
+                $result.Error='Google account verification required'
+                $uri=$null
+                if([uri]::TryCreate([string]$detail.metadata.validation_url,[UriKind]::Absolute,[ref]$uri) -and
+                    $uri.Scheme -eq 'https' -and $uri.Host -eq 'accounts.google.com' -and
+                    $uri.IsDefaultPort -and -not $uri.UserInfo -and $uri.AbsolutePath -ceq '/signin/continue') {
+                    $result.VerificationUrl=$uri.AbsoluteUri
+                }
+                break
+            }
+        } catch { } # Unknown/malformed errors remain unavailable; no guessed quota.
+    }
     [pscustomobject]$result
 }
 

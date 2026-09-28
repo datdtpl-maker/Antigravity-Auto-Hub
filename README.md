@@ -6,7 +6,7 @@
 
 Auto-Hub cung cấp giao diện WPF, tiến trình giám sát nền và MCP server chạy cục bộ. Engine chỉ thực hiện chuyển khi xác định được tài khoản đang dùng, quota đạt điều kiện và phiên làm việc cho phép chuyển.
 
-> **Trạng thái kiểm chứng:** Bộ kiểm tra local đạt 73 mục PASS, gồm kiểm tra cú pháp/WPF và bản IDE đang cài. Hub kiểm tra các tên hàm liên quan trong `app.asar` để tự nhận bản 2.x mới. Đây là kiểm tra sơ bộ, không chứng minh hành vi của các hàm không đổi; không bảo đảm tương thích mọi cập nhật tương lai. Chưa kiểm chứng chuyển tài khoản thật xuyên suốt hoặc tích hợp OmniLogin thực tế.
+> **Trạng thái kiểm chứng:** Bộ kiểm tra local đạt 138 mục PASS, gồm kiểm tra cú pháp/WPF và bản IDE đang cài. Hub kiểm tra các tên hàm liên quan trong `app.asar` để tự nhận bản 2.x mới. Đây là kiểm tra sơ bộ, không chứng minh hành vi của các hàm không đổi; không bảo đảm tương thích mọi cập nhật tương lai. Chưa kiểm chứng chuyển tài khoản thật xuyên suốt hoặc tích hợp OmniLogin thực tế.
 
 ## Mục lục
 
@@ -95,9 +95,13 @@ Daemon là tiến trình nền của người dùng, không phải Windows Servi
 Mở Antigravity và đăng nhập Google, sau đó dùng Hub:
 
 - **Lưu Acc Này:** lưu credential hiện tại vào pool tài khoản.
-- **+ Thêm Tài Khoản Mới:** mở luồng đăng nhập Google để thêm tài khoản khác.
+- **+ Thêm Tài Khoản Mới:** khởi chạy helper riêng ở chế độ Hub, yêu cầu đăng nhập và mở liên kết Google bằng trình duyệt mặc định. Không cần xác nhận Yes/No trước khi mở.
 
-Chờ quá trình đăng nhập hoàn tất trước khi đóng Hub. Bước thêm tài khoản cố khôi phục lựa chọn credential trước đó và không tự khởi động lại Antigravity.
+Chờ quá trình đăng nhập hoàn tất hoặc bấm **Hủy đăng nhập**. Hub báo lỗi nếu không nhận được URL trong 30 giây và hủy phiên sau 5 phút. Khi hoàn tất/hủy/đóng Hub, helper dừng và Hub cố khôi phục credential trước đó; không khởi động lại Antigravity. Nếu khôi phục thất bại, tự động xoay tạm dừng để kiểm tra.
+
+Nếu thẻ tài khoản hiển thị **Cần xác minh Google để đọc quota**, bấm **Xác minh Google**, hoàn tất yêu cầu rồi bấm **Quét Quota**. `N/A` nghĩa là chưa lấy được dữ liệu, không phải 0% quota.
+
+Trang Google báo đăng nhập thành công chưa có nghĩa Antigravity đã chấp nhận phiên đăng nhập. Khi nhận yêu cầu xác minh kèm liên kết Google được hỗ trợ, Hub mở trang đó một lần, giữ phiên và chờ tối đa 5 phút; bấm **Hủy xác minh** để dừng. Hub chỉ lưu sau khi Antigravity xác nhận hợp lệ và email của token khớp tài khoản vừa đăng nhập. Nếu không có liên kết được hỗ trợ, Hub báo trạng thái để kiểm tra trong ứng dụng chính thức; không suy ra nguyên nhân từ mã `ineligible` đơn lẻ.
 
 ## Sử dụng
 
@@ -218,23 +222,25 @@ Source hiện tại không chứa client secret dùng sẵn. Việc loại secre
 powershell.exe -NoProfile -STA -File .\tests\Validate.ps1
 ```
 
-Bộ kiểm tra có **73 mục PASS** trên máy phát triển: một mục kiểm tra cú pháp/ASCII và WPF, cùng các kiểm thử sau:
+Bộ kiểm tra có **138 mục PASS** trên máy phát triển: một mục kiểm tra cú pháp/ASCII và WPF, cùng các kiểm thử sau:
 
 - **43 kiểm thử engine và tương thích:** quota, điều kiện xoay, rollback, trạng thái, phiên bản và chính sách tự thích ứng.
 - **3 kiểm thử trạng thái daemon:** nhận diện khi có 0, 1 hoặc 2 tiến trình trên PowerShell 5.1.
+- **6 kiểm thử lỗi quota:** phân loại yêu cầu xác minh, lọc URL và quét lại thành công.
+- **59 kiểm thử đăng nhập:** URL Google, tham số helper, quyền sở hữu cổng, khôi phục credential khi hủy/lỗi, đối chiếu danh tính, phân loại kết quả xác thực, liên kết xác minh và chuyển trạng thái chờ sang hợp lệ.
 - **26 kiểm thử MCP:** giao thức, quyền chỉ đọc, validation, lọc dữ liệu nhạy cảm, UTF-8 BOM và tiến trình stdio thật từ thư mục không có credential.
 
 Workflow [Windows validation](.github/workflows/validate.yml) chạy cùng bộ kiểm tra khi push hoặc mở pull request. Các thao tác chuyển trong kiểm thử dùng mock, không thay tài khoản thật.
 
 | Hạng mục | Bằng chứng hiện có |
 | --- | --- |
-| Kiểm thử local | 73 kiểm thử đạt ngày 24/09/2026, bao gồm kiểm tra capability của IDE đang cài |
-| CI Windows | Commit `e81ffad` đã đạt CI; xem badge đầu trang cho kết quả mới nhất. Bộ kiểm tra hiện tại có 72 mục PASS khi runner không có Antigravity, do bỏ qua kiểm tra bản IDE đang cài |
+| Kiểm thử local | 138 mục PASS ngày 26/09/2026, bao gồm kiểm tra bản 2.17.0 đang cài |
+| CI Windows | Commit `5b56672` đã đạt CI; bản sửa đăng nhập chưa chạy CI. Bộ kiểm tra hiện tại có 137 mục PASS khi runner không có Antigravity |
 | Quota Google và email runtime | Đã đọc được trên máy phát triển |
 | Trạng thái tác vụ và kiểm tra ô nhập qua CDP | Đã truy vấn trên runtime thật |
 | MCP `antigravity_status` qua stdio | Đã đọc được runtime thật ở chế độ chỉ đọc |
 | Chuyển tài khoản thật xuyên suốt | **Chưa kiểm chứng** |
-| Luồng đăng nhập Google tương tác sau nâng cấp | **Chưa kiểm thử lại** |
+| Luồng đăng nhập Google tương tác sau nâng cấp | Helper 2.17.0 mở được Google; lượt thật 26/09 trả `authResult.ineligible`. Provider yêu cầu xác minh Google; Hub đã bổ sung mở liên kết và giữ phiên chờ xác nhận, kiểm thử bằng fixture đã đạt. Chưa xác minh hoàn tất xác minh/lưu tài khoản mới thành công |
 | Tích hợp OmniLogin | **Chưa kiểm chứng** |
 
 ## Cấu trúc mã nguồn
@@ -242,6 +248,7 @@ Workflow [Windows validation](.github/workflows/validate.yml) chạy cùng bộ 
 | File / thư mục | Vai trò |
 | --- | --- |
 | `AntigravityHub.ps1`, `MainWindow.xaml` | Giao diện quản lý tài khoản |
+| `AccountLogin.ps1` | Helper đăng nhập riêng, đọc stdout/stderr và gọi RPC Login |
 | `AutoRotator.ps1` | Cấu hình, Credential Manager, thông báo và daemon |
 | `RotationCore.ps1` | Quota, lựa chọn tài khoản, giao dịch và khôi phục |
 | `RuntimeBridge.ps1` | Kết nối API nội bộ, CDP và xác minh runtime |

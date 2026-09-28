@@ -16,6 +16,7 @@ if (-not (Test-Path $accDir)) {
 }
 
 . $rotatorScript
+. (Join-Path $baseDir 'AccountLogin.ps1')
 
 function Get-DaemonStatus {
     $procs = @(Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%AutoRotator.ps1%Daemon%'" -ErrorAction SilentlyContinue)
@@ -270,6 +271,33 @@ function Load-Accounts-UI {
         $quotaRow.Children.Add($qWPctText) | Out-Null
 
         $info.Children.Add($quotaRow) | Out-Null
+        if (-not $acc.Success) {
+            $quotaStatus=New-Object System.Windows.Controls.TextBlock
+            $quotaStatus.Text=if($acc.ErrorCode -eq 'AccountVerificationRequired'){"C$([char]0x1EA7)n x$([char]0x00E1)c minh Google $([char]0x0111)$([char]0x1EC3) $([char]0x0111)$([char]0x1ECD)c quota"}else{"Ch$([char]0x01B0)a $([char]0x0111)$([char]0x1ECD)c $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c quota. Th$([char]0x1EED) Qu$([char]0x00E9)t Quota l$([char]0x1EA1)i. "}
+            $quotaStatus.Foreground=[System.Windows.Media.BrushConverter]::new().ConvertFromString("#F9E2AF")
+            $quotaStatus.FontSize=11
+            $quotaStatus.TextWrapping=[System.Windows.TextWrapping]::Wrap
+            $quotaStatus.Margin=New-Object System.Windows.Thickness(0,6,8,0)
+            $info.Children.Add($quotaStatus) | Out-Null
+            if($acc.VerificationUrl) {
+                $verificationUrl=$acc.VerificationUrl
+                $btnVerify=New-Object System.Windows.Controls.Button
+                $btnVerify.Style=$window.FindResource("SuccessBtn")
+                $btnVerify.Content="X$([char]0x00E1)c minh Google"
+                $btnVerify.HorizontalAlignment=[System.Windows.HorizontalAlignment]::Left
+                $btnVerify.Margin=New-Object System.Windows.Thickness(0,6,0,0)
+                $btnVerify.ToolTip="Ho$([char]0x00E0)n t$([char]0x1EA5)t x$([char]0x00E1)c minh r$([char]0x1ED3)i b$([char]0x1EA5)m Qu$([char]0x00E9)t Quota"
+                $btnVerify.Add_Click({
+                    if(-not [AntigravityAccountLogin]::IsVerificationUrl($verificationUrl)){return}
+                    try {
+                        $browser=[Diagnostics.ProcessStartInfo]::new($verificationUrl)
+                        $browser.UseShellExecute=$true
+                        [Diagnostics.Process]::Start($browser) | Out-Null
+                    } catch { Show-AccountLoginFailure 'LoginBrowserFailed' }
+                }.GetNewClosure())
+                $info.Children.Add($btnVerify) | Out-Null
+            }
+        }
 
         [System.Windows.Controls.Grid]::SetColumn($info, 0)
         $grid.Children.Add($info) | Out-Null
@@ -367,161 +395,167 @@ function Remove-LoginTempDirectory {
 }
 
 function Complete-AccountLogin {
-    if (-not $script:loginProtection) { return }
+    if (-not $script:loginProtection) { return $true }
+    $cleanupOk=$true
     try {
         if ($script:activeLoginTimer) { $script:activeLoginTimer.Stop() }
-        if ($script:activeLoginProc -and -not $script:activeLoginProc.HasExited) {
-            $script:activeLoginProc.Kill()
-            if (-not $script:activeLoginProc.WaitForExit(5000)) { throw 'Login helper did not exit.' }
+        if ($script:loginSession) { $script:loginSession.Dispose() }
+        if ($script:loginSnapshotReady) {
+            if ((Get-StoredCredential) -cne $script:loginOldCredential) {
+                if ($script:loginOldCredential) { Restore-StoredCredential $script:loginOldCredential }
+                elseif (-not [WinCred]::Delete('gemini:antigravity')) { throw 'LoginRestoreFailed' }
+            }
+            if ($null -ne $script:loginOldFallback) { Write-AtomicText $geminiTokenPath $script:loginOldFallback }
+            elseif (Test-Path -LiteralPath $geminiTokenPath) { [IO.File]::Delete($geminiTokenPath) }
         }
-        # The official helper can write the shared keyring despite its temporary gemini_dir.
-        # Restore the pre-login selection while holding the same lock as the rotator.
-        if ($script:loginOldCredential) { Restore-StoredCredential $script:loginOldCredential }
-        else { [WinCred]::Delete('gemini:antigravity') | Out-Null }
-        if ($null -ne $script:loginOldFallback) { Write-AtomicText $geminiTokenPath $script:loginOldFallback }
-        elseif (Test-Path -LiteralPath $geminiTokenPath) { [IO.File]::Delete($geminiTokenPath) }
+        Remove-LoginTempDirectory $script:activeLoginTempDir
     } catch {
+        $cleanupOk=$false
         Set-RotationState 'NeedsAttention'
         Write-RotatorLog 'Login cleanup requires verification; automatic rotation paused.'
     } finally {
-        Remove-LoginTempDirectory $script:activeLoginTempDir
         $script:loginProtection.ReleaseMutex()
         $script:loginProtection.Dispose()
-        $script:loginProtection=$null
+        $script:loginProtection=$null; $script:loginSnapshotReady=$false
         $script:loginOldCredential=$null; $script:loginOldFallback=$null
+        $script:loginSession=$null; $script:activeLoginTempDir=$null
         $accountsContainer.IsEnabled=$true; $btnAddAccount.IsEnabled=$true; $btnSaveCurrent.IsEnabled=$true
+        $btnAddAccount.Content = "+ Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i"
     }
+    return $cleanupOk
+}
+
+function Get-AccountLoginFailureMessage {
+    param([string]$Code)
+    $message = switch ($Code) {
+        'LoginVerificationTimeout' { "$([char]0x0110)$([char]0x00E3) h$([char]0x1EBF)t 5 ph$([char]0x00FA)t ch$([char]0x1EDD) x$([char]0x00E1)c minh Google. Hub ch$([char]0x01B0)a l$([char]0x01B0)u t$([char]0x00E0)i kho$([char]0x1EA3)n. Ho$([char]0x00E0)n t$([char]0x1EA5)t y$([char]0x00EA)u c$([char]0x1EA7)u tr$([char]0x00EA)n trang x$([char]0x00E1)c minh r$([char]0x1ED3)i b$([char]0x1EA5)m Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i $([char]0x0111)$([char]0x1EC3) th$([char]0x1EED) l$([char]0x1EA1)i." }
+        'LoginIneligible' { "Antigravity ch$([char]0x01B0)a x$([char]0x00E1)c nh$([char]0x1EAD)n phi$([char]0x00EA)n $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p n$([char]0x00E0)y (ineligible). Hub ch$([char]0x01B0)a l$([char]0x01B0)u t$([char]0x00E0)i kho$([char]0x1EA3)n v$([char]0x00E0) ch$([char]0x01B0)a nh$([char]0x1EAD)n $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c li$([char]0x00EA)n k$([char]0x1EBF)t x$([char]0x00E1)c minh $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c h$([char]0x1ED7) tr$([char]0x1EE3). H$([char]0x00E3)y ki$([char]0x1EC3)m tra th$([char]0x00F4)ng b$([char]0x00E1)o trong Antigravity ch$([char]0x00ED)nh th$([char]0x1EE9)c; m$([char]0x00E3) n$([char]0x00E0)y ch$([char]0x01B0)a x$([char]0x00E1)c $([char]0x0111)$([char]0x1ECB)nh $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c nguy$([char]0x00EA)n nh$([char]0x00E2)n c$([char]0x1EE5) th$([char]0x1EC3)." }
+        'LoginVerificationRequired' { "Antigravity y$([char]0x00EA)u c$([char]0x1EA7)u x$([char]0x00E1)c minh th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n. H$([char]0x00E3)y m$([char]0x1EDF) $([char]0x1EE9)ng d$([char]0x1EE5)ng Antigravity ch$([char]0x00ED)nh th$([char]0x1EE9)c, ho$([char]0x00E0)n t$([char]0x1EA5)t x$([char]0x00E1)c minh r$([char]0x1ED3)i th$([char]0x00EA)m l$([char]0x1EA1)i v$([char]0x00E0)o Hub. T$([char]0x00E0)i kho$([char]0x1EA3)n ch$([char]0x01B0)a $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c l$([char]0x01B0)u." }
+        'LoginTermsRejected' { "Antigravity t$([char]0x1EEB) ch$([char]0x1ED1)i t$([char]0x00E0)i kho$([char]0x1EA3)n v$([char]0x1EDB)i tr$([char]0x1EA1)ng th$([char]0x00E1)i tosViolation. H$([char]0x00E3)y ki$([char]0x1EC3)m tra th$([char]0x00F4)ng b$([char]0x00E1)o trong $([char]0x1EE9)ng d$([char]0x1EE5)ng ch$([char]0x00ED)nh th$([char]0x1EE9)c ho$([char]0x1EB7)c li$([char]0x00EA)n h$([char]0x1EC7) h$([char]0x1ED7) tr$([char]0x1EE3) Antigravity. T$([char]0x00E0)i kho$([char]0x1EA3)n ch$([char]0x01B0)a $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c l$([char]0x01B0)u." }
+        'LoginProviderError' { "Antigravity tr$([char]0x1EA3) v$([char]0x1EC1) l$([char]0x1ED7)i khi x$([char]0x00E1)c th$([char]0x1EF1)c t$([char]0x00E0)i kho$([char]0x1EA3)n. H$([char]0x00E3)y ki$([char]0x1EC3)m tra $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p trong $([char]0x1EE9)ng d$([char]0x1EE5)ng ch$([char]0x00ED)nh th$([char]0x1EE9)c r$([char]0x1ED3)i th$([char]0x1EED) l$([char]0x1EA1)i. T$([char]0x00E0)i kho$([char]0x1EA3)n ch$([char]0x01B0)a $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c l$([char]0x01B0)u." }
+        'LoginProjectRequired' { "Antigravity y$([char]0x00EA)u c$([char]0x1EA7)u c$([char]0x1EA5)u h$([char]0x00EC)nh project tr$([char]0x01B0)$([char]0x1EDB)c khi d$([char]0x00F9)ng t$([char]0x00E0)i kho$([char]0x1EA3)n. H$([char]0x00E3)y ho$([char]0x00E0)n t$([char]0x1EA5)t y$([char]0x00EA)u c$([char]0x1EA7)u trong $([char]0x1EE9)ng d$([char]0x1EE5)ng ch$([char]0x00ED)nh th$([char]0x1EE9)c r$([char]0x1ED3)i th$([char]0x00EA)m l$([char]0x1EA1)i v$([char]0x00E0)o Hub." }
+        'LoginInteractiveRequired' { "Antigravity y$([char]0x00EA)u c$([char]0x1EA7)u ph$([char]0x01B0)$([char]0x01A1)ng th$([char]0x1EE9)c x$([char]0x00E1)c th$([char]0x1EF1)c kh$([char]0x00E1)c (headlessAuthRequired); Hub ch$([char]0x01B0)a h$([char]0x1ED7) tr$([char]0x1EE3) b$([char]0x01B0)$([char]0x1EDB)c n$([char]0x00E0)y. H$([char]0x00E3)y $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p trong $([char]0x1EE9)ng d$([char]0x1EE5)ng ch$([char]0x00ED)nh th$([char]0x1EE9)c." }
+        'LoginLicenseRequired' { "Antigravity y$([char]0x00EA)u c$([char]0x1EA7)u gi$([char]0x1EA5)y ph$([char]0x00E9)p s$([char]0x1EED) d$([char]0x1EE5)ng cho t$([char]0x00E0)i kho$([char]0x1EA3)n n$([char]0x00E0)y. H$([char]0x00E3)y ki$([char]0x1EC3)m tra quy$([char]0x1EC1)n truy c$([char]0x1EAD)p trong $([char]0x1EE9)ng d$([char]0x1EE5)ng ch$([char]0x00ED)nh th$([char]0x1EE9)c r$([char]0x1ED3)i th$([char]0x00EA)m l$([char]0x1EA1)i v$([char]0x00E0)o Hub." }
+        'LoginAuthRejected' { "Antigravity ch$([char]0x01B0)a x$([char]0x00E1)c nh$([char]0x1EAD)n t$([char]0x00E0)i kho$([char]0x1EA3)n h$([char]0x1EE3)p l$([char]0x1EC7) d$([char]0x00F9) Google c$([char]0x00F3) th$([char]0x1EC3) $([char]0x0111)$([char]0x00E3) $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p th$([char]0x00E0)nh c$([char]0x00F4)ng. T$([char]0x00E0)i kho$([char]0x1EA3)n ch$([char]0x01B0)a $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c l$([char]0x01B0)u. H$([char]0x00E3)y ki$([char]0x1EC3)m tra $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p trong $([char]0x1EE9)ng d$([char]0x1EE5)ng Antigravity ch$([char]0x00ED)nh th$([char]0x1EE9)c." }
+        'LoginCleanupFailed' { "Kh$([char]0x00F4)ng kh$([char]0x00F4)i ph$([char]0x1EE5)c $([char]0x0111)$([char]0x1EA7)y $([char]0x0111)$([char]0x1EE7) $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c th$([char]0x00F4)ng tin $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p tr$([char]0x01B0)$([char]0x1EDB)c $([char]0x0111)$([char]0x00F3). T$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng xoay $([char]0x0111)$([char]0x00E3) t$([char]0x1EA1)m d$([char]0x1EEB)ng. H$([char]0x00E3)y ki$([char]0x1EC3)m tra t$([char]0x00E0)i kho$([char]0x1EA3)n $([char]0x0111)ang d$([char]0x00F9)ng trong Antigravity tr$([char]0x01B0)$([char]0x1EDB)c khi ti$([char]0x1EBF)p t$([char]0x1EE5)c." }
+        'LoginBusy' { "$([char]0x0110)ang c$([char]0x00F3) thao t$([char]0x00E1)c chuy$([char]0x1EC3)n ho$([char]0x1EB7)c th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n. Vui l$([char]0x00F2)ng th$([char]0x1EED) l$([char]0x1EA1)i sau." }
+        'LoginHelperMissing' { "Kh$([char]0x00F4)ng t$([char]0x00EC)m th$([char]0x1EA5)y language_server.exe c$([char]0x1EE7)a Antigravity." }
+        'LoginUrlTimeout' { "Kh$([char]0x00F4)ng nh$([char]0x1EAD)n $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c li$([char]0x00EA)n k$([char]0x1EBF)t Google sau 30 gi$([char]0x00E2)y. Ki$([char]0x1EC3)m tra k$([char]0x1EBF)t n$([char]0x1ED1)i m$([char]0x1EA1)ng ho$([char]0x1EB7)c c$([char]0x1EAD)p nh$([char]0x1EAD)t Antigravity r$([char]0x1ED3)i th$([char]0x1EED) l$([char]0x1EA1)i." }
+        'LoginTimeout' { "$([char]0x0110)$([char]0x00E3) h$([char]0x1EBF)t 5 ph$([char]0x00FA)t ch$([char]0x1EDD) $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p. B$([char]0x1EA5)m Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i $([char]0x0111)$([char]0x1EC3) th$([char]0x1EED) l$([char]0x1EA1)i." }
+        'LoginBrowserFailed' { "Kh$([char]0x00F4)ng m$([char]0x1EDF) $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c tr$([char]0x00EC)nh duy$([char]0x1EC7)t m$([char]0x1EB7)c $([char]0x0111)$([char]0x1ECB)nh. Ki$([char]0x1EC3)m tra $([char]0x1EE9)ng d$([char]0x1EE5)ng m$([char]0x1EDF) li$([char]0x00EA)n k$([char]0x1EBF)t HTTPS trong Windows." }
+        'LoginTokenMissing' { "$([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p ch$([char]0x01B0)a tr$([char]0x1EA3) v$([char]0x1EC1) token h$([char]0x1EE3)p l$([char]0x1EC7). Vui l$([char]0x00F2)ng th$([char]0x1EED) l$([char]0x1EA1)i." }
+        default { "Kh$([char]0x00F4)ng ho$([char]0x00E0)n t$([char]0x1EA5)t $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c lu$([char]0x1ED3)ng $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p. Ki$([char]0x1EC3)m tra m$([char]0x1EA1)ng, c$([char]0x1EA5)u h$([char]0x00EC)nh OAuth v$([char]0x00E0) phi$([char]0x00EA)n b$([char]0x1EA3)n Antigravity r$([char]0x1ED3)i th$([char]0x1EED) l$([char]0x1EA1)i." }
+    }
+    return $message
+}
+
+function Show-AccountLoginFailure {
+    param([string]$Code)
+    $message=Get-AccountLoginFailureMessage $Code
+    # Only fixed codes enter logs; never URLs, raw helper output or OAuth errors.
+    $safeCode = if ($Code -in @('LoginBusy','LoginHelperMissing','LoginUrlTimeout','LoginTimeout','LoginBrowserFailed','LoginTokenMissing','LoginHelperExited','LoginRequestFailed','LoginListenerMismatch','LoginAuthRejected','LoginInvalidResponse','LoginIdentityMissing','LoginCleanupFailed','LoginIneligible','LoginVerificationRequired','LoginTermsRejected','LoginProviderError','LoginProjectRequired','LoginInteractiveRequired','LoginLicenseRequired','LoginVerificationTimeout')) { $Code } else { 'LoginFailed' }
+    Write-RotatorLog "Account login failed: $safeCode."
+    [System.Windows.MessageBox]::Show($window, $message, "Th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning) | Out-Null
 }
 $window.Add_Closed({ Complete-AccountLogin })
 
 $btnAddAccount.Add_Click({
-    $msg = "B$([char]0x1EA1)n c$([char]0x00F3) mu$([char]0x1ED1)n m$([char]0x1EDF) tr$([char]0x00EC)nh duy$([char]0x1EC7)t $([char]0x0111)$([char]0x1EC3) $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p t$([char]0x00E0)i kho$([char]0x1EA3)n Google m$([char]0x1EDB)i ngay b$([char]0x00E2)y gi$([char]0x1EDD) kh$([char]0x00F4)ng?`n`n(Sau khi b$([char]0x1EA5)m Yes, tr$([char]0x00EC)nh duy$([char]0x1EC7)t s$([char]0x1EBD) t$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng b$([char]0x1EAD)t l$([char]0x00EA)n trang $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p Google v$([char]0x00E0) t$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng l$([char]0x01B0)u khi b$([char]0x1EA1)n ch$([char]0x1ECD)n xong)"
-    $confirm = [System.Windows.MessageBox]::Show($msg, "Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
-    if ($confirm -ne [System.Windows.MessageBoxResult]::Yes) { return }
-
-    $lsPath = Join-Path $env:LOCALAPPDATA "Programs\Antigravity\resources\bin\language_server.exe"
-    if (-not (Test-Path $lsPath)) {
-        [System.Windows.MessageBox]::Show("Kh$([char]0x00F4)ng t$([char]0x00EC)m th$([char]0x1EA5)y language_server.exe t$([char]0x1EA1)i $lsPath", "L$([char]0x1ED7)i", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
-        return
-    }
-
+    if ($script:loginProtection) { Complete-AccountLogin; return }
+    $lsPath=Join-Path $env:LOCALAPPDATA 'Programs\Antigravity\resources\bin\language_server.exe'
+    if (-not (Test-Path -LiteralPath $lsPath)) { Show-AccountLoginFailure 'LoginHelperMissing'; return }
     $loginLock=[Threading.Mutex]::new($false, 'Local\AntigravityAutoHub.Switch')
     $loginLocked=$false
     try { $loginLocked=$loginLock.WaitOne(0) } catch [Threading.AbandonedMutexException] { $loginLocked=$true }
-    if (-not $loginLocked) { $loginLock.Dispose(); return }
+    if (-not $loginLocked) { $loginLock.Dispose(); Show-AccountLoginFailure 'LoginBusy'; return }
     $script:loginProtection=$loginLock
-    $script:loginOldCredential=Get-StoredCredential
-    $script:loginOldFallback=$null
-    if (Test-Path -LiteralPath $geminiTokenPath) { $script:loginOldFallback=[IO.File]::ReadAllText($geminiTokenPath) }
-    $accountsContainer.IsEnabled=$false; $btnAddAccount.IsEnabled=$false; $btnSaveCurrent.IsEnabled=$false
-
-    $tempDir = Join-Path $env:TEMP ("ag_login_" + (Get-Random))
-    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-    $script:activeLoginTempDir = $tempDir
-
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = $lsPath
-    $psi.Arguments = "--standalone --gemini_dir=""$tempDir"" --app_data_dir=""app"""
-    $psi.RedirectStandardError = $true
-    $psi.UseShellExecute = $false
-    $psi.CreateNoWindow = $true
-
-    try { $proc = [System.Diagnostics.Process]::Start($psi) }
-    catch { Complete-AccountLogin; return }
-    $script:activeLoginProc = $proc
-    $authUrl = $null
-    $start = Get-Date
-
-    $urlPattern = "https://accounts\.google\.com/o/oauth2/auth\?[a-zA-Z0-9\-._~%!$&'()*+,;=:@/?]+"
-    $lineTask = $proc.StandardError.ReadLineAsync()
-    while ((-not $proc.HasExited) -and ((Get-Date) - $start).TotalSeconds -lt 15) {
-        if (-not $lineTask.Wait(100)) { continue }
-        $line = $lineTask.Result
-        if ($null -eq $line) { break }
-        $lineTask = $proc.StandardError.ReadLineAsync()
-        if ($line) {
-            $match = [regex]::Match($line, $urlPattern)
-            if ($match.Success) {
-                $authUrl = $match.Value
-                break
-            }
-        }
-    }
-
-    if (-not $authUrl) {
-        Complete-AccountLogin
-        return
-    }
-
-    if ($authUrl -notmatch "prompt=") {
-        $authUrl += "&prompt=select_account"
-    }
-
-    $script:loginStartTime = Get-Date
-    Start-Process $authUrl
-
-    if ($script:activeLoginTimer) { $script:activeLoginTimer.Stop() }
-    $loginTimer = New-Object System.Windows.Threading.DispatcherTimer
-    $loginTimer.Interval = [TimeSpan]::FromSeconds(1)
-    $script:activeLoginTimer = $loginTimer
-    $script:loginElapsed = 0
-
-    $loginTimer.Add_Tick({
-        $script:loginElapsed += 1
-        $tempPath = $script:activeLoginTempDir
-        if (-not $tempPath) { return }
-        $tFile = Join-Path $tempPath "jetski-standalone-oauth-token"
-        $foundTokenFile = $null
-
-        if (Test-Path $tFile) {
-            $foundTokenFile = $tFile
-
-        }
-
-        if ($foundTokenFile) {
-            $script:activeLoginTimer.Stop()
+    try {
+        $script:loginSnapshotReady=$false
+        $script:loginOldCredential=Get-StoredCredential
+        $script:loginOldFallback=$null
+        if (Test-Path -LiteralPath $geminiTokenPath) { $script:loginOldFallback=[IO.File]::ReadAllText($geminiTokenPath) }
+        $script:loginSnapshotReady=$true
+        $script:activeLoginTempDir=Join-Path $env:TEMP ('ag_login_'+(Get-Random))
+        New-Item -ItemType Directory -Path $script:activeLoginTempDir -ErrorAction Stop | Out-Null
+        $accountsContainer.IsEnabled=$false; $btnSaveCurrent.IsEnabled=$false
+        $btnAddAccount.Content="H$([char]0x1EE7)y $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p"
+        $script:loginSession=[AntigravityAccountLogin]::new($lsPath,$script:activeLoginTempDir)
+        $script:loginClock=[Diagnostics.Stopwatch]::StartNew()
+        $script:loginBrowserOpened=$false
+        $script:loginResultAt=$null
+        $script:loginVerificationAt=$null
+        $loginTimer=New-Object System.Windows.Threading.DispatcherTimer
+        $loginTimer.Interval=[TimeSpan]::FromMilliseconds(250)
+        $script:activeLoginTimer=$loginTimer
+        $loginTimer.Add_Tick({
             try {
-                Start-Sleep -Milliseconds 500
-                $rawToken = [System.IO.File]::ReadAllText($foundTokenFile, [System.Text.Encoding]::UTF8)
-                $j = $rawToken | ConvertFrom-Json
-                $rt = $j.token.refresh_token
-                if (-not $rt) { $rt = $j.refresh_token }
-
-                $email = ""
-                if ($rt) {
-                    $tResp = Invoke-RestMethod -Uri "https://oauth2.googleapis.com/token" -Method Post -Body @{
-                        client_id = $script:GoogleClientId
-                        client_secret = $script:GoogleClientSecret
-                        refresh_token = $rt
-                        grant_type = "refresh_token"
-                    } -TimeoutSec 10
-                    $uinfo = Invoke-RestMethod -Uri "https://www.googleapis.com/oauth2/v3/userinfo" -Headers @{ Authorization = "Bearer $($tResp.access_token)" } -TimeoutSec 5
-                    $email = $uinfo.email
+                $session=$script:loginSession
+                if (-not $session) { return }
+                Update-AccountLoginSession $session
+                if ($session.AuthUrl -and -not $script:loginBrowserOpened) {
+                    $url=$session.AuthUrl
+                    if ($url -notmatch '[?&]prompt=') { $url+='&prompt=select_account' }
+                    try {
+                        $browser=[Diagnostics.ProcessStartInfo]::new($url)
+                        $browser.UseShellExecute=$true
+                        [Diagnostics.Process]::Start($browser) | Out-Null
+                    } catch { throw 'LoginBrowserFailed' }
+                    $script:loginBrowserOpened=$true
+                    Write-RotatorLog 'Account login: Google authorization opened.'
                 }
-
-                $cleanName = if ($email) { $email.Split('@')[0] } else { "GoogleAccount_" + (Get-Date -Format "HHmmss") }
-                $targetFile = Join-Path $accDir "$cleanName.json"
-                [System.IO.File]::WriteAllText($targetFile, $rawToken, [System.Text.Encoding]::UTF8)
-
-                Complete-AccountLogin
+                if (-not $script:loginBrowserOpened -and $script:loginClock.Elapsed.TotalSeconds -ge 30) { throw 'LoginUrlTimeout' }
+                if ($null -eq $script:loginVerificationAt -and $script:loginClock.Elapsed.TotalSeconds -ge 300) { throw 'LoginTimeout' }
+                if ($null -ne $script:loginVerificationAt -and $script:loginClock.Elapsed.TotalSeconds-$script:loginVerificationAt -ge 300) { throw 'LoginVerificationTimeout' }
+                if (-not $session.Succeeded) { return }
+                $script:activeLoginTimer.Stop()
+                $listeners=@(Get-NetTCPConnection -LocalPort $session.Port -State Listen -ErrorAction Stop)
+                if (-not ($listeners | Where-Object {$_.OwningProcess -eq $session.Process.Id -and $_.LocalAddress -in @('127.0.0.1','::1')})) { throw 'LoginListenerMismatch' }
+                $progress=Get-AccountLoginProgress $session -Recheck:($null -ne $script:loginVerificationAt)
+                if ($progress.Status -eq 'VerificationRequired') {
+                    if ($null -eq $script:loginVerificationAt) {
+                        $browser=[Diagnostics.ProcessStartInfo]::new($progress.VerificationUrl)
+                        $browser.UseShellExecute=$true
+                        try { [Diagnostics.Process]::Start($browser) | Out-Null } catch { throw 'LoginBrowserFailed' }
+                        $script:loginVerificationAt=$script:loginClock.Elapsed.TotalSeconds
+                        $btnAddAccount.Content="H$([char]0x1EE7)y x$([char]0x00E1)c minh"
+                        Write-RotatorLog 'Account login: official Google verification opened; waiting for valid auth.'
+                    }
+                    $script:activeLoginTimer.Interval=[TimeSpan]::FromSeconds(2)
+                    $script:activeLoginTimer.Start()
+                    return
+                }
+                if ($null -eq $script:loginResultAt) { $script:loginResultAt=$script:loginClock.Elapsed.TotalSeconds }
+                $identity=$session.ReadUserStatus() | ConvertFrom-Json
+                $candidates=@(Get-AccountLoginTokenCandidates $script:activeLoginTempDir $geminiTokenPath)
+                $verified=Get-VerifiedAccountLoginToken $candidates $identity.userStatus.email
+                if (-not $verified) {
+                    $tempTokens=@(Get-ChildItem -LiteralPath $script:activeLoginTempDir -Recurse -File -Filter '*token*' -ErrorAction SilentlyContinue).Count
+                    Write-RotatorLog "Account login token verification pending: candidates=$($candidates.Count), helperTokenFiles=$tempTokens."
+                    if ($script:loginClock.Elapsed.TotalSeconds-$script:loginResultAt -ge 15) { throw 'LoginTokenMissing' }
+                    $script:activeLoginTimer.Interval=[TimeSpan]::FromSeconds(2)
+                    $script:activeLoginTimer.Start()
+                    return
+                }
+                $token=$verified.Token
+                $user=[pscustomobject]@{email=$verified.Email}
+                $cleanName=$user.email.Split('@')[0] -replace '[^a-zA-Z0-9._-]','_'
+                if (-not $cleanName -or $cleanName -in @('.','..')) { throw 'LoginTokenMissing' }
+                Write-AtomicText (Join-Path $accDir ($cleanName+'.json')) ($token | ConvertTo-Json -Depth 6 -Compress)
+                if (-not (Complete-AccountLogin)) { throw 'LoginCleanupFailed' }
+                Write-RotatorLog 'Account login completed; account saved and previous credential restored.'
                 Load-Accounts-UI
-
-                $toastTitle = "$([char]0x26A1) Antigravity Auto-Hub"
-                $toastMsg = "$([char]0x0110)$([char]0x00E3) th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i: $cleanName ($email)"
-                Send-ToastNotification -Title $toastTitle -Message $toastMsg
-
-                [System.Windows.MessageBox]::Show("$([char]0x0110)$([char]0x0103)ng nh$([char]0x1EAD)p th$([char]0x00E0)nh c$([char]0x00F4)ng!`n`n$([char]0x0110)$([char]0x00E3) t$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n: $cleanName ($email) v$([char]0x00E0)o kho xoay tua.", "Th$([char]0x00E0)nh C$([char]0x00F4)ng", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+                [System.Windows.MessageBox]::Show($window, "$([char]0x0110)$([char]0x00E3) th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n: $($user.email)", "Th$([char]0x00EA)m t$([char]0x00E0)i kho$([char]0x1EA3)n", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
             } catch {
-                [System.Windows.MessageBox]::Show("L$([char]0x1ED7)i khi l$([char]0x01B0)u token: $_", "L$([char]0x1ED7)i", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
-            } finally {
-                Complete-AccountLogin
+                $code=$_.Exception.Message
+                if (-not (Complete-AccountLogin)) { $code='LoginCleanupFailed' }
+                Show-AccountLoginFailure $code
             }
-        } elseif ($script:loginElapsed -ge 180) {
-            $script:activeLoginTimer.Stop()
-            Complete-AccountLogin
-        }
-    })
-    $loginTimer.Start()
+        })
+        $loginTimer.Start()
+    } catch {
+        $code='LoginFailed'
+        if (-not (Complete-AccountLogin)) { $code='LoginCleanupFailed' }
+        Show-AccountLoginFailure $code
+    }
 })
 
 Load-Accounts-UI
