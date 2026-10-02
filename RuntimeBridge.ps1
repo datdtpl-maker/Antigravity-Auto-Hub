@@ -223,7 +223,8 @@ function Get-RuntimeWindows {
         $expression = @'
 (() => {
   const a = document.activeElement;
-  if (a && (a.matches('input,textarea,[contenteditable="true"]') || a.closest('[contenteditable="true"]'))) return false;
+  // activeElement survives window blur; an empty background composer is safe.
+  if (document.hasFocus() && a && (a.matches('input,textarea,[contenteditable="true"]') || a.closest('[contenteditable="true"]'))) return false;
   return !Array.from(document.querySelectorAll('textarea,input:not([type="hidden"]),[contenteditable="true"]'))
     .some(e => (e.value || e.textContent || '').trim().length > 0);
 })()

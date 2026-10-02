@@ -46,14 +46,18 @@ function Reset-Fixture {
 Reset-Fixture
 $script:FixtureRuntime.Idle=$false
 Assert (-not (Switch-ActiveAccount 'target') -and $script:Writes -eq 0 -and $script:Restarts -eq 0) 'Running agent defers without writes'
+Assert ($script:LastSwitchMessage -eq (Get-SwitchFailureMessage 'SwitchAgentRunning')) 'Running agent reports the specific deferral reason'
 Reset-Fixture
 $script:SafeWindow=$false
 Assert (-not (Switch-ActiveAccount 'target') -and $script:Writes -eq 0) 'Unsaved draft defers without writes'
+Assert ($script:LastSwitchMessage -eq (Get-SwitchFailureMessage 'Unsaved draft or focused editor; rotation deferred.')) 'Draft protection reports an actionable reason'
 Reset-Fixture
 Assert (Switch-ActiveAccount 'target') 'Verified transaction succeeds'
 Assert ((Read-RotationState).Status -eq 'Verified' -and $script:Restarts -eq 1 -and $script:RestoredWindows -eq 1) 'Runtime restarted, navigation restored, identity verified'
 Assert ((Get-Content $activeFile -Raw) -eq 'target') 'Active marker written only after verification'
 Assert (-not (Switch-ActiveAccount 'target') -and $script:Writes -eq 1) 'Persistent cooldown blocks second switch'
+Assert ($script:LastSwitchMessage -eq (Get-SwitchFailureMessage 'SwitchCooldown')) 'Cooldown explains why a repeated switch is deferred'
+Assert ((Get-SwitchFailureMessage 'secret-fixture-provider-url') -notmatch 'secret-fixture-provider-url') 'Unknown switch exceptions never leak raw details'
 Reset-Fixture
 $script:Verified=$false
 Assert (-not (Switch-ActiveAccount 'target')) 'Wrong runtime identity rejects success'

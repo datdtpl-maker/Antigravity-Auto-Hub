@@ -170,17 +170,38 @@ function Restore-StoredCredential {
     if ([WinCred]::Read('gemini:antigravity') -cne $Content) { throw 'Rollback read-back mismatch.' }
 }
 
+function Get-SwitchFailureMessage {
+    param([string]$Code)
+    # Fixed allowlist only: never display raw HTTP errors, credentials or URLs.
+    switch ($Code) {
+        'SwitchBusy' { return "$([char]0x0110)ang c$([char]0x00F3) phi$([char]0x00EA)n $([char]0x0111)$([char]0x0103)ng nh$([char]0x1EAD)p ho$([char]0x1EB7)c chuy$([char]0x1EC3)n t$([char]0x00E0)i kho$([char]0x1EA3)n kh$([char]0x00E1)c. Ch$([char]0x1EDD) ho$([char]0x00E0)n t$([char]0x1EA5)t r$([char]0x1ED3)i th$([char]0x1EED) l$([char]0x1EA1)i." }
+        'SwitchCooldown' { return "$([char]0x0110)ang trong th$([char]0x1EDD)i gian ch$([char]0x1EDD) 120 gi$([char]0x00E2)y sau l$([char]0x1EA7)n chuy$([char]0x1EC3)n g$([char]0x1EA7)n nh$([char]0x1EA5)t." }
+        'SwitchAgentRunning' { return "Antigravity $([char]0x0111)ang ch$([char]0x1EA1)y t$([char]0x00E1)c v$([char]0x1EE5). S$([char]0x1EBD) chuy$([char]0x1EC3)n khi t$([char]0x00E1)c v$([char]0x1EE5) ho$([char]0x00E0)n t$([char]0x1EA5)t." }
+        'Unsaved draft or focused editor; rotation deferred.' { return "$([char]0x0110)ang c$([char]0x00F3) b$([char]0x1EA3)n nh$([char]0x00E1)p ch$([char]0x01B0)a g$([char]0x1EED)i ho$([char]0x1EB7)c $([char]0x00F4) nh$([char]0x1EAD)p $([char]0x0111)ang $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c ch$([char]0x1ECD)n trong Antigravity. G$([char]0x1EED)i/l$([char]0x01B0)u b$([char]0x1EA3)n nh$([char]0x00E1)p r$([char]0x1ED3)i chuy$([char]0x1EC3)n sang Hub." }
+        'An editor is active; switch deferred.' { return "$([char]0x00D4) nh$([char]0x1EAD)p Antigravity v$([char]0x1EEB)a ho$([char]0x1EA1)t $([char]0x0111)$([char]0x1ED9)ng. $([char]0x0110)$([char]0x00E3) ho$([char]0x00E3)n chuy$([char]0x1EC3)n $([char]0x0111)$([char]0x1EC3) b$([char]0x1EA3)o v$([char]0x1EC7) n$([char]0x1ED9)i dung." }
+        'An agent became active; switch deferred.' { return "Antigravity v$([char]0x1EEB)a b$([char]0x1EAF)t $([char]0x0111)$([char]0x1EA7)u t$([char]0x00E1)c v$([char]0x1EE5) m$([char]0x1EDB)i. $([char]0x0110)$([char]0x00E3) ho$([char]0x00E3)n chuy$([char]0x1EC3)n." }
+        'Previous switch requires reconciliation.' { return "L$([char]0x1EA7)n chuy$([char]0x1EC3)n tr$([char]0x01B0)$([char]0x1EDB)c c$([char]0x1EA7)n ki$([char]0x1EC3)m tra. B$([char]0x1EA5)m Qu$([char]0x00E9)t Quota $([char]0x0111)$([char]0x1EC3) $([char]0x0111)$([char]0x1ED1)i chi$([char]0x1EBF)u t$([char]0x00E0)i kho$([char]0x1EA3)n." }
+        'Target quota unavailable or exhausted.' { return "T$([char]0x00E0)i kho$([char]0x1EA3)n $([char]0x0111)$([char]0x00ED)ch ch$([char]0x01B0)a $([char]0x0111)$([char]0x1ECD)c $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c quota ho$([char]0x1EB7)c quota qu$([char]0x00E1) th$([char]0x1EA5)p." }
+        'Stored credential does not match the runtime; reconcile before switching.' { return "T$([char]0x00E0)i kho$([char]0x1EA3)n l$([char]0x01B0)u trong Windows kh$([char]0x00E1)c t$([char]0x00E0)i kho$([char]0x1EA3)n Antigravity $([char]0x0111)ang d$([char]0x00F9)ng. C$([char]0x1EA7)n $([char]0x0111)$([char]0x1ED1)i chi$([char]0x1EBF)u l$([char]0x1EA1)i." }
+        'Debugger unavailable.' { return "Ch$([char]0x01B0)a k$([char]0x1EBF)t n$([char]0x1ED1)i $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c c$([char]0x1EED)a s$([char]0x1ED5) Antigravity $([char]0x0111)$([char]0x1EC3) b$([char]0x1EA3)o v$([char]0x1EC7) b$([char]0x1EA3)n nh$([char]0x00E1)p." }
+        'New runtime identity not confirmed.' { return "Ch$([char]0x01B0)a x$([char]0x00E1)c minh $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i. T$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng xoay $([char]0x0111)$([char]0x00E3) t$([char]0x1EA1)m d$([char]0x1EEB)ng." }
+        'Window changed or user is editing; cannot restore navigation.' { return "T$([char]0x00E0)i kho$([char]0x1EA3)n $([char]0x0111)$([char]0x00E3) $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c x$([char]0x1EED) l$([char]0x00FD) nh$([char]0x01B0)ng c$([char]0x1EED)a s$([char]0x1ED5) thay $([char]0x0111)$([char]0x1ED5)i ho$([char]0x1EB7)c $([char]0x0111)ang nh$([char]0x1EAD)p. C$([char]0x1EA7)n ki$([char]0x1EC3)m tra tr$([char]0x01B0)$([char]0x1EDB)c khi xoay ti$([char]0x1EBF)p." }
+        default { return "Ch$([char]0x01B0)a chuy$([char]0x1EC3)n $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c t$([char]0x00E0)i kho$([char]0x1EA3)n. Ki$([char]0x1EC3)m tra k$([char]0x1EBF)t n$([char]0x1ED1)i, c$([char]0x1EA5)u h$([char]0x00EC)nh OAuth v$([char]0x00E0) tr$([char]0x1EA1)ng th$([char]0x00E1)i Hub." }
+    }
+}
+
 function Switch-ActiveAccount {
     param([string]$targetAccountName, [string]$Reason='', [switch]$Notify)
     $ErrorActionPreference='Stop'
+    $script:LastSwitchMessage=''
     $mutex = [Threading.Mutex]::new($false, 'Local\AntigravityAutoHub.Switch')
     $locked=$false; $written=$false; $oldCredential=$null; $oldFile=$null; $oldEmail=''
     try {
         try { $locked=$mutex.WaitOne(0) } catch [Threading.AbandonedMutexException] { $locked=$true }
-        if (-not $locked) { return $false }
+        if (-not $locked) { throw 'SwitchBusy' }
         $state = Read-RotationState
         if ($state.Status -in @('Switching','NeedsAttention')) { throw 'Previous switch requires reconciliation.' }
-        if ($state.UpdatedAt -and ([datetime]::UtcNow - [datetime]$state.UpdatedAt).TotalSeconds -lt 120) { return $false }
+        if ($state.UpdatedAt -and ([datetime]::UtcNow - [datetime]$state.UpdatedAt).TotalSeconds -lt 120) { throw 'SwitchCooldown' }
         if ($targetAccountName -notmatch '^[a-zA-Z0-9_.@-]+$' -or $targetAccountName -in @('.','..')) { throw 'Invalid account name.' }
         $source = Join-Path $accDir "$targetAccountName.json"
         $quota = Get-AccountQuotaInfo $source
@@ -188,8 +209,7 @@ function Switch-ActiveAccount {
         $fresh = Get-FreshToken (Get-Content -LiteralPath $source -Raw -Encoding UTF8 | ConvertFrom-Json)
         $runtime = Get-RuntimeIdentity
         if ($runtime -and (-not $runtime.Idle)) {
-            Write-RotatorLog 'IDE agent is running; rotation deferred until idle.'
-            return $false
+            throw 'SwitchAgentRunning'
         }
         if ($runtime -and $runtime.Email -eq $quota.Email) { return $true }
         $savedWindows = @()
@@ -224,6 +244,7 @@ function Switch-ActiveAccount {
         }
         return $true
     } catch {
+        $script:LastSwitchMessage=Get-SwitchFailureMessage $_.Exception.Message
         if ($written) {
             $restored=$false
             try {
@@ -235,8 +256,9 @@ function Switch-ActiveAccount {
             } catch { }
             Set-RotationState 'NeedsAttention' '' $oldEmail
             Write-RotatorLog "Switch unverified. Stored credential restored: $restored. Automatic rotation paused."
-        } else { Write-RotatorLog 'Switch deferred: check quota, runtime, OAuth configuration and rotation-state.json.' }
-        if ($Notify) { Send-ToastNotification -Message "Ch$([char]0x1B0)a chuy$([char]0x1EC3)n $([char]0x111)$([char]0x1B0)$([char]0x1EE3)c t$([char]0xE0)i kho$([char]0x1EA3)n. Ki$([char]0x1EC3)m tra tr$([char]0x1EA1)ng th$([char]0xE1)i Hub / rotator.log." }
+        }
+        Write-RotatorLog ('Switch deferred: ' + $script:LastSwitchMessage)
+        if ($Notify) { Send-ToastNotification -Message $script:LastSwitchMessage }
         return $false
     } finally {
         if ($locked) { $mutex.ReleaseMutex() }

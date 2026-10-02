@@ -6,7 +6,7 @@
 
 Auto-Hub cung cấp giao diện WPF, tiến trình giám sát nền và MCP server chạy cục bộ. Engine chỉ thực hiện chuyển khi xác định được tài khoản đang dùng, quota đạt điều kiện và phiên làm việc cho phép chuyển.
 
-> **Trạng thái kiểm chứng:** Bộ kiểm tra local đạt 138 mục PASS, gồm kiểm tra cú pháp/WPF và bản IDE đang cài. Hub kiểm tra các tên hàm liên quan trong `app.asar` để tự nhận bản 2.x mới. Đây là kiểm tra sơ bộ, không chứng minh hành vi của các hàm không đổi; không bảo đảm tương thích mọi cập nhật tương lai. Chưa kiểm chứng chuyển tài khoản thật xuyên suốt hoặc tích hợp OmniLogin thực tế.
+> **Trạng thái kiểm chứng:** Bộ kiểm tra local đạt 148 mục PASS, gồm kiểm tra cú pháp/WPF và bản IDE đang cài. Hub kiểm tra các tên hàm liên quan trong `app.asar` để tự nhận bản 2.x mới. Đây là kiểm tra sơ bộ, không chứng minh hành vi của các hàm không đổi; không bảo đảm tương thích mọi cập nhật tương lai. Log ngày 02/10/2026 đã ghi nhận một lần chuyển tự động và xác minh tài khoản thành công; chưa kiểm chứng tích hợp OmniLogin thực tế.
 
 ## Mục lục
 
@@ -222,10 +222,12 @@ Source hiện tại không chứa client secret dùng sẵn. Việc loại secre
 powershell.exe -NoProfile -STA -File .\tests\Validate.ps1
 ```
 
-Bộ kiểm tra có **138 mục PASS** trên máy phát triển: một mục kiểm tra cú pháp/ASCII và WPF, cùng các kiểm thử sau:
+Bộ kiểm tra có **148 mục PASS** trên máy phát triển: một mục kiểm tra cú pháp/ASCII và WPF, cùng các kiểm thử sau:
 
 - **43 kiểm thử engine và tương thích:** quota, điều kiện xoay, rollback, trạng thái, phiên bản và chính sách tự thích ứng.
 - **3 kiểm thử trạng thái daemon:** nhận diện khi có 0, 1 hoặc 2 tiến trình trên PowerShell 5.1.
+- **6 kiểm thử an toàn cửa sổ:** focus thật, composer nền trống và bảo vệ bản nháp; chạy bằng Node.js.
+- **4 kiểm thử lý do hoãn:** agent, bản nháp, cooldown và lọc lỗi nhạy cảm.
 - **6 kiểm thử lỗi quota:** phân loại yêu cầu xác minh, lọc URL và quét lại thành công.
 - **59 kiểm thử đăng nhập:** URL Google, tham số helper, quyền sở hữu cổng, khôi phục credential khi hủy/lỗi, đối chiếu danh tính, phân loại kết quả xác thực, liên kết xác minh và chuyển trạng thái chờ sang hợp lệ.
 - **26 kiểm thử MCP:** giao thức, quyền chỉ đọc, validation, lọc dữ liệu nhạy cảm, UTF-8 BOM và tiến trình stdio thật từ thư mục không có credential.
@@ -234,12 +236,12 @@ Workflow [Windows validation](.github/workflows/validate.yml) chạy cùng bộ 
 
 | Hạng mục | Bằng chứng hiện có |
 | --- | --- |
-| Kiểm thử local | 138 mục PASS ngày 26/09/2026, bao gồm kiểm tra bản 2.17.0 đang cài |
-| CI Windows | Commit `5b56672` đã đạt CI; bản sửa đăng nhập chưa chạy CI. Bộ kiểm tra hiện tại có 137 mục PASS khi runner không có Antigravity |
+| Kiểm thử local | 148 mục PASS ngày 02/10/2026, bao gồm kiểm tra bản 2.19.1 đang cài |
+| CI Windows | Bản sửa focus hiện tại chưa đẩy/chạy CI. Bộ kiểm tra hiện tại có 147 mục PASS khi runner không có Antigravity |
 | Quota Google và email runtime | Đã đọc được trên máy phát triển |
 | Trạng thái tác vụ và kiểm tra ô nhập qua CDP | Đã truy vấn trên runtime thật |
 | MCP `antigravity_status` qua stdio | Đã đọc được runtime thật ở chế độ chỉ đọc |
-| Chuyển tài khoản thật xuyên suốt | **Chưa kiểm chứng** |
+| Chuyển tài khoản thật | Log 02/10/2026 12:56:17 ghi nhận chuyển và xác minh thành công; runtime, credential và state sau đó khớp nhau. Chưa kiểm chứng một lượt chat mới sau chuyển hoặc ép chuyển lại sau bản sửa focus |
 | Luồng đăng nhập Google tương tác sau nâng cấp | Helper 2.17.0 mở được Google; lượt thật 26/09 trả `authResult.ineligible`. Provider yêu cầu xác minh Google; Hub đã bổ sung mở liên kết và giữ phiên chờ xác nhận, kiểm thử bằng fixture đã đạt. Chưa xác minh hoàn tất xác minh/lưu tài khoản mới thành công |
 | Tích hợp OmniLogin | **Chưa kiểm chứng** |
 

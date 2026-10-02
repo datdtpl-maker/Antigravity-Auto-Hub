@@ -317,8 +317,13 @@ function Load-Accounts-UI {
             $btnSwitch.IsEnabled = $acc.Success
             $btnSwitch.Margin = New-Object System.Windows.Thickness(0, 0, 8, 0)
             $btnSwitch.Add_Click({
-                Switch-ActiveAccount -targetAccountName $currName -Notify | Out-Null
+                $switched=Switch-ActiveAccount -targetAccountName $currName -Notify
+                $switchMessage=$script:LastSwitchMessage
                 Load-Accounts-UI
+                if(-not $switched -and $switchMessage){
+                    $window.FindName('TxtDaemonStatus').Text="$([char]0x0110)$([char]0x00E3) ho$([char]0x00E3)n chuy$([char]0x1EC3)n $([char]0x2014) xem l$([char]0x00FD) do"
+                    $window.FindName('TxtDaemonStatus').ToolTip=$switchMessage
+                }
             }.GetNewClosure())
             $actions.Children.Add($btnSwitch) | Out-Null
         }
