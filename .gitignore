@@ -11,3 +11,18 @@ rotator.log
 *.log
 .DS_Store
 Thumbs.db
+
+# Local handoffs, credentials and private backups
+HANDOFF.md
+handoff.md
+*.clixml
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.bundle
+backups/

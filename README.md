@@ -314,6 +314,5 @@ Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR
 | `Configure-OAuth.ps1`, `Configure-Mcp.ps1` | Thiết lập OAuth/MCP |
 | `Setup-Install.bat`, `Setup.ps1`, `launch-*.vbs` | Cài shortcut và khởi chạy |
 | `tests/` | Kiểm thử engine, đăng nhập, quota, cửa sổ và MCP |
-| [HANDOFF.md](HANDOFF.md) | Bàn giao và bằng chứng kiểm chứng |
 
 PowerShell giữ ASCII, chuỗi tiếng Việt dùng mã Unicode; Markdown dùng UTF-8. Khi đóng góp, giữ điều kiện bảo vệ tác vụ/bản nháp, không commit credential và nêu rõ phần đã kiểm thử thực tế.
