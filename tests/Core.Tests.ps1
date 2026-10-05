@@ -58,6 +58,11 @@ Assert ((Get-Content $activeFile -Raw) -eq 'target') 'Active marker written only
 Assert (-not (Switch-ActiveAccount 'target') -and $script:Writes -eq 1) 'Persistent cooldown blocks second switch'
 Assert ($script:LastSwitchMessage -eq (Get-SwitchFailureMessage 'SwitchCooldown')) 'Cooldown explains why a repeated switch is deferred'
 Assert ((Get-SwitchFailureMessage 'secret-fixture-provider-url') -notmatch 'secret-fixture-provider-url') 'Unknown switch exceptions never leak raw details'
+Set-RotationState 'Verified' 'old-account' 'old@example.test'
+$expired=Read-RotationState
+$expired.UpdatedAt=[datetime]::UtcNow.AddMinutes(-3).ToString('o')
+Write-AtomicText $stateFile ($expired | ConvertTo-Json -Compress)
+Assert (Switch-ActiveAccount 'target') 'Manual switch accepts cooldown older than 120 real seconds'
 Reset-Fixture
 $script:Verified=$false
 Assert (-not (Switch-ActiveAccount 'target')) 'Wrong runtime identity rejects success'

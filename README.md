@@ -128,7 +128,7 @@ Google báo thành công chỉ xác nhận bước OAuth. Hub vẫn cần Antigr
 - Có ít nhất **hai tài khoản khác nhau** trong danh sách.
 - Tài khoản hiện tại có nhãn **ĐANG KẾT NỐI**.
 - Quota tài khoản hiện tại và dự phòng đọc được thành phần trăm.
-- Tài khoản dự phòng còn trên **15% quota 5H** và **10% quota tuần**.
+- Tài khoản dự phòng còn trên **20% quota 5H** và **10% quota tuần**.
 - Daemon đang chạy, không có trạng thái yêu cầu kiểm tra.
 
 Để thử thủ công lần đầu: chờ mọi tác vụ hoàn tất, gửi hoặc lưu bản nháp, chuyển sang cửa sổ Hub rồi bấm **Chuyển Thủ Công** trên tài khoản đích. Đợi kết quả trước khi bấm tiếp. Kiểm tra email trong Antigravity và thử một yêu cầu ngắn sau chuyển.
@@ -157,13 +157,15 @@ Sau Setup không cần bật thêm: daemon đã được khởi chạy. Chuyển
 
 | Điều kiện mặc định | Giá trị |
 | --- | --- |
-| Tìm tài khoản thay thế | Quota 5H **≤ 12%** hoặc tuần **≤ 8%** |
-| Tài khoản đích cho xoay tự động | Quota 5H **> 15%** và tuần **> 10%** |
+| Tìm tài khoản thay thế | Quota 5H **< 20%** hoặc tuần **≤ 8%** |
+| Tài khoản đích cho xoay tự động | Quota 5H **> 20%** và tuần **> 10%** |
 | Ưu tiên | Quota 5H cao nhất, sau đó quota tuần cao nhất |
 | Khoảng nghỉ giữa lượt quét | **25 giây sau khi lượt trước hoàn tất** |
 | Khoảng chờ giữa lần chuyển | **120 giây** |
 
-Ví dụ: A còn 5% quota 5H, B còn 80%. Khi Antigravity rảnh, không có bản nháp và B đạt cả ngưỡng quota tuần, daemon có thể chuyển từ A sang B. Nếu tác vụ còn chạy, Hub chờ.
+Ví dụ: A còn 19% quota 5H, B còn 80%. Daemon chuyển từ A sang B ngay trong lượt quét phát hiện quota thấp nếu Antigravity rảnh, không có bản nháp, B đạt ngưỡng quota tuần và đã hết thời gian chờ. Đúng 20% chưa kích hoạt điều kiện quota 5H. Nếu tác vụ còn chạy, Hub chờ lượt quét sau.
+
+Quota được kiểm tra theo lượt quét, không theo từng request. Khoảng chờ 120 giây được tính theo UTC để không bị kéo dài do múi giờ Windows.
 
 Engine xác minh danh tính, kiểm tra trạng thái rảnh, ghi credential đích, khởi động lại đúng tiến trình `language_server`, rồi xác minh email mới và khôi phục đường dẫn cửa sổ.
 
@@ -287,7 +289,7 @@ Cần Windows PowerShell 5.1, WPF và Node.js:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\tests\Validate.ps1
 ```
 
-Ngày **02/10/2026**, local đạt **148 mục PASS** trên máy có Antigravity 2.19.1. Runner không cài Antigravity bỏ qua kiểm tra bản cài, còn **147 mục PASS**. Kiểm thử giao dịch dùng mock, không đổi tài khoản thật.
+Ngày **05/10/2026**, local đạt **156 mục PASS**, gồm kiểm tra bản Antigravity đã cài. Runner không cài Antigravity bỏ qua kiểm tra bản cài, còn **155 mục PASS**. Kiểm thử giao dịch dùng mock, không đổi tài khoản thật; có kiểm thử ngưỡng 20% và thời gian chờ khi đọc timestamp UTC từ file.
 
 Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR. [CI bản sửa focus `6c99e18`](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/runs/36971936784) đã thành công.
 

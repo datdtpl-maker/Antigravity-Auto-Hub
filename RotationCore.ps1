@@ -201,7 +201,7 @@ function Switch-ActiveAccount {
         if (-not $locked) { throw 'SwitchBusy' }
         $state = Read-RotationState
         if ($state.Status -in @('Switching','NeedsAttention')) { throw 'Previous switch requires reconciliation.' }
-        if ($state.UpdatedAt -and ([datetime]::UtcNow - [datetime]$state.UpdatedAt).TotalSeconds -lt 120) { throw 'SwitchCooldown' }
+        if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt 120) { throw 'SwitchCooldown' }
         if ($targetAccountName -notmatch '^[a-zA-Z0-9_.@-]+$' -or $targetAccountName -in @('.','..')) { throw 'Invalid account name.' }
         $source = Join-Path $accDir "$targetAccountName.json"
         $quota = Get-AccountQuotaInfo $source
@@ -272,14 +272,14 @@ function Invoke-AutoRotationCheck {
         Write-RotatorLog 'Rotation paused: previous switch requires verification.'
         return
     }
-    if ($state.UpdatedAt -and ([datetime]::UtcNow - [datetime]$state.UpdatedAt).TotalSeconds -lt 120) { return }
+    if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt 120) { return }
     try { $runtime=Get-RuntimeIdentity } catch { Write-RotatorLog (Get-RuntimeFailureMessage $_); return }
     if (-not $runtime) { Write-RotatorLog 'IDE is closed; monitoring only.'; return }
     $accounts = @(Get-AllAccountsQuota)
     $current = $accounts | Where-Object { $_.Email -eq $runtime.Email } | Select-Object -First 1
     if (-not $current -or -not $current.Success) { Write-RotatorLog 'Active quota unknown; no rotation.'; return }
     Write-RotatorLog "Active [$($current.AccountName)]: 5H=$([math]::Round($current.Gemini5H*100))%, week=$([math]::Round($current.GeminiWeekly*100))%."
-    if ($current.Gemini5H -gt $MinQuotaThreshold -and $current.GeminiWeekly -gt $MinWeeklyThreshold) { return }
+    if ($current.Gemini5H -ge $MinQuotaThreshold -and $current.GeminiWeekly -gt $MinWeeklyThreshold) { return }
     if (-not $runtime.Idle) { Write-RotatorLog 'Low quota; waiting for running agents to finish.'; return }
     $best = $accounts | Where-Object {
         $_.Success -and $_.Email -ne $runtime.Email -and
