@@ -7,6 +7,28 @@ function Get-RefreshToken {
 
 function Get-FreshToken {
     param($Token)
+    if (-not $script:GoogleClientId -or -not $script:GoogleClientSecret) {
+        # UI closures may need to reload configuration. Stay within this clone;
+        # never borrow another installation's credentials via a fixed path.
+        if ($env:ANTIGRAVITY_GOOGLE_CLIENT_ID -and $env:ANTIGRAVITY_GOOGLE_CLIENT_SECRET) {
+            $script:GoogleClientId = $env:ANTIGRAVITY_GOOGLE_CLIENT_ID
+            $script:GoogleClientSecret = $env:ANTIGRAVITY_GOOGLE_CLIENT_SECRET
+        } else {
+            $configRoot = if ($baseDir) { $baseDir } else { $PSScriptRoot }
+            if ($configRoot) {
+                $localConfig = Join-Path $configRoot 'oauth.local.clixml'
+                if (Test-Path -LiteralPath $localConfig) {
+                    try {
+                        $config = Import-Clixml -LiteralPath $localConfig -ErrorAction Stop
+                        if ($config -is [pscredential]) {
+                            $script:GoogleClientId = $config.UserName
+                            $script:GoogleClientSecret = $config.GetNetworkCredential().Password
+                        }
+                    } catch { }
+                }
+            }
+        }
+    }
     if (-not $script:GoogleClientId -or -not $script:GoogleClientSecret) { throw 'OAuth configuration missing.' }
     $refresh = Get-RefreshToken $Token
     if (-not $refresh) { throw 'Refresh token missing.' }

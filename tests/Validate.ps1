@@ -22,6 +22,8 @@ if ($LASTEXITCODE) { throw 'Rotation tests failed' }
 if ($LASTEXITCODE) { throw 'Core tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Quota.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Quota tests failed' }
+& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'OAuth.Tests.ps1')
+if ($LASTEXITCODE) { throw 'OAuth configuration tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Compatibility.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Compatibility tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Daemon.Tests.ps1')

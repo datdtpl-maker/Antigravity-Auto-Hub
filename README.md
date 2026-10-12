@@ -76,6 +76,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Configure-OAuth.ps1
 
 Secret được Windows DPAPI bảo vệ theo người dùng hiện tại. Tham số `-ExecutionPolicy Bypass` chỉ áp dụng cho tiến trình PowerShell đang chạy, không thay chính sách toàn máy.
 
+**Clone sang máy khác:** cấu hình OAuth không đi theo Git. Chạy `Configure-OAuth.ps1` trên máy mới bằng client tương thích; không sao chép `oauth.local.clixml` từ máy/người dùng Windows khác. Khi cần nạp lại cấu hình để refresh token, Hub dùng biến môi trường đầy đủ hoặc file trong chính thư mục clone, không tìm ở đường dẫn cố định trên máy tác giả.
+
+Nếu Google báo đăng nhập thành công nhưng Hub báo **“Đăng nhập chưa trả về token hợp lệ”**, Hub chưa xác minh được token để lưu tài khoản. Thông báo này chưa phân biệt được thiếu token, lỗi refresh/OAuth/mạng hay email không khớp. Kiểm tra cấu hình trên máy mới, hoặc đăng nhập Antigravity chính thức rồi dùng **Lưu Acc Này → Quét Quota**. Nếu vẫn lỗi, xem các dòng `Account login` trong `rotator.log`; không chia sẻ token/secret. Bản sửa nạp cấu hình không bảo đảm khắc phục mọi nguyên nhân của lỗi này.
+
 <details>
 <summary>Nâng cao: cấu hình bằng biến môi trường</summary>
 
@@ -290,6 +294,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\tests\Validate.ps
 ```
 
 Ngày **05/10/2026**, local đạt **156 mục PASS**, gồm kiểm tra bản Antigravity đã cài. Runner không cài Antigravity bỏ qua kiểm tra bản cài, còn **155 mục PASS**. Kiểm thử giao dịch dùng mock, không đổi tài khoản thật; có kiểm thử ngưỡng 20% và thời gian chờ khi đọc timestamp UTC từ file.
+
+Ngày **12/10/2026**, local đạt **162 mục PASS**, gồm kiểm tra tương thích bản cài **2.22.0.0** và 6 kiểm tra nạp cấu hình OAuth: thư mục clone có dấu cách, thiếu/hỏng cấu hình, thứ tự ưu tiên biến môi trường và cấu hình đã nạp. Kiểm tra OAuth dùng credential giả và mock mạng; chưa xác minh lại luồng đăng nhập thật trên máy khác. Runner không cài Antigravity có **161 mục PASS**.
 
 Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR. [CI bản sửa focus `6c99e18`](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/runs/36971936784) đã thành công.
 
