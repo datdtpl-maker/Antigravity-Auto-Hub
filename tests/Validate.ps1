@@ -32,3 +32,5 @@ if ($LASTEXITCODE) { throw 'Daemon status tests failed' }
 if ($LASTEXITCODE) { throw 'Account login tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Mcp.Tests.ps1')
 if ($LASTEXITCODE) { throw 'MCP tests failed' }
+& powershell.exe -NoProfile -STA -File (Join-Path $PSScriptRoot 'Dashboard.Tests.ps1')
+if ($LASTEXITCODE) { throw 'Dashboard tests failed' }

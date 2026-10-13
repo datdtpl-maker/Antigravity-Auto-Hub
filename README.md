@@ -6,6 +6,26 @@
 
 Hub theo dõi các tài khoản bạn đã lưu và chọn tài khoản còn quota khi Antigravity rảnh. Bạn cũng có thể chuyển thủ công và xử lý yêu cầu xác minh Google từ giao diện.
 
+### Dashboard quản lý tài khoản
+
+Giao diện WPF mới dùng nền tối, thanh điều hướng và bảng tài khoản, tham khảo cách tổ chức dashboard của [Codex LB](https://github.com/Soju06/codex-lb). Không cần cài thêm thư viện giao diện.
+
+- **Tổng tài khoản, đủ quota, cần chú ý:** tính trên toàn bộ kho, không thay đổi theo bộ lọc. “Đủ quota” nghĩa là 5H > 20% và tuần > 10%; đây chưa phải xác nhận IDE sẵn sàng chuyển. Tài khoản chưa đọc được quota hiển thị `N/A`.
+- **Tìm kiếm, lọc và sắp xếp:** tìm theo tên/email, lọc đủ quota/cần chú ý, bấm tiêu đề cột để sắp xếp. Tài khoản đang dùng được nhận diện bằng email runtime và xếp đầu mặc định.
+- **Nhật ký xoay:** xem thời gian, tài khoản, kết quả và lý do hoãn đã nhận diện. Bảng tự cập nhật mỗi 5 giây, hiển thị tối đa 200 sự kiện từ 5.000 dòng cuối `rotator.log`. Bộ đếm “Đã xoay xác minh” chỉ đếm sự kiện xác minh trong phạm vi này, không phải tổng lịch sử trọn đời. Sự kiện không nhận diện được không được đưa vào bảng.
+- **Quét quota chạy nền:** tự quét lại sau 60 giây kể từ khi lượt quét giao diện trước kết thúc; có thể bấm Quét quota để cập nhật ngay. Tìm kiếm và chuyển trang vẫn hoạt động trong lúc quét. Khi quét lỗi, dữ liệu cũ được giữ lại kèm thông báo. Chu kỳ này độc lập với daemon xoay tài khoản.
+- **Cửa sổ co giãn:** có nút phóng to/khôi phục, bố cục gọn hơn khi chiều cao dưới 740px; kích thước tối thiểu 1040 × 640 đơn vị WPF. Danh sách dài cuộn và ảo hóa hàng.
+
+Đóng rồi mở lại Hub để nạp giao diện mới. Các kiểm tra quota, tác vụ đang chạy, bản nháp và xác minh danh tính của engine vẫn áp dụng khi chuyển.
+
+Xem thử bằng dữ liệu minh họa, không đọc credential hay khởi chạy daemon:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\AntigravityHub.ps1 -Preview
+```
+
+Chế độ preview khóa các thao tác thêm/lưu/chuyển/xóa tài khoản. `tests/Preview-Dashboard.ps1` xuất ảnh giao diện minh họa vào `work/ui-preview/` để kiểm tra bố cục.
+
 > **Trước khi bắt đầu:** cần Antigravity Desktop, tài khoản Google của bạn và cấu hình OAuth tương thích. Repo không cung cấp tài khoản, token hoặc client secret dùng sẵn. Chỉ clone repo và chạy Setup chưa đủ để đọc quota.
 
 ## Mục lục
@@ -297,6 +317,8 @@ Ngày **05/10/2026**, local đạt **156 mục PASS**, gồm kiểm tra bản An
 
 Ngày **12/10/2026**, local đạt **162 mục PASS**, gồm kiểm tra tương thích bản cài **2.22.0.0** và 6 kiểm tra nạp cấu hình OAuth: thư mục clone có dấu cách, thiếu/hỏng cấu hình, thứ tự ưu tiên biến môi trường và cấu hình đã nạp. Kiểm tra OAuth dùng credential giả và mock mạng; chưa xác minh lại luồng đăng nhập thật trên máy khác. Runner không cài Antigravity có **161 mục PASS**.
 
+Dashboard có thêm **23 kiểm thử WPF** cho số lượng, tìm kiếm/lọc/sắp xếp, nút thao tác theo dòng, điều hướng, trạng thái rỗng, nhật ký và quét bất đồng bộ. Tổng cộng **185 mục PASS** local, **184 mục** trên runner không cài Antigravity. Ngày **13/10/2026**, pipeline đọc dashboard thực tế nhận đủ **8 tài khoản có quota**, runtime và daemon được nhận diện; không thực hiện chuyển tài khoản thật trong lần kiểm tra giao diện này.
+
 Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR. [CI bản sửa focus `6c99e18`](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/runs/36971936784) đã thành công.
 
 ### Mức độ kiểm chứng
@@ -314,6 +336,7 @@ Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR
 | File / thư mục | Vai trò |
 | --- | --- |
 | `AntigravityHub.ps1`, `MainWindow.xaml` | Giao diện |
+| `Dashboard.ps1`, `DashboardText.vi.json` | Dữ liệu dashboard, quét nền, bộ lọc và nhật ký; nhãn tiếng Việt UTF-8 |
 | `AccountLogin.ps1` | Helper đăng nhập và xác minh Google |
 | `AutoRotator.ps1` | Cấu hình, Credential Manager, thông báo, daemon |
 | `RotationCore.ps1` | Quota, chọn tài khoản, chuyển và khôi phục |
@@ -323,4 +346,4 @@ Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR
 | `Setup-Install.bat`, `Setup.ps1`, `launch-*.vbs` | Cài shortcut và khởi chạy |
 | `tests/` | Kiểm thử engine, đăng nhập, quota, cửa sổ và MCP |
 
-PowerShell giữ ASCII, chuỗi tiếng Việt dùng mã Unicode; Markdown dùng UTF-8. Khi đóng góp, giữ điều kiện bảo vệ tác vụ/bản nháp, không commit credential và nêu rõ phần đã kiểm thử thực tế.
+PowerShell giữ ASCII; chuỗi tiếng Việt dùng mã Unicode hoặc resource `DashboardText.vi.json`. XAML, JSON và Markdown dùng UTF-8. Khi đóng góp, giữ điều kiện bảo vệ tác vụ/bản nháp, không commit credential và nêu rõ phần đã kiểm thử thực tế.

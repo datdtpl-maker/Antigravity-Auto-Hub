@@ -1,3 +1,5 @@
+param([switch]$Preview, [switch]$NoShow)
+if ($NoShow -and -not $Preview) { throw 'NoShow requires Preview.' }
 # ==============================================================================
 # ANTIGRAVITY MULTI-ACCOUNT HUB - 100% PURE ASCII UNICODE SAFE & PORTABLE
 # ==============================================================================
@@ -15,7 +17,8 @@ if (-not (Test-Path $accDir)) {
     New-Item -ItemType Directory -Path $accDir -Force | Out-Null
 }
 
-. $rotatorScript
+if (-not $Preview) { . $rotatorScript }
+. (Join-Path $baseDir 'Dashboard.ps1')
 . (Join-Path $baseDir 'AccountLogin.ps1')
 
 function Get-DaemonStatus {
@@ -39,16 +42,19 @@ function Start-AutoRotatorDaemon {
     }
 }
 
-Start-AutoRotatorDaemon
+if (-not $Preview) { Start-AutoRotatorDaemon }
 
 if (-not (Test-Path $xamlFile)) {
     Write-Error "Khong tim thay file MainWindow.xaml tai $xamlFile"
     exit 1
 }
 
-$xamlText = [System.IO.File]::ReadAllText($xamlFile, [System.Text.Encoding]::ASCII)
+$xamlText = [System.IO.File]::ReadAllText($xamlFile, [System.Text.Encoding]::UTF8)
 $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xamlText))
 $window = [System.Windows.Markup.XamlReader]::Load($reader)
+$reader.Dispose()
+$window.Width=[math]::Min($window.Width,[Windows.SystemParameters]::WorkArea.Width)
+$window.Height=[math]::Min($window.Height,[Windows.SystemParameters]::WorkArea.Height)
 
 $titleBar = $window.FindName("TitleBar")
 $btnMinimize = $window.FindName("BtnMinimize")
@@ -64,298 +70,22 @@ if ($txtFooterPath) {
     $txtFooterPath.Text = "Th$([char]0x01B0) m$([char]0x1EE5)c l$([char]0x01B0)u tr$([char]0x1EEF): $baseDir"
 }
 
-$titleBar.Add_MouseLeftButtonDown({ $window.DragMove() })
+$titleBar.Add_MouseLeftButtonDown({ param($sender,$event)
+    if ($event.OriginalSource -is [Windows.Controls.Button]) { return }
+    if ($event.ClickCount -eq 2) { Switch-HubWindowState } else { $window.DragMove() }
+})
+function Switch-HubWindowState {
+    $window.WindowState=if($window.WindowState -eq 'Maximized'){'Normal'}else{'Maximized'}
+}
+$window.FindName('BtnMaximize').Add_Click({ Switch-HubWindowState })
 $btnMinimize.Add_Click({ $window.WindowState = [System.Windows.WindowState]::Minimized })
 $btnClose.Add_Click({ $window.Close() })
 $btnOpenFolder.Add_Click({ Start-Process "explorer.exe" $baseDir })
 
-function Load-Accounts-UI {
-    $accountsContainer.Children.Clear()
-    
-    $accounts = @(Get-AllAccountsQuota)
-    $runtime = $null
-    $runtimeFailure = $null
-    try { $runtime = Get-RuntimeIdentity } catch { $runtimeFailure = Get-RuntimeFailureMessage $_ }
-    $activeEmail = if ($runtime) { $runtime.Email } else { '' }
-    $state = Read-RotationState
-    $daemonText = $window.FindName('TxtDaemonStatus')
-    if ($state.Status -in @('Switching','NeedsAttention')) {
-        $daemonText.Text = "C$([char]0x1EA7)n ki$([char]0x1EC3)m tra chuy$([char]0x1EC3)n t$([char]0x00E0)i kho$([char]0x1EA3)n"
-    } elseif ($runtimeFailure) {
-        $daemonText.Text = $runtimeFailure
-    } elseif (-not $runtime) {
-        $daemonText.Text = "Ch$([char]0x01B0)a x$([char]0x00E1)c minh IDE"
-    } elseif (-not (Get-DaemonStatus)) {
-        $daemonText.Text = "Daemon ch$([char]0x01B0)a ch$([char]0x1EA1)y"
-    } elseif (-not $runtime.Idle) {
-        $daemonText.Text = "IDE $([char]0x0111)ang ch$([char]0x1EA1)y t$([char]0x00E1)c v$([char]0x1EE5)"
-    } else {
-        $daemonText.Text = "S$([char]0x1EB5)n s$([char]0x00E0)ng xoay khi quota th$([char]0x1EA5)p"
-    }
-
-    if ($accounts.Count -eq 0) {
-        $empty = New-Object System.Windows.Controls.TextBlock
-        $empty.Text = "Ch$([char]0x01B0)a c$([char]0x00F3) t$([char]0x00E0)i kho$([char]0x1EA3)n n$([char]0x00E0)o trong h$([char]0x1EC7) th$([char]0x1ED1)ng.`nH$([char]0x00E3)y b$([char]0x1EA5)m '+ Th$([char]0x00EA)m T$([char]0x00E0)i Kho$([char]0x1EA3)n M$([char]0x1EDB)i' $ linh ho$([char]0x1EA1)t b$([char]0x1EAF)t $([char]0x0111)$([char]0x1EA7)u."
-        $empty.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#6C7086")
-        $empty.FontSize = 13
-        $empty.Margin = New-Object System.Windows.Thickness(0, 40, 0, 0)
-        $empty.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
-        $empty.TextAlignment = [System.Windows.TextAlignment]::Center
-        $accountsContainer.Children.Add($empty) | Out-Null
-        return
-    }
-
-    foreach ($acc in $accounts) {
-        $accName = $acc.AccountName
-        $isActive = ($activeEmail -and $acc.Email -eq $activeEmail)
-        $gemini5hPct = [Math]::Max(0, [Math]::Round($acc.Gemini5H * 100))
-        $geminiWeeklyPct = [Math]::Max(0, [Math]::Round($acc.GeminiWeekly * 100))
-        $email = if ($acc.Email) { $acc.Email } else { "$([char]0x0110)ang x$([char]0x00E1)c th$([char]0x1EF1)c..." }
-
-        # Card Border
-        $card = New-Object System.Windows.Controls.Border
-        if ($isActive) {
-            $card.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#23283B")
-            $card.BorderBrush = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#89B4FA")
-            $card.BorderThickness = New-Object System.Windows.Thickness(1.5)
-        } else {
-            $card.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1E1E2E")
-            $card.BorderBrush = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#313244")
-            $card.BorderThickness = New-Object System.Windows.Thickness(1)
-        }
-        $card.CornerRadius = New-Object System.Windows.CornerRadius(10)
-        $card.Padding = New-Object System.Windows.Thickness(18, 14, 18, 14)
-        $card.Margin = New-Object System.Windows.Thickness(0, 0, 0, 10)
-
-        $grid = New-Object System.Windows.Controls.Grid
-        $c1 = New-Object System.Windows.Controls.ColumnDefinition
-        $c1.Width = New-Object System.Windows.GridLength(1, [System.Windows.GridUnitType]::Star)
-        $c2 = New-Object System.Windows.Controls.ColumnDefinition
-        $c2.Width = [System.Windows.GridLength]::Auto
-        $grid.ColumnDefinitions.Add($c1)
-        $grid.ColumnDefinitions.Add($c2)
-
-        # Left Info Stack
-        $info = New-Object System.Windows.Controls.StackPanel
-        $info.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-
-        # Row 1: Name + Email + Status Badge
-        $row1 = New-Object System.Windows.Controls.StackPanel
-        $row1.Orientation = [System.Windows.Controls.Orientation]::Horizontal
-
-        $name = New-Object System.Windows.Controls.TextBlock
-        $name.Text = $accName
-        $name.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#CDD6F4")
-        $name.FontSize = 14
-        $name.FontWeight = [System.Windows.FontWeights]::Bold
-        $name.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $row1.Children.Add($name) | Out-Null
-
-        $emailText = New-Object System.Windows.Controls.TextBlock
-        $emailText.Text = "($email)"
-        $emailText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6ADC8")
-        $emailText.FontSize = 12
-        $emailText.Margin = New-Object System.Windows.Thickness(8, 0, 0, 0)
-        $emailText.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $row1.Children.Add($emailText) | Out-Null
-
-        if ($isActive) {
-            $badge = New-Object System.Windows.Controls.Border
-            $badge.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1E382B")
-            $badge.CornerRadius = New-Object System.Windows.CornerRadius(4)
-            $badge.Padding = New-Object System.Windows.Thickness(8, 2, 8, 2)
-            $badge.Margin = New-Object System.Windows.Thickness(12, 0, 0, 0)
-            $badge.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-
-            $bText = New-Object System.Windows.Controls.TextBlock
-            $bText.Text = "$([char]0x0110)ANG K$([char]0x1EBF)T N$([char]0x1ED0)I"
-            $bText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6E3A1")
-            $bText.FontSize = 10
-            $bText.FontWeight = [System.Windows.FontWeights]::Bold
-            $badge.Child = $bText
-            $row1.Children.Add($badge) | Out-Null
-        }
-
-        $info.Children.Add($row1) | Out-Null
-
-        # Row 2: Dual Quota Progress Bars (5H & Weekly)
-        $quotaRow = New-Object System.Windows.Controls.StackPanel
-        $quotaRow.Orientation = [System.Windows.Controls.Orientation]::Horizontal
-        $quotaRow.Margin = New-Object System.Windows.Thickness(0, 8, 0, 0)
-
-        # 1. 5H Quota
-        $q5hLabel = New-Object System.Windows.Controls.TextBlock
-        $q5hLabel.Text = "5H:"
-        $q5hLabel.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6ADC8")
-        $q5hLabel.FontSize = 11
-        $q5hLabel.FontWeight = [System.Windows.FontWeights]::SemiBold
-        $q5hLabel.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $quotaRow.Children.Add($q5hLabel) | Out-Null
-
-        $p5hBorder = New-Object System.Windows.Controls.Border
-        $p5hBorder.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#313244")
-        $p5hBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
-        $p5hBorder.Width = 90
-        $p5hBorder.Height = 7
-        $p5hBorder.Margin = New-Object System.Windows.Thickness(6, 0, 6, 0)
-        $p5hBorder.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-
-        $p5hFill = New-Object System.Windows.Controls.Border
-        $p5hFill.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Left
-        $p5hFill.Width = [Math]::Round(90 * ($gemini5hPct / 100))
-        $p5hFill.CornerRadius = New-Object System.Windows.CornerRadius(4)
-        if ($gemini5hPct -ge 50) {
-            $p5hFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6E3A1")
-        } elseif ($gemini5hPct -ge 20) {
-            $p5hFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F9E2AF")
-        } else {
-            $p5hFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F38BA8")
-        }
-        $p5hBorder.Child = $p5hFill
-        $quotaRow.Children.Add($p5hBorder) | Out-Null
-
-        $q5hPctText = New-Object System.Windows.Controls.TextBlock
-        $q5hPctText.Text = if ($acc.Success) { "$gemini5hPct%" } else { "N/A" }
-        $q5hPctText.FontWeight = [System.Windows.FontWeights]::Bold
-        $q5hPctText.FontSize = 11
-        $q5hPctText.Foreground = $p5hFill.Background
-        $q5hPctText.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $quotaRow.Children.Add($q5hPctText) | Out-Null
-
-        # Divider
-        $divider = New-Object System.Windows.Controls.TextBlock
-        $divider.Text = "|"
-        $divider.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#45475A")
-        $divider.FontSize = 11
-        $divider.Margin = New-Object System.Windows.Thickness(12, 0, 12, 0)
-        $divider.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $quotaRow.Children.Add($divider) | Out-Null
-
-        # 2. Weekly Quota
-        $qWLabel = New-Object System.Windows.Controls.TextBlock
-        $qWLabel.Text = "Tu$([char]0x1EA7)n:"
-        $qWLabel.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#A6ADC8")
-        $qWLabel.FontSize = 11
-        $qWLabel.FontWeight = [System.Windows.FontWeights]::SemiBold
-        $qWLabel.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $quotaRow.Children.Add($qWLabel) | Out-Null
-
-        $pWBorder = New-Object System.Windows.Controls.Border
-        $pWBorder.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#313244")
-        $pWBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
-        $pWBorder.Width = 90
-        $pWBorder.Height = 7
-        $pWBorder.Margin = New-Object System.Windows.Thickness(6, 0, 6, 0)
-        $pWBorder.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-
-        $pWFill = New-Object System.Windows.Controls.Border
-        $pWFill.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Left
-        $pWFill.Width = [Math]::Round(90 * ($geminiWeeklyPct / 100))
-        $pWFill.CornerRadius = New-Object System.Windows.CornerRadius(4)
-        if ($geminiWeeklyPct -ge 50) {
-            $pWFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#89B4FA")
-        } elseif ($geminiWeeklyPct -ge 20) {
-            $pWFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F9E2AF")
-        } else {
-            $pWFill.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#F38BA8")
-        }
-        $pWBorder.Child = $pWFill
-        $quotaRow.Children.Add($pWBorder) | Out-Null
-
-        $qWPctText = New-Object System.Windows.Controls.TextBlock
-        $qWPctText.Text = if ($acc.Success) { "$geminiWeeklyPct%" } else { "N/A" }
-        $qWPctText.FontWeight = [System.Windows.FontWeights]::Bold
-        $qWPctText.FontSize = 11
-        $qWPctText.Foreground = $pWFill.Background
-        $qWPctText.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $quotaRow.Children.Add($qWPctText) | Out-Null
-
-        $info.Children.Add($quotaRow) | Out-Null
-        if (-not $acc.Success) {
-            $quotaStatus=New-Object System.Windows.Controls.TextBlock
-            $quotaStatus.Text=if($acc.ErrorCode -eq 'AccountVerificationRequired'){"C$([char]0x1EA7)n x$([char]0x00E1)c minh Google $([char]0x0111)$([char]0x1EC3) $([char]0x0111)$([char]0x1ECD)c quota"}else{"Ch$([char]0x01B0)a $([char]0x0111)$([char]0x1ECD)c $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c quota. Th$([char]0x1EED) Qu$([char]0x00E9)t Quota l$([char]0x1EA1)i. "}
-            $quotaStatus.Foreground=[System.Windows.Media.BrushConverter]::new().ConvertFromString("#F9E2AF")
-            $quotaStatus.FontSize=11
-            $quotaStatus.TextWrapping=[System.Windows.TextWrapping]::Wrap
-            $quotaStatus.Margin=New-Object System.Windows.Thickness(0,6,8,0)
-            $info.Children.Add($quotaStatus) | Out-Null
-            if($acc.VerificationUrl) {
-                $verificationUrl=$acc.VerificationUrl
-                $btnVerify=New-Object System.Windows.Controls.Button
-                $btnVerify.Style=$window.FindResource("SuccessBtn")
-                $btnVerify.Content="X$([char]0x00E1)c minh Google"
-                $btnVerify.HorizontalAlignment=[System.Windows.HorizontalAlignment]::Left
-                $btnVerify.Margin=New-Object System.Windows.Thickness(0,6,0,0)
-                $btnVerify.ToolTip="Ho$([char]0x00E0)n t$([char]0x1EA5)t x$([char]0x00E1)c minh r$([char]0x1ED3)i b$([char]0x1EA5)m Qu$([char]0x00E9)t Quota"
-                $btnVerify.Add_Click({
-                    if(-not [AntigravityAccountLogin]::IsVerificationUrl($verificationUrl)){return}
-                    try {
-                        $browser=[Diagnostics.ProcessStartInfo]::new($verificationUrl)
-                        $browser.UseShellExecute=$true
-                        [Diagnostics.Process]::Start($browser) | Out-Null
-                    } catch { Show-AccountLoginFailure 'LoginBrowserFailed' }
-                }.GetNewClosure())
-                $info.Children.Add($btnVerify) | Out-Null
-            }
-        }
-
-        [System.Windows.Controls.Grid]::SetColumn($info, 0)
-        $grid.Children.Add($info) | Out-Null
-
-        # Right Action Buttons
-        $actions = New-Object System.Windows.Controls.StackPanel
-        $actions.Orientation = [System.Windows.Controls.Orientation]::Horizontal
-        $actions.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-
-        $currName = $accName
-        $currFile = $acc.TokenPath
-
-        if (-not $isActive) {
-            $btnSwitch = New-Object System.Windows.Controls.Button
-            $btnSwitch.Style = $window.FindResource("SuccessBtn")
-            $btnSwitch.Content = "$([char]0x26A1) Chuy$([char]0x1EC3)n Th$([char]0x1EE7) C$([char]0x00F4)ng"
-            $btnSwitch.IsEnabled = $acc.Success
-            $btnSwitch.Margin = New-Object System.Windows.Thickness(0, 0, 8, 0)
-            $btnSwitch.Add_Click({
-                $switched=Switch-ActiveAccount -targetAccountName $currName -Notify
-                $switchMessage=$script:LastSwitchMessage
-                Load-Accounts-UI
-                if(-not $switched -and $switchMessage){
-                    $window.FindName('TxtDaemonStatus').Text="$([char]0x0110)$([char]0x00E3) ho$([char]0x00E3)n chuy$([char]0x1EC3)n $([char]0x2014) xem l$([char]0x00FD) do"
-                    $window.FindName('TxtDaemonStatus').ToolTip=$switchMessage
-                }
-            }.GetNewClosure())
-            $actions.Children.Add($btnSwitch) | Out-Null
-        }
-
-        $btnDel = New-Object System.Windows.Controls.Button
-        $btnDel.Style = $window.FindResource("DangerBtn")
-        $btnDel.Content = "$([char]0x2715) X$([char]0x00F3)a"
-        $btnDel.Padding = New-Object System.Windows.Thickness(10, 6, 10, 6)
-        $btnDel.ToolTip = "X$([char]0x00F3)a t$([char]0x00E0)i kho$([char]0x1EA3)n"
-        $btnDel.Add_Click({
-            $ans = [System.Windows.MessageBox]::Show("B$([char]0x1EA1)n c$([char]0x00F3) ch$([char]0x1EAF)c mu$([char]0x1ED1)n x$([char]0x00F3)a t$([char]0x00E0)i kho$([char]0x1EA3)n '$currName' kh$([char]0x1ECF)i h$([char]0x1EC7) th$([char]0x1ED1)ng?", "X$([char]0x00E1)c Nh$([char]0x1EAD)n X$([char]0x00F3)a", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
-            if ($ans -eq [System.Windows.MessageBoxResult]::Yes) {
-                Remove-Item $currFile -Force -ErrorAction SilentlyContinue
-                Load-Accounts-UI
-            }
-        }.GetNewClosure())
-        $actions.Children.Add($btnDel) | Out-Null
-
-        [System.Windows.Controls.Grid]::SetColumn($actions, 1)
-        $grid.Children.Add($actions) | Out-Null
-
-        $card.Child = $grid
-        $accountsContainer.Children.Add($card) | Out-Null
-    }
-}
-
-$btnRefresh.Add_Click({
-    Repair-RotationState | Out-Null
-    Load-Accounts-UI
-})
+$btnRefresh.Add_Click({ Load-Accounts-UI -Reconcile })
 
 $btnSaveCurrent.Add_Click({
+    if ($Preview) { return }
     $cred = [WinCred]::Read("gemini:antigravity")
     if (-not $cred -and (Test-Path $geminiTokenPath)) {
         $cred = [System.IO.File]::ReadAllText($geminiTokenPath, [System.Text.Encoding]::UTF8)
@@ -465,6 +195,7 @@ function Show-AccountLoginFailure {
 $window.Add_Closed({ Complete-AccountLogin })
 
 $btnAddAccount.Add_Click({
+    if ($Preview) { return }
     if ($script:loginProtection) { Complete-AccountLogin; return }
     $lsPath=Join-Path $env:LOCALAPPDATA 'Programs\Antigravity\resources\bin\language_server.exe'
     if (-not (Test-Path -LiteralPath $lsPath)) { Show-AccountLoginFailure 'LoginHelperMissing'; return }
@@ -563,6 +294,6 @@ $btnAddAccount.Add_Click({
     }
 })
 
-Load-Accounts-UI
+Initialize-HubDashboard
 
-$window.ShowDialog() | Out-Null
+if (-not $NoShow) { $window.ShowDialog() | Out-Null }

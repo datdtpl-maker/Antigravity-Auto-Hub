@@ -1,0 +1,14 @@
+﻿{
+  "All": "Tất cả", "Ready": "Đủ quota", "Low": "Quota thấp", "Unknown": "Chưa rõ quota", "Active": "Đang kết nối", "Verify": "Cần xác minh",
+  "AccountsTitle": "Tài khoản", "AccountsSubtitle": "Quản lý nguồn quota cho phiên làm việc của bạn.", "HistoryTitle": "Nhật ký xoay", "HistorySubtitle": "Theo dõi những lần chuyển và lý do tạm hoãn.",
+  "Scan": "Quét quota", "Scanning": "Đang quét…", "ScanError": "Chưa cập nhật được. Dữ liệu đang hiển thị là lần quét trước; hãy thử lại.",
+  "NoAccounts": "Chưa có tài khoản", "AddHint": "Thêm tài khoản hoặc lưu tài khoản Antigravity đang dùng.", "NoResults": "Không có kết quả phù hợp", "FilterHint": "Thử từ khóa khác hoặc chọn Tất cả để xem lại danh sách.",
+  "Count": "Hiển thị {0} / {1} tài khoản", "Updated": "Cập nhật {0}", "ActiveAccount": "Đang dùng: {0}", "Unverified": "Chưa xác minh tài khoản trong Antigravity",
+  "AttentionState": "Cần kiểm tra lần chuyển trước · Tự động xoay đang tạm dừng", "NoRuntime": "Chưa kết nối Antigravity", "NoDaemon": "Daemon chưa chạy", "Busy": "IDE đang chạy tác vụ · Chờ hoàn tất để chuyển", "Monitoring": "Đang giám sát · Xoay khi quota thấp và IDE rảnh",
+  "Confirmed": "Đã xác minh", "Prepared": "Đã chuẩn bị", "Deferred": "Tạm hoãn", "Failed": "Cần kiểm tra", "Waiting": "Đang chờ", "Started": "Khởi chạy",
+  "ConfirmedDetail": "Đã xác minh tài khoản mới trong Antigravity.", "PreparedDetail": "Chờ mở IDE để xác minh tài khoản.", "DeferredDetail": "Điều kiện chuyển chưa phù hợp. Hệ thống sẽ kiểm tra lại.", "FailedDetail": "Chuyển chưa được xác minh; cần đối chiếu trạng thái.", "BusyDetail": "Quota thấp; chờ tác vụ đang chạy hoàn tất.", "PoolDetail": "Không có tài khoản dự phòng đủ quota.", "StartedDetail": "Tiến trình giám sát nền đã khởi chạy.", "PausedDetail": "Lần chuyển trước chưa được xác minh; tự động xoay tạm dừng.",
+  "HistoryCount": "{0} sự kiện · Tối đa 200 sự kiện từ 5.000 dòng log cuối · Tự cập nhật 5s",
+  "HistoryError": "Chưa đọc được nhật ký. Thử làm mới hoặc kiểm tra file rotator.log.", "NoHistory": "Chưa có sự kiện xoay trong nhật ký gần đây.",
+  "DeleteTitle": "Xóa khỏi kho tài khoản", "DeleteQuestion": "Xóa tài khoản '{0}' khỏi kho xoay trên máy này?", "DeleteError": "Không xóa được tài khoản. Kiểm tra quyền truy cập file.",
+  "ActionError": "Không hoàn tất được thao tác. Kiểm tra trạng thái và thử lại.", "SwitchSuccess": "Đã hoàn tất yêu cầu chuyển. Đang cập nhật trạng thái…", "Switching": "Đang chuyển tài khoản…", "Preview": "BẢN XEM TRƯỚC · Dữ liệu minh họa", "FiveAccessible": "Quota 5 giờ: {0}", "WeekAccessible": "Quota tuần: {0}"
+}
