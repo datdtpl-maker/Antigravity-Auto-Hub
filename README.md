@@ -26,7 +26,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\AntigravityHub.ps
 
 Chế độ preview khóa các thao tác thêm/lưu/chuyển/xóa tài khoản. `tests/Preview-Dashboard.ps1` xuất ảnh giao diện minh họa vào `work/ui-preview/` để kiểm tra bố cục.
 
-> **Trước khi bắt đầu:** cần Antigravity Desktop, tài khoản Google của bạn và cấu hình OAuth tương thích. Repo không cung cấp tài khoản, token hoặc client secret dùng sẵn. Chỉ clone repo và chạy Setup chưa đủ để đọc quota.
+> **Cài trên máy mới:** cài Antigravity Desktop và đăng nhập Google một lần trong ứng dụng chính thức, sau đó clone repo và chạy `Setup-Install.bat`. Setup tự tìm và xác minh cấu hình OAuth từ bản Antigravity trên máy rồi lưu bằng Windows DPAPI; thông thường không cần nhập client ID/secret. Repo không chứa tài khoản, token hoặc client secret dùng sẵn.
 
 ## Mục lục
 
@@ -49,7 +49,7 @@ Chế độ preview khóa các thao tác thêm/lưu/chuyển/xóa tài khoản. 
 | PowerShell | Windows PowerShell 5.1, lệnh `powershell.exe` |
 | Antigravity Desktop | Bản 2.x từ 2.12 trở lên, vượt qua kiểm tra tương thích của Hub; đã kiểm tra bản cài 2.19.1 |
 | Tài khoản | Một tài khoản để theo dõi; ít nhất hai tài khoản hợp lệ để xoay |
-| OAuth | Client ID và client secret tương thích với refresh token của tài khoản |
+| OAuth | Setup tự cấu hình từ Antigravity đã cài và phiên đăng nhập trên máy; hỗ trợ nhập thủ công khi cần |
 | Mạng | Truy cập được dịch vụ đăng nhập và quota Google |
 | Git | Chỉ cần nếu tải/cập nhật bằng lệnh Git |
 
@@ -80,34 +80,11 @@ Các lệnh tiếp theo chạy **trong thư mục có `Setup-Install.bat`**. B�
 
 Giữ repo ở vị trí cố định sau khi cài vì shortcut trỏ tới đường dẫn đó. Ưu tiên thư mục riêng trên máy, tránh đồng bộ dữ liệu tài khoản lên nơi dùng chung.
 
-### Bước 2 — Cấu hình OAuth
+### Bước 2 — Đăng nhập Antigravity trên máy mới
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Configure-OAuth.ps1
-```
-
-1. Nhập **Google OAuth client ID**.
-2. Nhập **Google OAuth client secret**; nội dung secret được che khi nhập.
-3. Kiểm tra thông báo đã lưu và file `oauth.local.clixml` trong repo.
-
-Đây là thông tin ứng dụng OAuth, **không phải email/mật khẩu Google, API key Gemini hoặc tên gói AI Pro**. Refresh token được cấp cho client nào phải dùng với client tương thích. Tạo một client Google Cloud bất kỳ không làm token hiện có trong Antigravity hoạt động với client đó.
-
-**Nếu chưa có cấu hình tương thích, bước này chưa thể hoàn tất.** Repo chưa có trình tự động cấp hoặc tìm cấu hình OAuth cho người mới. Cần cấu hình từ nguồn tích hợp bạn được phép sử dụng; không lấy credential của người khác. Hub mở được giao diện chưa chứng minh đã cấu hình quota thành công.
-
-Secret được Windows DPAPI bảo vệ theo người dùng hiện tại. Tham số `-ExecutionPolicy Bypass` chỉ áp dụng cho tiến trình PowerShell đang chạy, không thay chính sách toàn máy.
-
-**Clone sang máy khác:** cấu hình OAuth không đi theo Git. Chạy `Configure-OAuth.ps1` trên máy mới bằng client tương thích; không sao chép `oauth.local.clixml` từ máy/người dùng Windows khác. Khi cần nạp lại cấu hình để refresh token, Hub dùng biến môi trường đầy đủ hoặc file trong chính thư mục clone, không tìm ở đường dẫn cố định trên máy tác giả.
-
-Nếu Google báo đăng nhập thành công nhưng Hub báo **“Đăng nhập chưa trả về token hợp lệ”**, Hub chưa xác minh được token để lưu tài khoản. Thông báo này chưa phân biệt được thiếu token, lỗi refresh/OAuth/mạng hay email không khớp. Kiểm tra cấu hình trên máy mới, hoặc đăng nhập Antigravity chính thức rồi dùng **Lưu Acc Này → Quét Quota**. Nếu vẫn lỗi, xem các dòng `Account login` trong `rotator.log`; không chia sẻ token/secret. Bản sửa nạp cấu hình không bảo đảm khắc phục mọi nguyên nhân của lỗi này.
-
-<details>
-<summary>Nâng cao: cấu hình bằng biến môi trường</summary>
-
-Có thể cung cấp `ANTIGRAVITY_GOOGLE_CLIENT_ID` và `ANTIGRAVITY_GOOGLE_CLIENT_SECRET` trong môi trường của tiến trình Hub/daemon/MCP. Khi đủ cả hai biến, engine ưu tiên chúng; nếu thiếu, engine thử nạp file cấu hình cục bộ.
-
-Không đưa secret vào mã nguồn hoặc lệnh được chia sẻ. Sau khi thay cấu hình, phải nạp lại các tiến trình. Lưu công việc rồi khởi động lại Windows là cách đơn giản để nạp lại cả daemon đã cài Startup.
-
-</details>
+1. Cài và mở **Antigravity Desktop** ở đường dẫn mặc định.
+2. Đăng nhập Google và hoàn tất các bước xác minh/điều khoản trong ứng dụng chính thức.
+3. Dùng cùng người dùng Windows để chạy Hub. Không cần chép tài khoản hoặc file cấu hình từ máy cũ.
 
 ### Bước 3 — Chạy Setup
 
@@ -117,9 +94,43 @@ Nhấp đúp **`Setup-Install.bat`**, hoặc chạy:
 .\Setup-Install.bat
 ```
 
-Setup tạo thư mục `accounts/`, shortcut **Antigravity Auto-Hub** trên Desktop, shortcut **AntigravityAutoRotator** trong Windows Startup, rồi mở Hub và tiến trình giám sát nền (*daemon*).
+Setup thực hiện theo thứ tự:
 
-Setup không cài Antigravity hoặc cấu hình OAuth thay bạn. Daemon là tiến trình người dùng, không phải Windows Service.
+1. Kiểm tra bản Antigravity cài trên máy và khả năng tương thích.
+2. Xác minh OAuth bằng phiên đăng nhập cục bộ. Ưu tiên cặp biến môi trường đầy đủ, tiếp đến cấu hình trong repo; nếu thiếu, không giải mã được hoặc không tương thích thì dò các client trong helper Antigravity đã cài. Chỉ lưu bộ cấu hình nhận được access token hợp lệ từ Google, không đoán dựa trên thứ tự chuỗi trong file.
+3. Lưu `oauth.local.clixml` bằng DPAPI cho máy/người dùng Windows hiện tại. Cấu hình hợp lệ đã có được giữ nguyên. Không ghi token tài khoản vào repo hoặc thay đổi tài khoản đang dùng trong Antigravity.
+4. Tạo shortcut **Antigravity Auto-Hub** trên Desktop, shortcut **AntigravityAutoRotator** trong Windows Startup, rồi mở Hub và daemon.
+
+Nếu chưa đăng nhập, mất mạng, có biến môi trường ghi đè sai hoặc chưa nhận diện được bản Antigravity mới, Setup báo hướng xử lý và trả mã lỗi khác 0 **trước khi tạo shortcut/chạy daemon**. Cấu hình cũ không bị thay bằng bộ chưa xác minh. Việc tự dò phụ thuộc cấu trúc helper; không bảo đảm mọi bản cập nhật Antigravity tương lai đều được hỗ trợ. Setup không cài Antigravity và không tự đăng nhập Google thay bạn.
+
+Sau khi mở Hub, bấm **Lưu acc hiện tại → Quét quota**. Xác minh OAuth thành công không đồng nghĩa mọi tài khoản đã đủ quyền Antigravity hoặc đọc được quota. Daemon là tiến trình người dùng, không phải Windows Service.
+
+**Máy đã clone trước đây và đang báo lỗi token:** chạy `git pull --ff-only`, đăng nhập Antigravity chính thức rồi chạy lại `Setup-Install.bat`. Không sao chép `oauth.local.clixml` từ máy/người dùng Windows khác. Nếu Hub/daemon đã chạy trước khi thay cấu hình, lưu công việc và khởi động lại Windows để cả hai nạp lại cấu hình.
+
+Nếu Google báo đăng nhập thành công nhưng Hub vẫn báo **“Đăng nhập chưa trả về token hợp lệ”** sau khi Setup xác minh thành công, lỗi còn có thể do không lấy được token mới, lỗi mạng hoặc email không khớp. Thử **Lưu acc hiện tại → Quét quota**, rồi kiểm tra các dòng `Account login` trong `rotator.log`; không chia sẻ token/secret.
+
+<details>
+<summary>Nâng cao: nhập OAuth thủ công, biến môi trường và kiểm tra riêng</summary>
+
+Khi đã có cặp client ID/secret tương thích, có thể nhập thủ công:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Configure-OAuth.ps1
+```
+
+Script hỏi client ID và client secret (secret được che), rồi lưu `oauth.local.clixml`. Đây là thông tin ứng dụng OAuth, **không phải email/mật khẩu Google hoặc Gemini API key**. Refresh token cần được dùng với client đã cấp nó; xem [tài liệu OAuth cho ứng dụng desktop của Google](https://developers.google.com/identity/protocols/oauth2/native-app#offline).
+
+Có thể cung cấp `ANTIGRAVITY_GOOGLE_CLIENT_ID` và `ANTIGRAVITY_GOOGLE_CLIENT_SECRET` trong môi trường của tiến trình Hub/daemon/MCP. Khi đủ cả hai biến, engine ưu tiên chúng; nếu thiếu, engine thử nạp file cấu hình cục bộ.
+
+Chỉ tự cấu hình/xác minh OAuth, không tạo shortcut hoặc chạy Hub/daemon:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Setup.ps1 -ConfigureOnly
+```
+
+Secret được DPAPI bảo vệ theo máy/người dùng Windows. Tham số `-ExecutionPolicy Bypass` chỉ áp dụng cho tiến trình đang chạy. Không đưa secret vào mã nguồn hoặc lệnh được chia sẻ. Sau khi thay cấu hình, nạp lại Hub/daemon; khởi động lại Windows là cách đơn giản để nạp lại cả daemon đã cài Startup.
+
+</details>
 
 ## Thêm tài khoản
 
@@ -319,6 +330,8 @@ Ngày **12/10/2026**, local đạt **162 mục PASS**, gồm kiểm tra tương 
 
 Dashboard có thêm **23 kiểm thử WPF** cho số lượng, tìm kiếm/lọc/sắp xếp, nút thao tác theo dòng, điều hướng, trạng thái rỗng, nhật ký và quét bất đồng bộ. Tổng cộng **185 mục PASS** local, **184 mục** trên runner không cài Antigravity. Ngày **13/10/2026**, pipeline đọc dashboard thực tế nhận đủ **8 tài khoản có quota**, runtime và daemon được nhận diện; không thực hiện chuyển tài khoản thật trong lần kiểm tra giao diện này.
 
+Ngày **21/10/2026**, bổ sung kiểm thử tự cấu hình OAuth và chạy script Setup thực tế trong thư mục clone giả lập có dấu cách: cài mới, cấu hình cũ/hỏng, ưu tiên biến môi trường, mã hóa DPAPI, mất mạng, token bị từ chối, chưa đăng nhập và thiếu Antigravity. Mạng và credential trong các kiểm thử này đều được giả lập. Bộ đọc helper đã tìm thấy bộ cấu hình đang dùng trong bản Antigravity cài trên máy phát triển; chưa xác minh trọn luồng OAuth thật trên máy mới. `Setup.ps1 -ConfigureOnly` cho phép kiểm tra trên máy đích mà không tạo shortcut/chạy daemon.
+
 Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR. [CI bản sửa focus `6c99e18`](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/runs/36971936784) đã thành công.
 
 ### Mức độ kiểm chứng
@@ -342,8 +355,8 @@ Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR
 | `RotationCore.ps1` | Quota, chọn tài khoản, chuyển và khôi phục |
 | `RuntimeBridge.ps1` | Runtime/CDP, kiểm tra rảnh và bản nháp |
 | `AntigravityMcp.ps1` | MCP stdio |
-| `Configure-OAuth.ps1`, `Configure-Mcp.ps1` | Thiết lập OAuth/MCP |
-| `Setup-Install.bat`, `Setup.ps1`, `launch-*.vbs` | Cài shortcut và khởi chạy |
+| `OAuthSetup.ps1`, `Configure-OAuth.ps1`, `Configure-Mcp.ps1` | Tự dò/xác minh OAuth, cấu hình OAuth thủ công và MCP |
+| `Setup-Install.bat`, `Setup.ps1`, `launch-*.vbs` | Kiểm tra điều kiện cài, tự cấu hình OAuth, cài shortcut và khởi chạy |
 | `tests/` | Kiểm thử engine, đăng nhập, quota, cửa sổ và MCP |
 
 PowerShell giữ ASCII; chuỗi tiếng Việt dùng mã Unicode hoặc resource `DashboardText.vi.json`. XAML, JSON và Markdown dùng UTF-8. Khi đóng góp, giữ điều kiện bảo vệ tác vụ/bản nháp, không commit credential và nêu rõ phần đã kiểm thử thực tế.

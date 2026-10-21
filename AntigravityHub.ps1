@@ -99,12 +99,10 @@ $btnSaveCurrent.Add_Click({
     $email = ""
     try {
         $json = $cred | ConvertFrom-Json
-        $refreshToken = $json.token.refresh_token
+        $refreshToken = Get-RefreshToken $json
         if ($refreshToken) {
-            $tResp = Invoke-RestMethod -Uri "https://oauth2.googleapis.com/token" -Method Post -Body @{
-                client_id = $script:GoogleClientId; client_secret = $script:GoogleClientSecret; refresh_token = $refreshToken; grant_type = "refresh_token"
-            } -TimeoutSec 10
-            $uinfo = Invoke-RestMethod -Uri "https://www.googleapis.com/oauth2/v3/userinfo" -Headers @{ Authorization = "Bearer $($tResp.access_token)" } -TimeoutSec 5
+            $fresh = Get-FreshToken $json
+            $uinfo = Invoke-RestMethod -Uri "https://www.googleapis.com/oauth2/v3/userinfo" -Headers @{ Authorization = "Bearer $($fresh.token.access_token)" } -TimeoutSec 5
             $email = $uinfo.email
         }
     } catch {}

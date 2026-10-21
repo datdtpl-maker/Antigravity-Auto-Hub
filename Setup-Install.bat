@@ -6,5 +6,7 @@ echo   CAI DAT ANTIGRAVITY AUTO-ROTATION HUB (WINDOWS)
 echo ==============================================================================
 echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Setup.ps1"
+set "setupExit=%errorlevel%"
 echo.
 pause
+exit /b %setupExit%
