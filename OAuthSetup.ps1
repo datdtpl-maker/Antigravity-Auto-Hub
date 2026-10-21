@@ -54,6 +54,52 @@ function Get-SetupRefreshToken {
     throw 'SetupOAuthLoginRequired'
 }
 
+function Get-SetupOAuthFailureCode {
+    param([Management.Automation.ErrorRecord]$Failure)
+    $exception=$Failure.Exception
+    for ($depth=0; $depth -lt 5 -and $exception -and $exception -isnot [Net.WebException]; $depth++) {
+        $exception=$exception.InnerException
+    }
+    $response=if($exception -is [Net.WebException]){$exception.Response}else{$null}
+    $status=0
+    if ($response -and $response.PSObject.Properties['StatusCode']) { $status=[int]$response.StatusCode }
+    $body=$Failure.ErrorDetails.Message
+    $code=$null
+    try {
+        if (-not $body -and $response) {
+            $reader=[IO.StreamReader]::new($response.GetResponseStream())
+            try {
+                $buffer=New-Object char[] 4096
+                $text=[Text.StringBuilder]::new()
+                while (($count=$reader.Read($buffer,0,$buffer.Length)) -gt 0) {
+                    if ($text.Length+$count -gt 65536) { throw 'ResponseTooLarge' }
+                    $null=$text.Append($buffer,0,$count)
+                }
+                $body=$text.ToString()
+            } finally { $reader.Dispose() }
+        }
+        if ($body -and $body.Length -le 65536) { $code=($body | ConvertFrom-Json -ErrorAction Stop).error }
+    } catch { }
+    finally { if($response){$response.Close()} }
+    # Only a recognized client/token rejection allows another candidate. HTTP
+    # errors, proxy HTML and malformed bodies are not evidence of a bad client.
+    if ($status -eq 407) { return 'SetupOAuthProxy' }
+    if ($status -eq 429) { return 'SetupOAuthRateLimited' }
+    if ($status -ge 500) { return 'SetupOAuthServer' }
+    if ($code -in @('invalid_client','invalid_grant','unauthorized_client') -and $status -in @(0,400,401)) { return 'SetupOAuthCandidateRejected' }
+    if ($status -gt 0 -or $code) { return 'SetupOAuthRejected' }
+    if ($exception -is [Net.WebException]) {
+        switch ([string]$exception.Status) {
+            'NameResolutionFailure' { return 'SetupOAuthDns' }
+            'ProxyNameResolutionFailure' { return 'SetupOAuthProxy' }
+            'TrustFailure' { return 'SetupOAuthTls' }
+            'SecureChannelFailure' { return 'SetupOAuthTls' }
+            'Timeout' { return 'SetupOAuthTimeout' }
+        }
+    }
+    return 'SetupOAuthNetwork'
+}
+
 function Test-SetupOAuthCredential {
     param([pscredential]$Credential,[string]$RefreshToken)
     try {
@@ -62,12 +108,9 @@ function Test-SetupOAuthCredential {
             refresh_token=$RefreshToken; grant_type='refresh_token'
         } -TimeoutSec 10 -ErrorAction Stop
     } catch {
-        # Never return provider descriptions, request bodies, tokens or secrets.
-        $code=$null
-        try { $code=($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop).error } catch { }
-        if ($code -in @('invalid_client','invalid_grant','unauthorized_client')) { return $false }
-        if ($code) { throw 'SetupOAuthRejected' }
-        throw 'SetupOAuthNetwork'
+        $failureCode=Get-SetupOAuthFailureCode $_
+        if ($failureCode -eq 'SetupOAuthCandidateRejected') { return $false }
+        throw $failureCode
     }
     if (-not $response.access_token -or $response.expires_in -le 0) { throw 'SetupOAuthInvalidResponse' }
     return $true
@@ -127,6 +170,12 @@ function Get-OAuthSetupFailureMessage {
         'SetupOAuthNoMatch' { 'Khong xac minh duoc OAuth voi phien dang nhap hien tai. Dang nhap lai Antigravity chinh thuc roi chay lai Setup. Neu van loi, ban Antigravity nay co the chua duoc ho tro.' }
         'SetupOAuthEnvironmentInvalid' { 'Cap bien ANTIGRAVITY_GOOGLE_CLIENT_ID/SECRET dang ghi de cau hinh va khong hop le voi phien dang nhap. Sua hoac go ca hai bien, mo lai Setup.' }
         'SetupOAuthNetwork' { 'Khong ket noi duoc Google de xac minh OAuth. Kiem tra mang/proxy/firewall va chay lai Setup. Cau hinh cu duoc giu nguyen.' }
+        'SetupOAuthDns' { 'Khong phan giai duoc oauth2.googleapis.com (DNS). Kiem tra DNS/ket noi mang tren may nay roi chay lai Setup.' }
+        'SetupOAuthProxy' { 'Proxy khong truy cap duoc hoac yeu cau xac thuc (HTTP 407). Kiem tra cau hinh proxy cua Windows/PowerShell.' }
+        'SetupOAuthTls' { 'Ket noi HTTPS that bai o buoc TLS/chung chi. Kiem tra ngay gio Windows, cap nhat Windows/.NET va chung chi proxy neu co. Khong tat xac minh chung chi.' }
+        'SetupOAuthTimeout' { 'Google khong phan hoi trong 10 giay. Kiem tra mang/proxy/firewall roi thu lai.' }
+        'SetupOAuthRateLimited' { 'Google dang gioi han yeu cau (HTTP 429). Doi roi chay lai Setup; khong can thay cau hinh.' }
+        'SetupOAuthServer' { 'Dich vu OAuth hoac gateway tra loi may chu (HTTP 5xx). Thu lai sau; cau hinh cu duoc giu nguyen.' }
         'SetupOAuthRejected' { 'Google tu choi yeu cau xac minh OAuth. Kiem tra tai khoan trong Antigravity; neu bi gioi han yeu cau, doi roi chay lai Setup.' }
         'SetupOAuthInvalidResponse' { 'Google chua tra ve access token hop le. Thu lai sau; chua luu cau hinh moi.' }
         'SetupOAuthSaveFailed' { 'Khong luu duoc cau hinh OAuth. Kiem tra quyen ghi thu muc repo va dung cung nguoi dung Windows voi Antigravity.' }

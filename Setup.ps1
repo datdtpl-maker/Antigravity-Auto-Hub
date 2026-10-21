@@ -103,8 +103,13 @@ Write-Host "====================================================================
 Start-Process "wscript.exe" """$vbsPath""" -WindowStyle Hidden
 Write-Host 'Trong Hub: Luu acc hien tai -> Quet quota. Xac minh OAuth chua phai kiem tra quota/quyen su dung Antigravity.'
 } catch {
+    $setupFailure=$_.Exception.Message
     Write-Host ''
     Write-Host 'CAI DAT CHUA HOAN TAT' -ForegroundColor Red
-    Write-Host (Get-OAuthSetupFailureMessage $_.Exception.Message) -ForegroundColor Yellow
+    Write-Host (Get-OAuthSetupFailureMessage $setupFailure) -ForegroundColor Yellow
+    # Codes are an allowlist, never raw exception text or provider responses.
+    if ($setupFailure -in @('SetupOAuthNetwork','SetupOAuthDns','SetupOAuthProxy','SetupOAuthTls','SetupOAuthTimeout','SetupOAuthRateLimited','SetupOAuthServer','SetupOAuthRejected','SetupOAuthNoMatch','SetupOAuthEnvironmentInvalid','SetupOAuthLoginRequired','SetupOAuthUnsupported','SetupOAuthSaveFailed','SetupOAuthInvalidResponse','SetupAntigravityMissing','SetupAntigravityUnsupported','SetupBusy')) {
+        Write-Host "Ma chan doan: $setupFailure"
+    }
     exit 1
 }

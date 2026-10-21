@@ -109,6 +109,8 @@ Sau khi mở Hub, bấm **Lưu acc hiện tại → Quét quota**. Xác minh OAu
 
 Nếu Google báo đăng nhập thành công nhưng Hub vẫn báo **“Đăng nhập chưa trả về token hợp lệ”** sau khi Setup xác minh thành công, lỗi còn có thể do không lấy được token mới, lỗi mạng hoặc email không khớp. Thử **Lưu acc hiện tại → Quét quota**, rồi kiểm tra các dòng `Account login` trong `rotator.log`; không chia sẻ token/secret.
 
+**Nếu Setup dừng ở bước `[2/5]`:** cài đặt chưa thành công. Chạy riêng `AntigravityHub.ps1` chỉ mở giao diện, không hoàn tất cấu hình OAuth. Bản đầu của bộ cài tự động có thể báo nhầm lỗi OAuth thành lỗi mạng khi Windows PowerShell 5.1 không điền `ErrorDetails`. Bản sửa đọc thêm phản hồi HTTP và tiếp tục dò khi Google từ chối một client. Nếu vẫn lỗi, dòng **`Ma chan doan`** phân biệt `SetupOAuthDns`, `SetupOAuthTls`, `SetupOAuthProxy`, `SetupOAuthTimeout`, giới hạn HTTP 429 và lỗi máy chủ; gửi mã này để chẩn đoán, không gửi token/secret. Quota `N/A` và nút Chuyển bị khóa nghĩa là tài khoản chưa sẵn sàng xoay.
+
 <details>
 <summary>Nâng cao: nhập OAuth thủ công, biến môi trường và kiểm tra riêng</summary>
 

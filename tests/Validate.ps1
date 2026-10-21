@@ -26,6 +26,8 @@ if ($LASTEXITCODE) { throw 'Quota tests failed' }
 if ($LASTEXITCODE) { throw 'OAuth configuration tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'SetupOAuth.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Automatic OAuth setup tests failed' }
+& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'SetupHttp.Tests.ps1')
+if ($LASTEXITCODE) { throw 'Setup HTTP error tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Setup.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Installer integration tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Compatibility.Tests.ps1')
