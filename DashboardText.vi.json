@@ -1,4 +1,4 @@
-﻿{
+{
   "All": "Tất cả", "Ready": "Đủ quota", "Low": "Quota thấp", "Unknown": "Chưa rõ quota", "Active": "Đang kết nối", "Verify": "Cần xác minh",
   "AccountsTitle": "Tài khoản", "AccountsSubtitle": "Quản lý nguồn quota cho phiên làm việc của bạn.", "HistoryTitle": "Nhật ký xoay", "HistorySubtitle": "Theo dõi những lần chuyển và lý do tạm hoãn.",
   "Scan": "Quét quota", "Scanning": "Đang quét…", "ScanError": "Chưa cập nhật được. Dữ liệu đang hiển thị là lần quét trước; hãy thử lại.",
@@ -10,5 +10,5 @@
   "HistoryCount": "{0} sự kiện · Tối đa 200 sự kiện từ 5.000 dòng log cuối · Tự cập nhật 5s",
   "HistoryError": "Chưa đọc được nhật ký. Thử làm mới hoặc kiểm tra file rotator.log.", "NoHistory": "Chưa có sự kiện xoay trong nhật ký gần đây.",
   "DeleteTitle": "Xóa khỏi kho tài khoản", "DeleteQuestion": "Xóa tài khoản '{0}' khỏi kho xoay trên máy này?", "DeleteError": "Không xóa được tài khoản. Kiểm tra quyền truy cập file.",
-  "ActionError": "Không hoàn tất được thao tác. Kiểm tra trạng thái và thử lại.", "SwitchSuccess": "Đã hoàn tất yêu cầu chuyển. Đang cập nhật trạng thái…", "Switching": "Đang chuyển tài khoản…", "Preview": "BẢN XEM TRƯỚC · Dữ liệu minh họa", "FiveAccessible": "Quota 5 giờ: {0}", "WeekAccessible": "Quota tuần: {0}"
+  "ActionError": "Không hoàn tất được thao tác. Kiểm tra trạng thái và thử lại.", "SwitchSuccess": "Đã hoàn tất yêu cầu chuyển. Đang cập nhật trạng thái…", "Switching": "Đang chuyển tài khoản…", "Preview": "BẢN XEM TRƯỚC · Dữ liệu minh họa", "FiveAccessible": "Quota 5 giờ: {0}", "WeekAccessible": "Quota tuần: {0}", "ArgonAccessible": "Quota Gemini 4 Argon: {0}"
 }

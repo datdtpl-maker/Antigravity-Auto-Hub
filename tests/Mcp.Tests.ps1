@@ -24,7 +24,7 @@ Assert ((Message 'unsupported').error.code -eq -32601) 'Unknown RPC rejected'
 $script:SwitchCalls=0
 function Get-RuntimeIdentity { [pscustomobject]@{Email='fixture@example.test';Idle=$true;Runtimes=@(@{Csrf='SECRET_SENTINEL'})} }
 function Read-RotationState { [pscustomobject]@{Status='Verified';Account='fixture';Email='fixture@example.test';UpdatedAt='2026-09-16';Private='SECRET_SENTINEL'} }
-function Get-AllAccountsQuota { @([pscustomobject]@{AccountName='fixture';Email='fixture@example.test';Success=$false;Gemini5H=-1;GeminiWeekly=-1;TokenPath='SECRET_SENTINEL';Error='SECRET_SENTINEL'}) }
+function Get-AllAccountsQuota { @([pscustomobject]@{AccountName='fixture';Email='fixture@example.test';Success=$false;Gemini5H=-1;GeminiWeekly=-1;ArgonWeekly=-1;TokenPath='SECRET_SENTINEL';Error='SECRET_SENTINEL'}) }
 function Switch-ActiveAccount { param($targetAccountName) $script:SwitchCalls++; Write-Host 'not protocol'; $script:SwitchResult }
 function Invoke-AutoRotationCheck { Write-Host 'not protocol' }
 function Repair-RotationState { $false }
@@ -33,7 +33,7 @@ $text=$status | ConvertTo-Json -Depth 12
 Assert (-not $text.Contains('SECRET_SENTINEL') -and $text.Contains('fixture@example.test')) 'Status uses allowlist projection without CSRF'
 $accounts=Message 'tools/call' @{name='antigravity_accounts';arguments=@{}}
 $data=$accounts.result.content[0].text | ConvertFrom-Json
-Assert ($null -eq $data.accounts[0].remaining5h -and -not ($accounts | ConvertTo-Json -Depth 12).Contains('SECRET_SENTINEL')) 'Unknown quota stays null, token paths omitted'
+Assert ($null -eq $data.accounts[0].remaining5h -and $null -eq $data.accounts[0].remainingArgonWeekly -and -not ($accounts | ConvertTo-Json -Depth 12).Contains('SECRET_SENTINEL')) 'Unknown quota stays null, token paths omitted'
 $blocked=Message 'tools/call' @{name='antigravity_switch_account';arguments=@{account='fixture'}}
 Assert ($blocked.result.isError -and $script:SwitchCalls -eq 0) 'Read-only gate enforced on tool execution'
 $script:McpAllowSwitch=$true

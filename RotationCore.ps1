@@ -49,33 +49,43 @@ function Get-FreshToken {
 
 function Convert-QuotaSummary {
     param($Response)
-    $five = @(); $weekly = @()
+    $five = @(); $weekly = @(); $argon = @()
     foreach ($group in $Response.groups) {
-        if ("$($group.displayName) $($group.description)" -notmatch 'gemini') { continue }
+        $groupText = "$($group.displayName) $($group.description)"
+        if ($groupText -notmatch 'gemini|argon') { continue }
+        $groupIsArgon = $groupText -match 'argon'
         foreach ($bucket in $group.buckets) {
             if ($null -eq $bucket.remainingFraction) { continue }
             $fraction = 0.0
             if (-not [double]::TryParse([string]$bucket.remainingFraction,
                 [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$fraction)) { continue }
             if ([double]::IsNaN($fraction) -or $fraction -lt 0 -or $fraction -gt 1) { continue }
-            if ($bucket.window -match '^5h$') { $five += $fraction }
+            $bucketIsArgon = $groupIsArgon -or ("$($bucket.bucketId) $($bucket.displayName)" -match 'argon')
+            if ($bucketIsArgon) {
+                if ($bucket.window -match '^(5h|week|weekly|7d)$' -or -not $bucket.window) { $argon += $fraction }
+            } elseif ($bucket.window -match '^5h$') { $five += $fraction }
             elseif ($bucket.window -match '^(week|weekly|7d)$') { $weekly += $fraction }
         }
     }
     if (-not $five.Count -or -not $weekly.Count) { throw 'Quota windows unavailable; no rotation.' }
-    [pscustomobject]@{ Gemini5H=($five | Measure-Object -Minimum).Minimum; GeminiWeekly=($weekly | Measure-Object -Minimum).Minimum }
+    $argonMin = if ($argon.Count) { [double]($argon | Measure-Object -Minimum).Minimum } else { -1.0 }
+    [pscustomobject]@{
+        Gemini5H=($five | Measure-Object -Minimum).Minimum
+        GeminiWeekly=($weekly | Measure-Object -Minimum).Minimum
+        ArgonWeekly=$argonMin
+    }
 }
 
 function Get-AccountQuotaInfo {
     param([string]$tokenFilePath)
     $result = [ordered]@{
-        Success=$false; Email=''; Gemini5H=-1.0; GeminiWeekly=-1.0
+        Success=$false; Email=''; Gemini5H=-1.0; GeminiWeekly=-1.0; ArgonWeekly=-1.0
         TokenPath=$tokenFilePath; AccountName=[IO.Path]::GetFileNameWithoutExtension($tokenFilePath)
         Error='Quota unavailable'; ErrorCode='QuotaUnavailable'; VerificationUrl=$null
     }
     try {
         $token = Get-FreshToken (Get-Content -LiteralPath $tokenFilePath -Raw -Encoding UTF8 | ConvertFrom-Json)
-        $headers = @{Authorization="Bearer $($token.token.access_token)"; 'User-Agent'='antigravity/2.12.2 windows/amd64'}
+        $headers = @{Authorization="Bearer $($token.token.access_token)"; 'User-Agent'='antigravity/hub/2.25.0 (os_type=windows; arch=amd64; aidev_client; cl=1003374690; auth_method=consumer)'}
         $user = Invoke-RestMethod -Uri 'https://www.googleapis.com/oauth2/v3/userinfo' -Headers $headers -TimeoutSec 10 -ErrorAction Stop
         if (-not $user.email) { throw 'Account email unavailable.' }
         $result.Email = $user.email
@@ -86,7 +96,7 @@ function Get-AccountQuotaInfo {
         if (-not $projectId -or $projectId -isnot [string]) { throw 'Project ID unavailable.' }
         $response = Invoke-RestMethod -Uri 'https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary' -Method Post -Headers $headers -Body (@{project=$projectId} | ConvertTo-Json -Compress) -ContentType 'application/json' -TimeoutSec 10 -ErrorAction Stop
         $quota = Convert-QuotaSummary $response
-        $result.Gemini5H=$quota.Gemini5H; $result.GeminiWeekly=$quota.GeminiWeekly
+        $result.Gemini5H=$quota.Gemini5H; $result.GeminiWeekly=$quota.GeminiWeekly; $result.ArgonWeekly=$quota.ArgonWeekly
         $result.Success=$true; $result.Error=''; $result.ErrorCode=''
     } catch {
         # Read only the documented error discriminator; never log provider bodies.
@@ -227,7 +237,9 @@ function Switch-ActiveAccount {
         if ($targetAccountName -notmatch '^[a-zA-Z0-9_.@-]+$' -or $targetAccountName -in @('.','..')) { throw 'Invalid account name.' }
         $source = Join-Path $accDir "$targetAccountName.json"
         $quota = Get-AccountQuotaInfo $source
-        if (-not $quota.Success -or $quota.Gemini5H -le $MinQuotaThreshold -or $quota.GeminiWeekly -le $MinWeeklyThreshold) { throw 'Target quota unavailable or exhausted.' }
+        $argonLimit = if ($null -ne $MinArgonThreshold) { [double]$MinArgonThreshold } else { [double]$MinWeeklyThreshold }
+        $argonExhausted = $null -ne $quota.ArgonWeekly -and $quota.ArgonWeekly -ge 0 -and $quota.ArgonWeekly -le $argonLimit
+        if (-not $quota.Success -or $quota.Gemini5H -le $MinQuotaThreshold -or $quota.GeminiWeekly -le $MinWeeklyThreshold -or $argonExhausted) { throw 'Target quota unavailable or exhausted.' }
         $fresh = Get-FreshToken (Get-Content -LiteralPath $source -Raw -Encoding UTF8 | ConvertFrom-Json)
         $runtime = Get-RuntimeIdentity
         if ($runtime -and (-not $runtime.Idle)) {
@@ -300,13 +312,18 @@ function Invoke-AutoRotationCheck {
     $accounts = @(Get-AllAccountsQuota)
     $current = $accounts | Where-Object { $_.Email -eq $runtime.Email } | Select-Object -First 1
     if (-not $current -or -not $current.Success) { Write-RotatorLog 'Active quota unknown; no rotation.'; return }
-    Write-RotatorLog "Active [$($current.AccountName)]: 5H=$([math]::Round($current.Gemini5H*100))%, week=$([math]::Round($current.GeminiWeekly*100))%."
-    if ($current.Gemini5H -ge $MinQuotaThreshold -and $current.GeminiWeekly -gt $MinWeeklyThreshold) { return }
+    $argonLimit = if ($null -ne $MinArgonThreshold) { [double]$MinArgonThreshold } else { [double]$MinWeeklyThreshold }
+    $hasArgon = $null -ne $current.ArgonWeekly -and $current.ArgonWeekly -ge 0
+    $argonLog = if ($hasArgon) { ", Argon=$([math]::Round($current.ArgonWeekly*100))%" } else { '' }
+    Write-RotatorLog "Active [$($current.AccountName)]: 5H=$([math]::Round($current.Gemini5H*100))%, week=$([math]::Round($current.GeminiWeekly*100))%$argonLog."
+    $argonLow = $hasArgon -and $current.ArgonWeekly -le $argonLimit
+    if ($current.Gemini5H -ge $MinQuotaThreshold -and $current.GeminiWeekly -gt $MinWeeklyThreshold -and -not $argonLow) { return }
     if (-not $runtime.Idle) { Write-RotatorLog 'Low quota; waiting for running agents to finish.'; return }
     $best = $accounts | Where-Object {
         $_.Success -and $_.Email -ne $runtime.Email -and
-        $_.Gemini5H -gt [math]::Max(.15,$MinQuotaThreshold) -and $_.GeminiWeekly -gt [math]::Max(.10,$MinWeeklyThreshold)
-    } | Sort-Object -Property @{Expression='Gemini5H';Descending=$true}, @{Expression='GeminiWeekly';Descending=$true} | Select-Object -First 1
+        $_.Gemini5H -gt [math]::Max(.15,$MinQuotaThreshold) -and $_.GeminiWeekly -gt [math]::Max(.10,$MinWeeklyThreshold) -and
+        ($null -eq $_.ArgonWeekly -or $_.ArgonWeekly -lt 0 -or $_.ArgonWeekly -gt [math]::Max(.10,$argonLimit))
+    } | Sort-Object -Property @{Expression={ if ($null -ne $_.ArgonWeekly -and $_.ArgonWeekly -ge 0) { [double]$_.ArgonWeekly } else { -1.0 } };Descending=$true}, @{Expression='Gemini5H';Descending=$true}, @{Expression='GeminiWeekly';Descending=$true} | Select-Object -First 1
     if (-not $best) { Write-RotatorLog 'No healthy account available; waiting for quota reset.'; return }
     Switch-ActiveAccount $best.AccountName -Reason 'Low quota' -Notify | Out-Null
 }

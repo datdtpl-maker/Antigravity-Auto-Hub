@@ -51,9 +51,11 @@ function Invoke-McpTool {
         'antigravity_status' { return Get-McpStatus }
         'antigravity_accounts' {
             $accounts=@(Get-AllAccountsQuota | ForEach-Object {
+                $hasArgon=$_.Success -and $null -ne $_.ArgonWeekly -and [double]$_.ArgonWeekly -ge 0
                 @{account=$_.AccountName;email=$_.Email;quotaAvailable=[bool]$_.Success
                   remaining5h=$(if($_.Success){$_.Gemini5H}else{$null})
-                  remainingWeekly=$(if($_.Success){$_.GeminiWeekly}else{$null})}
+                  remainingWeekly=$(if($_.Success){$_.GeminiWeekly}else{$null})
+                  remainingArgonWeekly=$(if($hasArgon){$_.ArgonWeekly}else{$null})}
             })
             return @{accounts=$accounts}
         }

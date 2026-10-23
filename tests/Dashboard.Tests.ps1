@@ -15,8 +15,11 @@ New-Item -ItemType Directory -Path $fixture -Force | Out-Null
 try {
     Assert ($window.FindName('StatTotal').Text -eq '6' -and $window.FindName('StatReady').Text -eq '4' -and $window.FindName('StatAttention').Text -eq '2') 'Dashboard totals cover the entire account pool'
     Assert ($accountsContainer.Items[0].IsActive -and $accountsContainer.Items.Count -eq 6) 'Verified active identity is pinned first'
+    Assert ($accountsContainer.Items[0].ArgonText -eq '64%' -and $accountsContainer.Items[0].ArgonValue -eq 64) 'Dashboard projects Gemini 4 Argon quota percentage'
     $unknown=$script:HubAccounts | Where-Object StateKey -eq Unknown
-    Assert ($unknown.FiveText -eq 'N/A' -and -not $unknown.CanSwitch) 'Unknown quota stays unavailable, never displayed as exhausted'
+    Assert ($unknown.FiveText -eq 'N/A' -and $unknown.ArgonText -eq 'N/A' -and -not $unknown.CanSwitch) 'Unknown quota stays unavailable, never displayed as exhausted'
+    $argonLow=ConvertTo-HubAccount ([pscustomobject]@{AccountName='argon.low';Email='argon.low@example.test';Success=$true;Gemini5H=.95;GeminiWeekly=.90;ArgonWeekly=.05;TokenPath='';VerificationUrl=$null;ErrorCode=''}) ''
+    Assert ($argonLow.StateKey -eq 'Low' -and $argonLow.ArgonText -eq '5%' -and -not $argonLow.CanSwitch) 'Low Gemini 4 Argon quota marks account as needing attention and blocks manual switch'
     $window.FindName('FilterReady').IsChecked=$true
     Assert ($accountsContainer.Items.Count -eq 4 -and $window.FindName('StatTotal').Text -eq '6') 'Ready filter does not alter pool totals'
     $window.FindName('SearchAccounts').Text='PRODUCT'
@@ -66,7 +69,7 @@ try {
     # Exercise the real background runspace pipeline with an isolated engine fixture.
     Copy-Item (Join-Path $repo 'Dashboard.ps1'),(Join-Path $repo 'DashboardText.vi.json') -Destination $fixture
     @'
-function Get-AllAccountsQuota { Start-Sleep -Milliseconds 600; [pscustomobject]@{AccountName='worker.fixture';Email='worker@example.test';Success=$true;Gemini5H=.8;GeminiWeekly=.9;TokenPath='';VerificationUrl=$null;ErrorCode=''} }
+function Get-AllAccountsQuota { Start-Sleep -Milliseconds 600; [pscustomobject]@{AccountName='worker.fixture';Email='worker@example.test';Success=$true;Gemini5H=.8;GeminiWeekly=.9;ArgonWeekly=.75;TokenPath='';VerificationUrl=$null;ErrorCode=''} }
 function Get-RuntimeIdentity { [pscustomobject]@{Email='worker@example.test';Idle=$true} }
 function Read-RotationState { $null }
 function Get-CimInstance { param($ClassName,$Filter,$ErrorAction) }
@@ -80,7 +83,7 @@ function Repair-RotationState { $true }
     Assert ($script:HubRefreshQueued -and $script:HubRepairQueued) 'Refresh requested during a scan is queued, not lost'
     $deadline=(Get-Date).AddSeconds(15)
     while($script:HubWorker -and (Get-Date) -lt $deadline){Start-Sleep -Milliseconds 50;Complete-HubRefresh}
-    Assert (-not $script:HubWorker -and $accountsContainer.Items.Count -eq 1 -and $accountsContainer.Items[0].AccountName -eq 'worker.fixture' -and $btnRefresh.IsEnabled) 'Background result updates the dashboard and releases its worker'
+    Assert (-not $script:HubWorker -and $accountsContainer.Items.Count -eq 1 -and $accountsContainer.Items[0].AccountName -eq 'worker.fixture' -and $accountsContainer.Items[0].ArgonText -eq '75%' -and $btnRefresh.IsEnabled) 'Background result updates the dashboard and releases its worker'
     'function Get-AllAccountsQuota { throw "fixture failure" }' | Set-Content -LiteralPath (Join-Path $fixture 'AutoRotator.ps1') -Encoding ASCII
     Load-Accounts-UI
     $deadline=(Get-Date).AddSeconds(10)

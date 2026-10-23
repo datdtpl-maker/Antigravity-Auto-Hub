@@ -12,9 +12,15 @@ foreach ($fixture in @(@{}, (Summary @()), (Summary @((Bucket '5h' 1))), (Summar
     Assert $rejected 'Unknown or invalid quota is rejected'
 }
 $quota=Convert-QuotaSummary (Summary @((Bucket '5h' 0),(Bucket 'week' .7)))
-Assert ($quota.Gemini5H -eq 0 -and $quota.GeminiWeekly -eq .7) 'Zero is real exhaustion'
+Assert ($quota.Gemini5H -eq 0 -and $quota.GeminiWeekly -eq .7 -and $quota.ArgonWeekly -eq -1) 'Zero is real exhaustion and missing Argon stays -1'
 $quota=Convert-QuotaSummary (Summary @((Bucket '5h' .9),(Bucket '5h' .2),(Bucket 'week' .7)))
 Assert ($quota.Gemini5H -eq .2) 'Multiple windows use lowest quota'
+$argonSummary=[pscustomobject]@{groups=@(
+    [pscustomobject]@{displayName='Gemini Models';buckets=@((Bucket '5h' .95),(Bucket 'weekly' .80))}
+    [pscustomobject]@{displayName='Gemini 4 Argon';description='For paid Pro plans, Argon quota is separate.';buckets=@([pscustomobject]@{bucketId='gemini-argon-wtu-weekly';displayName='Gemini 4 Argon Weekly Limit';window='weekly';remainingFraction=.25})}
+)}
+$argonQuota=Convert-QuotaSummary $argonSummary
+Assert ($argonQuota.Gemini5H -eq .95 -and $argonQuota.GeminiWeekly -eq .80 -and $argonQuota.ArgonWeekly -eq .25) 'Gemini 4 Argon weekly bucket is tracked separately from standard Gemini weekly'
 
 # Transaction tests use isolated files and mocked native boundaries. No live credentials/processes.
 $testDir=Join-Path $baseDir ('work\test-' + [guid]::NewGuid().ToString('N'))
@@ -23,7 +29,8 @@ $accDir=$testDir; $geminiTokenPath=Join-Path $testDir 'fallback.txt'; $activeFil
 Write-AtomicText (Join-Path $testDir 'target.json') '{"token":{"refresh_token":"fixture"}}'
 function Write-RotatorLog { param($msg) }
 function Send-ToastNotification { param($Message) }
-function Get-AccountQuotaInfo { param($tokenFilePath) [pscustomobject]@{Success=$true;Email='target@example.test';Gemini5H=1.0;GeminiWeekly=1.0} }
+$script:TargetArgonWeekly=1.0
+function Get-AccountQuotaInfo { param($tokenFilePath) [pscustomobject]@{Success=$true;Email='target@example.test';Gemini5H=1.0;GeminiWeekly=1.0;ArgonWeekly=$script:TargetArgonWeekly} }
 function Get-FreshToken { param($Token) [pscustomobject]@{token=@{access_token='fixture-only';refresh_token='fixture-only'}} }
 function Get-RuntimeIdentity { $script:FixtureRuntime }
 function Get-RuntimeWindows { param($Runtime) @([pscustomobject]@{Safe=$script:SafeWindow}) }
@@ -38,11 +45,15 @@ function Reset-Fixture {
     $script:FixtureRuntime=[pscustomobject]@{Email='old@example.test';Idle=$true;Runtimes=@([pscustomobject]@{ProcessId=0})}
     $script:Writes=0; $script:Rollbacks=0; $script:Restarts=0; $script:RestoredWindows=0
     $script:Verified=$true; $script:FailWrite=$false; $script:SafeWindow=$true
-    $script:StoredEmail='old@example.test'
+    $script:StoredEmail='old@example.test'; $script:TargetArgonWeekly=1.0
     if (Test-Path -LiteralPath $stateFile) { Remove-Item -LiteralPath $stateFile }
     Write-AtomicText $geminiTokenPath 'old-fallback'
     Write-AtomicText $activeFile 'old-account'
 }
+Reset-Fixture
+$script:TargetArgonWeekly=.05
+Assert (-not (Switch-ActiveAccount 'target') -and $script:Writes -eq 0) 'Exhausted Gemini 4 Argon target quota is rejected before switching'
+Assert ($script:LastSwitchMessage -eq (Get-SwitchFailureMessage 'Target quota unavailable or exhausted.')) 'Exhausted Argon target reports quota unavailable or exhausted'
 Reset-Fixture
 $script:FixtureRuntime.Idle=$false
 Assert (-not (Switch-ActiveAccount 'target') -and $script:Writes -eq 0 -and $script:Restarts -eq 0) 'Running agent defers without writes'

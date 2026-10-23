@@ -10,7 +10,7 @@ Hub theo dõi các tài khoản bạn đã lưu và chọn tài khoản còn quo
 
 Giao diện WPF mới dùng nền tối, thanh điều hướng và bảng tài khoản, tham khảo cách tổ chức dashboard của [Codex LB](https://github.com/Soju06/codex-lb). Không cần cài thêm thư viện giao diện.
 
-- **Tổng tài khoản, đủ quota, cần chú ý:** tính trên toàn bộ kho, không thay đổi theo bộ lọc. “Đủ quota” nghĩa là 5H > 20% và tuần > 10%; đây chưa phải xác nhận IDE sẵn sàng chuyển. Tài khoản chưa đọc được quota hiển thị `N/A`.
+- **Tổng tài khoản, đủ quota, cần chú ý:** tính trên toàn bộ kho, không thay đổi theo bộ lọc. “Đủ quota” nghĩa là 5H > 20%, tuần > 10% và quota **Gemini 4 Argon** (nếu tài khoản có bucket Argon riêng) > 10%; đây chưa phải xác nhận IDE sẵn sàng chuyển. Tài khoản chưa đọc được quota hoặc không có gói Argon riêng hiển thị `N/A`.
 - **Tìm kiếm, lọc và sắp xếp:** tìm theo tên/email, lọc đủ quota/cần chú ý, bấm tiêu đề cột để sắp xếp. Tài khoản đang dùng được nhận diện bằng email runtime và xếp đầu mặc định.
 - **Nhật ký xoay:** xem thời gian, tài khoản, kết quả và lý do hoãn đã nhận diện. Bảng tự cập nhật mỗi 5 giây, hiển thị tối đa 200 sự kiện từ 5.000 dòng cuối `rotator.log`. Bộ đếm “Đã xoay xác minh” chỉ đếm sự kiện xác minh trong phạm vi này, không phải tổng lịch sử trọn đời. Sự kiện không nhận diện được không được đưa vào bảng.
 - **Quét quota chạy nền:** tự quét lại sau 60 giây kể từ khi lượt quét giao diện trước kết thúc; có thể bấm Quét quota để cập nhật ngay. Tìm kiếm và chuyển trang vẫn hoạt động trong lúc quét. Khi quét lỗi, dữ liệu cũ được giữ lại kèm thông báo. Chu kỳ này độc lập với daemon xoay tài khoản.
@@ -194,9 +194,9 @@ Sau Setup không cần bật thêm: daemon đã được khởi chạy. Chuyển
 
 | Điều kiện mặc định | Giá trị |
 | --- | --- |
-| Tìm tài khoản thay thế | Quota 5H **< 20%** hoặc tuần **≤ 8%** |
-| Tài khoản đích cho xoay tự động | Quota 5H **> 20%** và tuần **> 10%** |
-| Ưu tiên | Quota 5H cao nhất, sau đó quota tuần cao nhất |
+| Tìm tài khoản thay thế | Quota 5H **< 20%**, tuần **≤ 8%**, hoặc **Gemini 4 Argon ≤ 8%** (nếu có bucket Argon riêng) |
+| Tài khoản đích cho xoay tự động | Quota 5H **> 20%**, tuần **> 10%**, và **Gemini 4 Argon > 10%** (nếu có bucket Argon riêng) |
+| Ưu tiên | Tài khoản có quota **Gemini 4 Argon** cao nhất trước, sau đó quota 5H và quota tuần cao nhất |
 | Khoảng nghỉ giữa lượt quét | **25 giây sau khi lượt trước hoàn tất** |
 | Khoảng chờ giữa lần chuyển | **120 giây** |
 

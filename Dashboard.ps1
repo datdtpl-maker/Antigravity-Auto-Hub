@@ -6,22 +6,31 @@ function ConvertTo-HubAccount {
     param($Account,[string]$ActiveEmail)
     $known=[bool]$Account.Success
     $active=[bool]($ActiveEmail -and $Account.Email -ieq $ActiveEmail)
-    $ready=$known -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .10
+    $hasArgon=$known -and $null -ne $Account.ArgonWeekly -and [double]$Account.ArgonWeekly -ge 0
+    $argonOk=(-not $hasArgon) -or ([double]$Account.ArgonWeekly -gt .10)
+    $argonSwitchOk=(-not $hasArgon) -or ([double]$Account.ArgonWeekly -gt .08)
+    $ready=$known -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .10 -and $argonOk
     $key=if(-not $known){'Unknown'}elseif($ready){'Ready'}else{'Low'}
     $verify=[bool]($Account.VerificationUrl -and $Account.ErrorCode -eq 'AccountVerificationRequired')
     $status=if($active){'Active'}elseif($verify){'Verify'}else{$key}
     $five=if($known){[math]::Round($Account.Gemini5H*100,1)}else{0}
     $week=if($known){[math]::Round($Account.GeminiWeekly*100,1)}else{0}
+    $argon=if($hasArgon){[math]::Round([double]$Account.ArgonWeekly*100,1)}else{0}
     $fiveText=if($known){'{0:0.#}%' -f $five}else{'N/A'}
     $weekText=if($known){'{0:0.#}%' -f $week}else{'N/A'}
+    $argonText=if($hasArgon){'{0:0.#}%' -f $argon}else{'N/A'}
     [pscustomobject]@{
         AccountName=$Account.AccountName;Email=$Account.Email;TokenPath=$Account.TokenPath
         IsActive=$active;StateKey=$key;StatusText=(Get-HubText $status)
         StatusColor=$(if($active -or $ready){'#7EE2B8'}elseif($key -eq 'Low'){'#F2C97D'}else{'#B4BEC9'})
-        FiveValue=[double]$five;WeekValue=[double]$week;FiveText=$fiveText;WeekText=$weekText
+        FiveValue=[double]$five;WeekValue=[double]$week;ArgonValue=[double]$argon
+        FiveText=$fiveText;WeekText=$weekText;ArgonText=$argonText
         FiveColor=$(if($known -and $Account.Gemini5H -gt .20){'#7EE2B8'}else{'#F2C97D'})
-        FiveAccessible=((Get-HubText FiveAccessible) -f $fiveText);WeekAccessible=((Get-HubText WeekAccessible) -f $weekText)
-        CanSwitch=($known -and -not $active -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .08)
+        ArgonColor=$(if(-not $hasArgon){'#526171'}elseif([double]$Account.ArgonWeekly -gt .20){'#7EE2B8'}elseif([double]$Account.ArgonWeekly -gt .08){'#93B9EE'}else{'#F2C97D'})
+        FiveAccessible=((Get-HubText FiveAccessible) -f $fiveText)
+        WeekAccessible=((Get-HubText WeekAccessible) -f $weekText)
+        ArgonAccessible=((Get-HubText ArgonAccessible) -f $argonText)
+        CanSwitch=($known -and -not $active -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .08 -and $argonSwitchOk)
         VerificationUrl=$Account.VerificationUrl
         VerifyVisibility=$(if($verify){'Visible'}else{'Collapsed'})
         SwitchVisibility=$(if($verify){'Collapsed'}else{'Visible'})
@@ -253,8 +262,8 @@ function Initialize-HubDashboard {
         $script:PreviewEvents=@(ConvertFrom-HubLog @('[2026-10-13 09:42:16] Verified IDE account: [studio.team].','[2026-10-13 09:41:42] Low quota; waiting for running agents to finish.','[2026-10-13 08:18:03] Verified IDE account: [design.workspace].','[2026-10-13 07:30:00] Daemon started; interval 25s after each completed scan.'))
         $sample=@();$index=0
         foreach($name in @('studio.team','design.workspace','product.lab','research.team','personal','backup.account')){
-            $five=@(.76,.98,.65,.12,.88,0)[$index];$week=@(.82,.94,.57,.43,.69,0)[$index]
-            $sample+=[pscustomobject]@{AccountName=$name;Email="$name@example.test";Success=($index -ne 5);Gemini5H=$five;GeminiWeekly=$week;TokenPath='';VerificationUrl=$null;ErrorCode=''};$index++
+            $five=@(.76,.98,.65,.12,.88,0)[$index];$week=@(.82,.94,.57,.43,.69,0)[$index];$argon=@(.64,.91,.52,.06,-1,0)[$index]
+            $sample+=[pscustomobject]@{AccountName=$name;Email="$name@example.test";Success=($index -ne 5);Gemini5H=$five;GeminiWeekly=$week;ArgonWeekly=$argon;TokenPath='';VerificationUrl=$null;ErrorCode=''};$index++
         }
         Set-HubSnapshot ([pscustomobject]@{Accounts=$sample;Email='studio.team@example.test';Connected=$true;Idle=$true;Daemon=$true;State=$null;At=(Get-Date)})
         $window.FindName('PageSubtitle').Text=Get-HubText Preview
