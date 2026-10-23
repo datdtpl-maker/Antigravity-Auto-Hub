@@ -1,6 +1,6 @@
 # Antigravity Auto-Hub
 
-**Quản lý nhiều tài khoản, theo dõi quota Gemini và tự động chuyển tài khoản Antigravity Desktop trên Windows.**
+**Quản lý nhiều tài khoản, theo dõi quota Gemini/Argon và tự động chuyển tài khoản Antigravity Desktop trên Windows.**
 
 [![Windows validation](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/workflows/validate.yml/badge.svg)](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/workflows/validate.yml)
 
@@ -41,6 +41,8 @@ Chế độ preview khóa các thao tác thêm/lưu/chuyển/xóa tài khoản. 
 8. [Kết nối MCP](#kết-nối-mcp)
 9. [Dữ liệu và bảo mật](#dữ-liệu-và-bảo-mật)
 10. [Dành cho người phát triển](#dành-cho-người-phát-triển)
+
+Hướng dẫn mới: [Quét quota Gemini và Argon](#quét-quota-gemini-và-argon), bao gồm cách đọc trạng thái và tự cập nhật khi tài khoản được cấp Argon.
 
 ## Chuẩn bị
 
@@ -189,6 +191,26 @@ Mở shortcut Desktop hoặc nhấp đúp `Chuyen-Doi-Tai-Khoan.bat`.
 
 **Đóng Hub không tắt xoay tự động.** Daemon tiếp tục chạy và được Startup mở lại khi đăng nhập Windows. Quét quota gọi API theo từng tài khoản nên có thể mất thời gian; chờ lượt quét hoàn tất trước khi bấm lại.
 
+### Quét quota Gemini và Argon
+
+Sau khi tài khoản đã được lưu trong Hub, mỗi lượt quét dùng token của **từng tài khoản** để đọc quota 5 giờ, quota tuần và quota Argon. Không cần chuyển tài khoản đang dùng trong Antigravity hoặc đăng nhập lại lần lượt để quét.
+
+| Cột Argon hiển thị | Ý nghĩa |
+| --- | --- |
+| **Phần trăm**, kể cả **0%** | Google trả quota Argon hợp lệ; 0% nghĩa là đã hết quota được báo cáo |
+| **Chưa được cấp** | Trong lượt quét này, Google đánh dấu tất cả biến thể Argon tìm thấy là bị tắt (`disabled: true`); không đồng nghĩa quota bằng 0% |
+| **N/A** | Chưa xác định được quota: thiếu dữ liệu, lỗi truy vấn hoặc phản hồi chưa được hỗ trợ; không đủ căn cứ kết luận tài khoản không có Argon |
+
+Rê chuột lên ô Argon để xem nguồn và giải thích. Hub ưu tiên quota Argon riêng trong bản tổng hợp; nếu thiếu, đọc quota từ danh sách model của chính tài khoản và lấy mức thấp nhất trong các biến thể hợp lệ. Quota theo model không mặc định là quota tuần và không được thay bằng quota Gemini thông thường.
+
+**Nếu tài khoản được cấp Argon sau này:** Hub kiểm tra lại quyền và quota ở mỗi lượt quét, không lưu cố định trạng thái “Chưa được cấp”. Khi API Google trả quota Argon hợp lệ, ô này tự đổi sang phần trăm. Với token còn hợp lệ, không cần thêm lại tài khoản, đăng nhập từng acc hay cài lại Hub.
+
+- Khi Hub đang mở, giao diện tự quét lại sau **60 giây kể từ khi lượt quét trước hoàn tất**. Có thể mất thêm thời gian để quét hết danh sách.
+- Bấm **Quét quota** để yêu cầu cập nhật; nếu đang quét, yêu cầu được xếp chờ. Trong lúc thêm tài khoản/xác minh, Hub có thể tạm hoãn quét.
+- Daemon quét độc lập, nghỉ **25 giây sau mỗi lượt hoàn tất**. Đóng giao diện không dừng daemon.
+
+Việc cập nhật phụ thuộc Google đã phản ánh quyền mới qua API và token còn sử dụng được. Nếu token bị thu hồi hoặc tài khoản cần xác minh, xử lý thông báo tương ứng rồi quét lại. Nếu Google đổi tên model hoặc cấu trúc API ngoài dạng đang hỗ trợ, Hub có thể cần bản cập nhật.
+
 ## Xoay tự động
 
 Sau Setup không cần bật thêm: daemon đã được khởi chạy. Chuyển chỉ diễn ra khi đủ điều kiện.
@@ -225,6 +247,7 @@ Các trường hợp hoãn:
 | Hiện tượng | Cách xử lý |
 | --- | --- |
 | **Quota `N/A`** | Nghĩa là chưa đọc được dữ liệu, không phải 0%. Kiểm tra dòng trạng thái trên thẻ, OAuth và mạng |
+| **Argon vẫn “Chưa được cấp” sau khi đổi gói** | Bấm Quét quota và chờ hoàn tất. Nhãn phản ánh kết quả Google trả ở lượt quét; tên gói không tự xác nhận quyền model. Khi API trả quota hợp lệ, Hub tự cập nhật, không cần thêm lại acc |
 | **Cần xác minh Google để đọc quota** | Bấm Xác minh Google, hoàn tất bằng đúng tài khoản, rồi Quét Quota. API có thể trả 403 `VALIDATION_REQUIRED` dù tài khoản đã được lưu |
 | **Google thành công nhưng Hub báo `ineligible`** | Hoàn tất trang xác minh nếu Hub mở; nếu không có liên kết hỗ trợ, kiểm tra trong Antigravity chính thức. Mã này hoặc việc có AI Pro chưa đủ để kết luận nguyên nhân |
 | **Thêm tài khoản không mở trình duyệt** | Chờ thông báo tối đa 30 giây; kiểm tra ứng dụng mở HTTPS mặc định, mạng và đường dẫn helper |
@@ -324,6 +347,10 @@ Hub không chủ động sửa source, `.env` hoặc biến môi trường dự 
 ## Dành cho người phát triển
 
 ### Kiểm thử
+
+Bản quét Argon [`0bc7761`](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/commit/0bc7761), ngày **23/10/2026**: **293 mục PASS** trên máy phát triển; [Windows CI thành công](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/runs/39902541677). Kiểm thử bao gồm fallback theo model, phân biệt bị tắt/0%/chưa rõ, lỗi mạng và tránh xoay do cạn Argon sang tài khoản không có quota Argon đã xác nhận.
+
+Kiểm tra chỉ đọc trên máy thật cùng ngày: đọc quota Gemini của **10/10 tài khoản**, trong đó **1 tài khoản có quota Argon** và **9 tài khoản được API đánh dấu Argon bị tắt**. Đây là kết quả tại thời điểm kiểm tra, không phải danh sách quyền cố định; không chuyển tài khoản trong IDE để thực hiện phép kiểm tra này. Các mốc kiểm thử cũ được giữ bên dưới để tham khảo lịch sử.
 
 Cần Windows PowerShell 5.1, WPF và Node.js:
 
