@@ -10,7 +10,8 @@ Hub theo dõi các tài khoản bạn đã lưu và chọn tài khoản còn quo
 
 Giao diện WPF mới dùng nền tối, thanh điều hướng và bảng tài khoản, tham khảo cách tổ chức dashboard của [Codex LB](https://github.com/Soju06/codex-lb). Không cần cài thêm thư viện giao diện.
 
-- **Tổng tài khoản, đủ quota, cần chú ý:** tính trên toàn bộ kho, không thay đổi theo bộ lọc. “Đủ quota” nghĩa là 5H > 20%, tuần > 10% và quota **Gemini 4 Argon** (nếu tài khoản có bucket Argon riêng) > 10%; đây chưa phải xác nhận IDE sẵn sàng chuyển. Tài khoản chưa đọc được quota hoặc không có gói Argon riêng hiển thị `N/A`.
+- **Tổng tài khoản, đủ quota, cần chú ý:** tính trên toàn bộ kho, không thay đổi theo bộ lọc. “Đủ quota” nghĩa là 5H > 20%, tuần > 10% và quota **Gemini 4 Argon** (khi đọc được) > 10%; đây chưa phải xác nhận quyền dùng mọi model hoặc IDE sẵn sàng chuyển. Acc chưa được cấp Argon vẫn có thể đủ quota Gemini thông thường.
+- **Quota Argon trên toàn bộ tài khoản:** quét bằng token đã lưu, không cần đăng nhập/chuyển từng acc trong IDE. Ưu tiên quota Argon riêng từ `retrieveUserQuotaSummary`; nếu thiếu, truy vấn `fetchAvailableModels` bằng token/project của chính acc đó. Model có quota hợp lệ hiển thị phần trăm; nếu tất cả biến thể Argon đều bị Google đánh dấu `disabled`, hiển thị **Chưa được cấp**; thiếu dữ liệu hoặc lỗi truy vấn giữ `N/A`. Di chuột lên ô để xem giải thích. Quota theo model không được coi mặc định là một giới hạn tuần riêng; không thay bằng quota Gemini hoặc suy đoán 100%.
 - **Tìm kiếm, lọc và sắp xếp:** tìm theo tên/email, lọc đủ quota/cần chú ý, bấm tiêu đề cột để sắp xếp. Tài khoản đang dùng được nhận diện bằng email runtime và xếp đầu mặc định.
 - **Nhật ký xoay:** xem thời gian, tài khoản, kết quả và lý do hoãn đã nhận diện. Bảng tự cập nhật mỗi 5 giây, hiển thị tối đa 200 sự kiện từ 5.000 dòng cuối `rotator.log`. Bộ đếm “Đã xoay xác minh” chỉ đếm sự kiện xác minh trong phạm vi này, không phải tổng lịch sử trọn đời. Sự kiện không nhận diện được không được đưa vào bảng.
 - **Quét quota chạy nền:** tự quét lại sau 60 giây kể từ khi lượt quét giao diện trước kết thúc; có thể bấm Quét quota để cập nhật ngay. Tìm kiếm và chuyển trang vẫn hoạt động trong lúc quét. Khi quét lỗi, dữ liệu cũ được giữ lại kèm thông báo. Chu kỳ này độc lập với daemon xoay tài khoản.
@@ -194,11 +195,15 @@ Sau Setup không cần bật thêm: daemon đã được khởi chạy. Chuyển
 
 | Điều kiện mặc định | Giá trị |
 | --- | --- |
-| Tìm tài khoản thay thế | Quota 5H **< 20%**, tuần **≤ 8%**, hoặc **Gemini 4 Argon ≤ 8%** (nếu có bucket Argon riêng) |
-| Tài khoản đích cho xoay tự động | Quota 5H **> 20%**, tuần **> 10%**, và **Gemini 4 Argon > 10%** (nếu có bucket Argon riêng) |
+| Tìm tài khoản thay thế | Quota 5H **< 20%**, tuần **≤ 8%**, hoặc **Gemini 4 Argon ≤ 8%** (khi đọc được quota Argon) |
+| Tài khoản đích cho xoay tự động | Quota 5H **> 20%**, tuần **> 10%**, và **Gemini 4 Argon > 10%** khi đọc được; bắt buộc biết quota Argon nếu xoay do cạn Argon |
 | Ưu tiên | Tài khoản có quota **Gemini 4 Argon** cao nhất trước, sau đó quota 5H và quota tuần cao nhất |
 | Khoảng nghỉ giữa lượt quét | **25 giây sau khi lượt trước hoàn tất** |
 | Khoảng chờ giữa lần chuyển | **120 giây** |
+
+Khi quota Argon đang dùng cạn, tài khoản đích phải có **quota Argon đã đọc được và > 10%**; không xoay vào acc Argon bị tắt hoặc chưa rõ quota chỉ vì Gemini còn nhiều. Nếu không có acc phù hợp, giữ nguyên và ghi nhật ký chờ. Chuyển thủ công sang acc chưa có Argon vẫn có thể dùng cho model Gemini khác.
+
+Google quyết định quyền dùng Argon theo tài khoản/gói; đăng nhập lại không được coi là cách tự cấp quyền. Tham khảo [bảng model chính thức](https://www.antigravity.google/docs/models/). Tên gói Pro từ API chưa đủ để tự suy ra quota Argon. Trong lần kiểm tra thực tế ngày 23/10/2026, cả 10 acc được truy vấn mà không đổi phiên IDE: 1 acc có quota Argon, 9 acc được Google trả model Argon với `disabled: true`. Hub không thể tạo phần trăm quota cho các acc này.
 
 Ví dụ: A còn 19% quota 5H, B còn 80%. Daemon chuyển từ A sang B ngay trong lượt quét phát hiện quota thấp nếu Antigravity rảnh, không có bản nháp, B đạt ngưỡng quota tuần và đã hết thời gian chờ. Đúng 20% chưa kích hoạt điều kiện quota 5H. Nếu tác vụ còn chạy, Hub chờ lượt quét sau.
 

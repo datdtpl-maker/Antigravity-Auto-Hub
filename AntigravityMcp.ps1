@@ -55,7 +55,10 @@ function Invoke-McpTool {
                 @{account=$_.AccountName;email=$_.Email;quotaAvailable=[bool]$_.Success
                   remaining5h=$(if($_.Success){$_.Gemini5H}else{$null})
                   remainingWeekly=$(if($_.Success){$_.GeminiWeekly}else{$null})
-                  remainingArgonWeekly=$(if($hasArgon){$_.ArgonWeekly}else{$null})}
+                  remainingArgonWeekly=$(if($hasArgon -and $_.ArgonQuotaSource -ne 'ModelCatalog'){$_.ArgonWeekly}else{$null})
+                  remainingArgon=$(if($hasArgon){$_.ArgonWeekly}else{$null})
+                  argonStatus=$(if($_.ArgonStatus -in @('Available','Disabled','Unknown')){$_.ArgonStatus}elseif($hasArgon){'Available'}else{'Unknown'})
+                  argonQuotaSource=$(if($_.ArgonQuotaSource -in @('Summary','ModelCatalog')){$_.ArgonQuotaSource}else{$null})}
             })
             return @{accounts=$accounts}
         }

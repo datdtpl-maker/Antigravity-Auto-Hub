@@ -18,13 +18,15 @@ function ConvertTo-HubAccount {
     $argon=if($hasArgon){[math]::Round([double]$Account.ArgonWeekly*100,1)}else{0}
     $fiveText=if($known){'{0:0.#}%' -f $five}else{'N/A'}
     $weekText=if($known){'{0:0.#}%' -f $week}else{'N/A'}
-    $argonText=if($hasArgon){'{0:0.#}%' -f $argon}else{'N/A'}
+    $argonText=if($hasArgon){'{0:0.#}%' -f $argon}elseif($known -and $Account.ArgonStatus -eq 'Disabled'){Get-HubText ArgonDisabled}else{'N/A'}
+    $argonHint=if($known -and $Account.ArgonStatus -eq 'Disabled'){Get-HubText ArgonDisabledHint}elseif($hasArgon -and $Account.ArgonQuotaSource -eq 'ModelCatalog'){Get-HubText ArgonModelHint}elseif($hasArgon){Get-HubText ArgonSummaryHint}else{Get-HubText ArgonUnknownHint}
     [pscustomobject]@{
         AccountName=$Account.AccountName;Email=$Account.Email;TokenPath=$Account.TokenPath
         IsActive=$active;StateKey=$key;StatusText=(Get-HubText $status)
         StatusColor=$(if($active -or $ready){'#7EE2B8'}elseif($key -eq 'Low'){'#F2C97D'}else{'#B4BEC9'})
         FiveValue=[double]$five;WeekValue=[double]$week;ArgonValue=[double]$argon
         FiveText=$fiveText;WeekText=$weekText;ArgonText=$argonText
+        ArgonHint=$argonHint;ArgonBarVisibility=$(if($hasArgon){'Visible'}else{'Hidden'})
         FiveColor=$(if($known -and $Account.Gemini5H -gt .20){'#7EE2B8'}else{'#F2C97D'})
         ArgonColor=$(if(-not $hasArgon){'#526171'}elseif([double]$Account.ArgonWeekly -gt .20){'#7EE2B8'}elseif([double]$Account.ArgonWeekly -gt .08){'#93B9EE'}else{'#F2C97D'})
         FiveAccessible=((Get-HubText FiveAccessible) -f $fiveText)

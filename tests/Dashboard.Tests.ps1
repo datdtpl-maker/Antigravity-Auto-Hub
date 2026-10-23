@@ -20,6 +20,8 @@ try {
     Assert ($unknown.FiveText -eq 'N/A' -and $unknown.ArgonText -eq 'N/A' -and -not $unknown.CanSwitch) 'Unknown quota stays unavailable, never displayed as exhausted'
     $argonLow=ConvertTo-HubAccount ([pscustomobject]@{AccountName='argon.low';Email='argon.low@example.test';Success=$true;Gemini5H=.95;GeminiWeekly=.90;ArgonWeekly=.05;TokenPath='';VerificationUrl=$null;ErrorCode=''}) ''
     Assert ($argonLow.StateKey -eq 'Low' -and $argonLow.ArgonText -eq '5%' -and -not $argonLow.CanSwitch) 'Low Gemini 4 Argon quota marks account as needing attention and blocks manual switch'
+    $argonDisabled=ConvertTo-HubAccount ([pscustomobject]@{AccountName='argon.disabled';Success=$true;Gemini5H=.9;GeminiWeekly=.9;ArgonWeekly=-1;ArgonStatus='Disabled'}) ''
+    Assert ($argonDisabled.ArgonText -eq (Get-HubText ArgonDisabled) -and $argonDisabled.ArgonBarVisibility -eq 'Hidden' -and $argonDisabled.ArgonHint -eq (Get-HubText ArgonDisabledHint)) 'Disabled Argon has an explicit label and explanation instead of a zero quota bar'
     $window.FindName('FilterReady').IsChecked=$true
     Assert ($accountsContainer.Items.Count -eq 4 -and $window.FindName('StatTotal').Text -eq '6') 'Ready filter does not alter pool totals'
     $window.FindName('SearchAccounts').Text='PRODUCT'

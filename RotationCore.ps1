@@ -76,10 +76,36 @@ function Convert-QuotaSummary {
     }
 }
 
+function Convert-ArgonModelQuota {
+    param($Response)
+    $entries=@($Response.models.PSObject.Properties | Where-Object {
+        $_.Name -match '(^|[-_])argon([-_]|$)' -or $_.Value.displayName -match '\bargon\b'
+    })
+    $disabled=0; $fractions=@(); $incomplete=$false
+    foreach ($entry in $entries) {
+        $model=$entry.Value
+        if ($model.disabled -is [bool] -and $model.disabled) { $disabled++; continue }
+        if ($null -ne $model.disabled -and $model.disabled -isnot [bool]) { $incomplete=$true; continue }
+        $fraction=0.0
+        if ($null -eq $model.quotaInfo.remainingFraction -or
+            -not [double]::TryParse([string]$model.quotaInfo.remainingFraction,[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$fraction) -or
+            [double]::IsNaN($fraction) -or $fraction -lt 0 -or $fraction -gt 1) { $incomplete=$true; continue }
+        $fractions+=$fraction
+    }
+    if ($entries.Count -gt 0 -and $disabled -eq $entries.Count) {
+        return [pscustomobject]@{Status='Disabled';Remaining=-1.0}
+    }
+    if ($fractions.Count -gt 0 -and -not $incomplete) {
+        return [pscustomobject]@{Status='Available';Remaining=[double]($fractions|Measure-Object -Minimum).Minimum}
+    }
+    return [pscustomobject]@{Status='Unknown';Remaining=-1.0}
+}
+
 function Get-AccountQuotaInfo {
     param([string]$tokenFilePath)
     $result = [ordered]@{
         Success=$false; Email=''; Gemini5H=-1.0; GeminiWeekly=-1.0; ArgonWeekly=-1.0
+        ArgonStatus='Unknown'; ArgonQuotaSource=''
         TokenPath=$tokenFilePath; AccountName=[IO.Path]::GetFileNameWithoutExtension($tokenFilePath)
         Error='Quota unavailable'; ErrorCode='QuotaUnavailable'; VerificationUrl=$null
     }
@@ -97,6 +123,19 @@ function Get-AccountQuotaInfo {
         $response = Invoke-RestMethod -Uri 'https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary' -Method Post -Headers $headers -Body (@{project=$projectId} | ConvertTo-Json -Compress) -ContentType 'application/json' -TimeoutSec 10 -ErrorAction Stop
         $quota = Convert-QuotaSummary $response
         $result.Gemini5H=$quota.Gemini5H; $result.GeminiWeekly=$quota.GeminiWeekly; $result.ArgonWeekly=$quota.ArgonWeekly
+        if ($quota.ArgonWeekly -ge 0) {
+            $result.ArgonStatus='Available'; $result.ArgonQuotaSource='Summary'
+        } else {
+            # Query this account directly: no IDE login/switch or generation call.
+            # A missing summary bucket can mean model-disabled, shared/model quota,
+            # or missing data. Never substitute generic Gemini quota for Argon.
+            try {
+                $models=Invoke-RestMethod -Uri 'https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels' -Method Post -Headers $headers -Body (@{project=$projectId}|ConvertTo-Json -Compress) -ContentType 'application/json' -TimeoutSec 10 -ErrorAction Stop
+                $argon=Convert-ArgonModelQuota $models
+                $result.ArgonStatus=$argon.Status; $result.ArgonWeekly=$argon.Remaining
+                $result.ArgonQuotaSource='ModelCatalog'
+            } catch { } # Preserve valid Gemini quota; Argon remains unknown.
+        }
         $result.Success=$true; $result.Error=''; $result.ErrorCode=''
     } catch {
         # Read only the documented error discriminator; never log provider bodies.
@@ -322,6 +361,7 @@ function Invoke-AutoRotationCheck {
     $best = $accounts | Where-Object {
         $_.Success -and $_.Email -ne $runtime.Email -and
         $_.Gemini5H -gt [math]::Max(.15,$MinQuotaThreshold) -and $_.GeminiWeekly -gt [math]::Max(.10,$MinWeeklyThreshold) -and
+        (-not $argonLow -or ($null -ne $_.ArgonWeekly -and $_.ArgonWeekly -gt [math]::Max(.10,$argonLimit))) -and
         ($null -eq $_.ArgonWeekly -or $_.ArgonWeekly -lt 0 -or $_.ArgonWeekly -gt [math]::Max(.10,$argonLimit))
     } | Sort-Object -Property @{Expression={ if ($null -ne $_.ArgonWeekly -and $_.ArgonWeekly -ge 0) { [double]$_.ArgonWeekly } else { -1.0 } };Descending=$true}, @{Expression='Gemini5H';Descending=$true}, @{Expression='GeminiWeekly';Descending=$true} | Select-Object -First 1
     if (-not $best) { Write-RotatorLog 'No healthy account available; waiting for quota reset.'; return }

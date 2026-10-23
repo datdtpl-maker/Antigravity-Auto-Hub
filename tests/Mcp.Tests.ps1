@@ -34,6 +34,14 @@ Assert (-not $text.Contains('SECRET_SENTINEL') -and $text.Contains('fixture@exam
 $accounts=Message 'tools/call' @{name='antigravity_accounts';arguments=@{}}
 $data=$accounts.result.content[0].text | ConvertFrom-Json
 Assert ($null -eq $data.accounts[0].remaining5h -and $null -eq $data.accounts[0].remainingArgonWeekly -and -not ($accounts | ConvertTo-Json -Depth 12).Contains('SECRET_SENTINEL')) 'Unknown quota stays null, token paths omitted'
+function Get-AllAccountsQuota { @(
+    [pscustomobject]@{AccountName='disabled';Success=$true;Gemini5H=1;GeminiWeekly=1;ArgonWeekly=-1;ArgonStatus='Disabled';ArgonQuotaSource='ModelCatalog'},
+    [pscustomobject]@{AccountName='enabled';Success=$true;Gemini5H=1;GeminiWeekly=1;ArgonWeekly=.6;ArgonStatus='Available';ArgonQuotaSource='ModelCatalog'}
+) }
+$accounts=Message 'tools/call' @{name='antigravity_accounts';arguments=@{}}
+$data=$accounts.result.content[0].text|ConvertFrom-Json
+Assert ($data.accounts[0].argonStatus -eq 'Disabled' -and $null -eq $data.accounts[0].remainingArgon) 'MCP exposes disabled Argon separately from zero or unknown quota'
+Assert ($data.accounts[1].remainingArgon -eq .6 -and $null -eq $data.accounts[1].remainingArgonWeekly -and $data.accounts[1].argonQuotaSource -eq 'ModelCatalog') 'MCP model quota does not claim an unreported weekly window'
 $blocked=Message 'tools/call' @{name='antigravity_switch_account';arguments=@{account='fixture'}}
 Assert ($blocked.result.isError -and $script:SwitchCalls -eq 0) 'Read-only gate enforced on tool execution'
 $script:McpAllowSwitch=$true

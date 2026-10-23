@@ -39,6 +39,7 @@ Check @((Account 'current' .95 .90 $true .19), (Account 'other' .90 .90 $true .8
 Check @((Account 'current' .95 .90 $true .05), (Account 'other' .95 .90 $true .04)) 0 'Never rotate into another account with exhausted Gemini 4 Argon quota'
 Check @((Account 'current' .95 .90 $true .05), (Account 'noargon' 1.0 1.0 $true -1.0), (Account 'argonok' .85 .85 $true .75)) 1 'Argon rotation prefers candidate with healthy Argon quota over non-Argon candidate'
 Assert-Equal $script:LastSwitchedTarget 'argonok' 'Selected target is the Argon-capable account'
+Check @((Account 'current' .95 .90 $true .05), (Account 'noargon' 1.0 1.0 $true -1.0)) 0 'Exhausted Argon must not rotate into an account without verified Argon quota'
 $script:FixtureState=[pscustomobject]@{Status='Verified';UpdatedAt=[datetime]::UtcNow.AddMinutes(-3).ToString('o')}
 Check @((Account 'current' .1 .9), (Account 'other' 1 1)) 1 'Expired cooldown parsed from disk does not add the local timezone offset'
 $script:FixtureState=[pscustomobject]@{Status='Verified';UpdatedAt=[datetime]::UtcNow.AddSeconds(-30).ToString('o')}

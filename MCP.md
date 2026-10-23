@@ -65,7 +65,7 @@ Khởi động lại kết nối MCP sau khi thêm cấu hình. Server chỉ ho�
 | Tool | Chức năng |
 |---|---|
 | `antigravity_status` | Email runtime, idle, trạng thái giao dịch; không lộ token/CSRF |
-| `antigravity_accounts` | Tên tài khoản, email, quota (`remaining5h`, `remainingWeekly`, `remainingArgonWeekly`); dữ liệu chưa biết trả `null` |
+| `antigravity_accounts` | Tên tài khoản, email, quota (`remaining5h`, `remainingWeekly`, `remainingArgon`); `argonStatus` là `Available`/`Disabled`/`Unknown`, nguồn `argonQuotaSource` là `Summary`/`ModelCatalog`. `remainingArgonWeekly` chỉ giữ số liệu quota riêng từ summary, trả `null` khi dùng quota theo model hoặc chưa biết |
 | `antigravity_rotate_if_needed` | Chạy một lần kiểm tra và chỉ xoay khi quota thấp, IDE rảnh, không nhập dở |
 | `antigravity_switch_account` | Chuyển tới `account` lấy từ danh sách, vẫn áp dụng toàn bộ điều kiện an toàn |
 | `antigravity_reconcile` | Đối chiếu credential/runtime để gỡ trạng thái cần kiểm tra |
