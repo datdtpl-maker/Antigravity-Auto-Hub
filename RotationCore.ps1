@@ -212,8 +212,9 @@ function Write-AtomicText {
 }
 
 function Set-RotationState {
-    param([string]$Status, [string]$Account='', [string]$Email='')
-    Write-AtomicText $stateFile (@{Status=$Status;Account=$Account;Email=$Email;UpdatedAt=[datetime]::UtcNow.ToString('o')} | ConvertTo-Json -Compress)
+    param([string]$Status, [string]$Account='', [string]$Email='', [string]$UpdatedAt='')
+    if (-not $UpdatedAt) { $UpdatedAt = [datetime]::UtcNow.ToString('o') }
+    Write-AtomicText $stateFile (@{Status=$Status;Account=$Account;Email=$Email;UpdatedAt=$UpdatedAt} | ConvertTo-Json -Compress)
 }
 
 function Set-StoredCredential {
@@ -271,7 +272,10 @@ function Switch-ActiveAccount {
         try { $locked=$mutex.WaitOne(0) } catch [Threading.AbandonedMutexException] { $locked=$true }
         if (-not $locked) { throw 'SwitchBusy' }
         $state = Read-RotationState
-        if ($state.Status -in @('Switching','NeedsAttention')) { throw 'Previous switch requires reconciliation.' }
+        if ($state.Status -in @('Switching','NeedsAttention')) {
+            if (-not (Repair-RotationState)) { throw 'Previous switch requires reconciliation.' }
+            $state = Read-RotationState
+        }
         if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt 120) { throw 'SwitchCooldown' }
         if ($targetAccountName -notmatch '^[a-zA-Z0-9_.@-]+$' -or $targetAccountName -in @('.','..')) { throw 'Invalid account name.' }
         $source = Join-Path $accDir "$targetAccountName.json"
@@ -342,8 +346,11 @@ function Switch-ActiveAccount {
 function Invoke-AutoRotationCheck {
     $state = Read-RotationState
     if ($state.Status -in @('Switching','NeedsAttention')) {
-        Write-RotatorLog 'Rotation paused: previous switch requires verification.'
-        return
+        if (-not (Repair-RotationState)) {
+            Write-RotatorLog 'Rotation paused: previous switch requires verification.'
+            return
+        }
+        $state = Read-RotationState
     }
     if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt 120) { return }
     try { $runtime=Get-RuntimeIdentity } catch { Write-RotatorLog (Get-RuntimeFailureMessage $_); return }
@@ -383,13 +390,31 @@ function Repair-RotationState {
         $token=Get-FreshToken $stored
         $user=Invoke-RestMethod 'https://www.googleapis.com/oauth2/v3/userinfo' -Headers @{Authorization="Bearer $($token.token.access_token)"} -TimeoutSec 10 -ErrorAction Stop
         if ($user.email -ne $runtime.Email) { return $false }
+        $matchedFile=$null
         foreach ($file in (Get-ChildItem -LiteralPath $accDir -Filter '*.json')) {
             $saved=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
             if ((Get-RefreshToken $saved) -eq (Get-RefreshToken $stored)) {
-                Set-RotationState 'Verified' $file.BaseName $runtime.Email
-                Write-AtomicText $activeFile $file.BaseName
-                return $true
+                $matchedFile=$file
+                break
             }
+        }
+        if (-not $matchedFile) {
+            foreach ($file in (Get-ChildItem -LiteralPath $accDir -Filter '*.json')) {
+                try {
+                    $savedEmail=Get-CredentialEmail (Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8)
+                    if ($savedEmail -eq $runtime.Email) {
+                        $matchedFile=$file
+                        Write-AtomicText $file.FullName ($stored | ConvertTo-Json -Depth 10 -Compress)
+                        break
+                    }
+                } catch { }
+            }
+        }
+        if ($matchedFile) {
+            $updatedAt=if ($state -and $state.UpdatedAt) { [string]$state.UpdatedAt } else { [datetime]::UtcNow.AddMinutes(-3).ToString('o') }
+            Set-RotationState 'Verified' $matchedFile.BaseName $runtime.Email $updatedAt
+            Write-AtomicText $activeFile $matchedFile.BaseName
+            return $true
         }
         return $false
     } catch { return $false }

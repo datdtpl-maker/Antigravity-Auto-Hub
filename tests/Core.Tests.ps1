@@ -35,8 +35,9 @@ function Get-FreshToken { param($Token) [pscustomobject]@{token=@{access_token='
 function Get-RuntimeIdentity { $script:FixtureRuntime }
 function Get-RuntimeWindows { param($Runtime) @([pscustomobject]@{Safe=$script:SafeWindow}) }
 function Restore-RuntimeWindows { param($SavedWindows) $script:RestoredWindows++ }
-function Get-StoredCredential { 'old-fixture' }
-function Get-CredentialEmail { param($Content) $script:StoredEmail }
+function Get-StoredCredential { '{"token":{"refresh_token":"fixture"}}' }
+function Invoke-RestMethod { param($Uri) [pscustomobject]@{email=$script:StoredEmail} }
+function Get-CredentialEmail { param($Content) if ($script:EmailBranch) { if ($Content -match 'different-token') { 'old@example.test' } else { 'target@example.test' } } else { $script:StoredEmail } }
 function Set-StoredCredential { param($Content) $script:Writes++; if($script:FailWrite){throw 'fixture write failure'} }
 function Restore-StoredCredential { param($Content) $script:Rollbacks++ }
 function Restart-AntigravityRuntime { param($Runtime) $script:Restarts++ }
@@ -91,4 +92,30 @@ Assert (-not (Switch-ActiveAccount '../outside') -and $script:Writes -eq 0) 'Acc
 Reset-Fixture
 $script:StoredEmail='different@example.test'
 Assert (-not (Switch-ActiveAccount 'target') -and $script:Writes -eq 0) 'Rollback credential must match runtime identity'
+Reset-Fixture
+Set-RotationState 'NeedsAttention' '' 'old@example.test'
+$expired=Read-RotationState
+$expired.UpdatedAt=[datetime]::UtcNow.AddMinutes(-3).ToString('o')
+Write-AtomicText $stateFile ($expired | ConvertTo-Json -Compress)
+Write-AtomicText (Join-Path $testDir 'target.json') '{"token":{"refresh_token":"target-token"}}'
+Write-AtomicText (Join-Path $testDir 'old-account.json') '{"token":{"refresh_token":"different-token"}}'
+$script:EmailBranch = $true
+Assert (Repair-RotationState) 'Repair reconciles matching runtime and stored email even when refresh token string differs'
+Assert ((Read-RotationState).Status -eq 'Verified' -and (Read-RotationState).Account -eq 'old-account') 'Reconciled state is Verified with matching account name'
+$script:EmailBranch = $false
+Reset-Fixture
+Set-RotationState 'NeedsAttention' '' 'old@example.test'
+$expired=Read-RotationState
+$expired.UpdatedAt=[datetime]::UtcNow.AddMinutes(-3).ToString('o')
+Write-AtomicText $stateFile ($expired | ConvertTo-Json -Compress)
+Write-AtomicText (Join-Path $testDir 'target.json') '{"token":{"refresh_token":"fixture"}}'
+Assert (Switch-ActiveAccount 'target') 'Manual switch automatically reconciles previous NeedsAttention state when identities match'
+Reset-Fixture
+Set-RotationState 'NeedsAttention' '' 'old@example.test'
+$expired=Read-RotationState
+$expired.UpdatedAt=[datetime]::UtcNow.AddMinutes(-3).ToString('o')
+Write-AtomicText $stateFile ($expired | ConvertTo-Json -Compress)
+$script:StoredEmail='mismatch@example.test'
+Assert (-not (Switch-ActiveAccount 'target')) 'Manual switch blocks when NeedsAttention cannot be reconciled'
+Assert ($script:LastSwitchMessage -eq (Get-SwitchFailureMessage 'Previous switch requires reconciliation.')) 'Failure message indicates previous switch requires reconciliation'
 if ($script:Failed) { throw "$script:Failed test(s) failed" }
