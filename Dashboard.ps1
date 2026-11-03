@@ -20,8 +20,11 @@ function ConvertTo-HubAccount {
     $weekText=if($known){'{0:0.#}%' -f $week}else{'N/A'}
     $argonText=if($hasArgon){'{0:0.#}%' -f $argon}elseif($known -and $Account.ArgonStatus -eq 'Disabled'){Get-HubText ArgonDisabled}else{'N/A'}
     $argonHint=if($known -and $Account.ArgonStatus -eq 'Disabled'){Get-HubText ArgonDisabledHint}elseif($hasArgon -and $Account.ArgonQuotaSource -eq 'ModelCatalog'){Get-HubText ArgonModelHint}elseif($hasArgon){Get-HubText ArgonSummaryHint}else{Get-HubText ArgonUnknownHint}
+    $planText=if($Account.Plan -in @('Free','Pro','Ultra')){[string]$Account.Plan}else{Get-HubText PlanUnknown}
+    $planHint=if($Account.PlanSource -eq 'PaidTier'){Get-HubText PlanPaidHint}elseif($Account.PlanSource -eq 'CurrentTier'){Get-HubText PlanCurrentHint}else{Get-HubText PlanUnknownHint}
     [pscustomobject]@{
         AccountName=$Account.AccountName;Email=$Account.Email;TokenPath=$Account.TokenPath
+        PlanText=$planText;PlanHint=$planHint
         IsActive=$active;StateKey=$key;StatusText=(Get-HubText $status)
         StatusColor=$(if($active -or $ready){'#7EE2B8'}elseif($key -eq 'Low'){'#F2C97D'}else{'#B4BEC9'})
         FiveValue=[double]$five;WeekValue=[double]$week;ArgonValue=[double]$argon

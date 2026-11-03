@@ -101,11 +101,29 @@ function Convert-ArgonModelQuota {
     return [pscustomobject]@{Status='Unknown';Remaining=-1.0}
 }
 
+function Convert-AccountPlan {
+    param($Response)
+    # A paid entitlement overrides the service's free currentTier. Never infer
+    # a subscription from allowedTiers, upgrade copy, model access or quota.
+    $tier=$Response.currentTier; $source='CurrentTier'
+    if ($null -ne $Response.paidTier) { $tier=$Response.paidTier; $source='PaidTier' }
+    $plan='Unknown'
+    if ($tier) {
+        switch -Exact ([string]$tier.id) {
+            'free-tier' { if($source -eq 'CurrentTier'){$plan='Free'} }
+            'g1-pro-tier' { $plan='Pro' }
+            'g1-ultra-tier' { $plan='Ultra' }
+        }
+    }
+    [pscustomobject]@{Name=$plan;Source=$(if($plan -eq 'Unknown'){''}else{$source})}
+}
+
 function Get-AccountQuotaInfo {
     param([string]$tokenFilePath)
     $result = [ordered]@{
         Success=$false; Email=''; Gemini5H=-1.0; GeminiWeekly=-1.0; ArgonWeekly=-1.0
         ArgonStatus='Unknown'; ArgonQuotaSource=''
+        Plan='Unknown'; PlanSource=''
         TokenPath=$tokenFilePath; AccountName=[IO.Path]::GetFileNameWithoutExtension($tokenFilePath)
         Error='Quota unavailable'; ErrorCode='QuotaUnavailable'; VerificationUrl=$null
     }
@@ -116,6 +134,8 @@ function Get-AccountQuotaInfo {
         if (-not $user.email) { throw 'Account email unavailable.' }
         $result.Email = $user.email
         $project = Invoke-RestMethod -Uri 'https://daily-cloudcode-pa.googleapis.com/v1internal:loadCodeAssist' -Method Post -Headers $headers -Body '{}' -ContentType 'application/json' -TimeoutSec 10 -ErrorAction Stop
+        $plan=Convert-AccountPlan $project
+        $result.Plan=$plan.Name; $result.PlanSource=$plan.Source
         $projectId = $project.cloudaicompanionProject
         if ($projectId -and $projectId -isnot [string]) { $projectId = $projectId.id }
         if (-not $projectId) { $projectId = $project.project }

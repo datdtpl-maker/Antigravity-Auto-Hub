@@ -193,6 +193,10 @@ Mở shortcut Desktop hoặc nhấp đúp `Chuyen-Doi-Tai-Khoan.bat`.
 
 ### Quét quota Gemini và Argon
 
+Cột **Gói** hiển thị **Free / Pro / Ultra / Chưa xác định** theo phản hồi `loadCodeAssist` của từng tài khoản, cập nhật cùng mỗi lượt quét quota và không cần chuyển acc trong IDE. Hub ưu tiên `paidTier` hơn `currentTier`: `currentTier=free-tier` cùng `paidTier=g1-pro-tier` sẽ hiển thị **Pro**. Chỉ nhận các mã gói đã hỗ trợ (`free-tier`, `g1-pro-tier`, `g1-ultra-tier`); gói trả phí thiếu thông tin hoặc có mã lạ giữ **Chưa xác định**, không tự hạ xuống Free. Không suy đoán từ tên gói quảng cáo, quota, `allowedTiers` hoặc quyền Argon.
+
+Rê chuột vào tên gói để xem nguồn dữ liệu, hoặc bấm tiêu đề cột để sắp xếp. Đây là gói API báo cho ứng dụng, không phải xác nhận hóa đơn, ngày hết hạn hay phân biệt gói dùng thử với trả tiền. Gói đọc thành công vẫn có thể hiển thị nếu bước đọc quota sau đó lỗi; nếu lượt quét mới không đọc được gói, hiển thị **Chưa xác định**. Quyền Argon được kiểm tra riêng, không suy ra từ nhãn Pro/Ultra.
+
 Sau khi tài khoản đã được lưu trong Hub, mỗi lượt quét dùng token của **từng tài khoản** để đọc quota 5 giờ, quota tuần và quota Argon. Không cần chuyển tài khoản đang dùng trong Antigravity hoặc đăng nhập lại lần lượt để quét.
 
 | Cột Argon hiển thị | Ý nghĩa |

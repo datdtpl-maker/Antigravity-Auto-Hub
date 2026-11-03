@@ -1,4 +1,8 @@
 {
+  "PlanUnknown": "Chưa xác định",
+  "PlanPaidHint": "Gói Google trả qua paidTier trong lần quét này; ưu tiên hơn currentTier. Không xác nhận thanh toán, thời hạn gói hoặc quyền Argon.",
+  "PlanCurrentHint": "Gói Google trả qua currentTier khi không có paidTier. Quyền Argon được kiểm tra riêng.",
+  "PlanUnknownHint": "Chưa đọc được thông tin gói hoặc mã gói chưa được hỗ trợ. Không suy đoán từ quota hay quyền Argon.",
   "ArgonDisabled": "Chưa được cấp",
   "ArgonDisabledHint": "Google đang tắt Argon cho tài khoản này. Đây không phải quota 0%. Hub đã kiểm tra bằng token đã lưu, không cần chuyển tài khoản trong IDE.",
   "ArgonModelHint": "Quota Argon do Google trả theo model; dùng mức thấp nhất giữa các biến thể. Không khẳng định đây là giới hạn tuần riêng.",
