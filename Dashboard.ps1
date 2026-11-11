@@ -2,6 +2,65 @@
 $script:HubText=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'DashboardText.vi.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 function Get-HubText { param([string]$Key) return [string]$script:HubText.$Key }
 
+function New-HubQuotaRing {
+    param([double]$Fraction=-1,[string]$Hint='',[string]$Status='Unknown')
+    $known=$Status -eq 'Available' -and $Fraction -ge 0 -and $Fraction -le 1 -and -not [double]::IsNaN($Fraction)
+    $geometry='M 24,4'
+    if($known -and $Fraction -ge 1){$geometry='M 24,4 A 20,20 0 1 1 24,44 A 20,20 0 1 1 24,4'}
+    elseif($known -and $Fraction -gt 0){
+        $angle=2*[math]::PI*$Fraction
+        $endX=24+20*[math]::Sin($angle);$endY=24-20*[math]::Cos($angle)
+        $geometry=[string]::Format([Globalization.CultureInfo]::InvariantCulture,'M 24,4 A 20,20 0 {0} 1 {1:0.####},{2:0.####}',[int]($Fraction -gt .5),$endX,$endY)
+    }
+    $text=if($known){'{0:0.#}%' -f ($Fraction*100)}else{[string][char]0x2014}
+    [pscustomobject]@{Text=$text;Value=$(if($known){$Fraction*100}else{-1});Geometry=$geometry;Hint=$Hint;Accessible="$text. $Hint";Dash=$(if($known){'1,0'}else{'2,2'});Color=$(if(-not $known){'#64748B'}elseif($Fraction -le .10){'#B42318'}elseif($Fraction -le .20){'#9A6700'}else{'#087F73'})}
+}
+
+function Format-HubQuotaReset {
+    param([string]$ResetAt)
+    $parsed=[datetimeoffset]::MinValue
+    if($ResetAt -and [datetimeoffset]::TryParse($ResetAt,[ref]$parsed)){return (Get-HubText ResetAt) -f $parsed.ToLocalTime().ToString('dd/MM HH:mm')}
+    return Get-HubText ResetUnknown
+}
+
+function Get-HubModelRing {
+    param($Account,[string]$Family)
+    $variants=@($Account.ModelQuotas | Where-Object Family -eq $Family)
+    $enabled=@($variants | Where-Object Status -eq 'Available')
+    $unknown=@($variants | Where-Object Status -eq 'Unknown')
+    $status='Unknown';$fraction=-1.0
+    if($variants.Count -gt 0 -and @($variants | Where-Object Status -ne 'Disabled').Count -eq 0){$status='Disabled'}
+    elseif($enabled.Count -gt 0 -and $unknown.Count -eq 0){$status='Available';$fraction=[double]($enabled | Measure-Object Remaining -Minimum).Minimum}
+    $lines=@((Get-HubText ModelRingHint))
+    foreach($variant in $variants){
+        $value=if($variant.Status -eq 'Available'){'{0:0.#}%' -f ($variant.Remaining*100)}elseif($variant.Status -eq 'Disabled'){Get-HubText ModelDisabled}else{Get-HubText ModelUnknown}
+        $lines+="$($variant.Name): $value | $(Format-HubQuotaReset $variant.ResetAt)"
+    }
+    if(-not $variants.Count){$lines+=Get-HubText ModelMissing}
+    if($Family -in @('Opus','Sonnet','GptOss')){$lines+=Get-HubText SharedQuotaHint}
+    if($Family -eq 'Argon' -and -not $variants.Count -and $Account.Success -and $null -ne $Account.ArgonWeekly -and $Account.ArgonWeekly -ge 0){
+        $fraction=[double]$Account.ArgonWeekly;$status='Available';$lines=@((Get-HubText ArgonSummaryHint))
+    }
+    New-HubQuotaRing $fraction ($lines -join "`n") $status
+}
+
+function Get-HubQuotaDetails {
+    param($Account)
+    $lines=@($Account.AccountName,$Account.Email,(Get-HubText DetailsHint),'', (Get-HubText GroupQuotas))
+    foreach($group in $Account.QuotaGroups){
+        $value=if($group.Remaining -ge 0){'{0:0.#}%' -f ($group.Remaining*100)}else{Get-HubText ModelUnknown}
+        $lines+="$($group.Name) / $($group.Window): $value | $(Format-HubQuotaReset $group.ResetAt)"
+    }
+    $lines+='';$lines+=Get-HubText AllModels
+    foreach($model in $Account.ModelQuotas){
+        $value=if($model.Status -eq 'Available'){'{0:0.#}%' -f ($model.Remaining*100)}elseif($model.Status -eq 'Disabled'){Get-HubText ModelDisabled}else{Get-HubText ModelUnknown}
+        $lines+="$($model.Name): $value | $(Format-HubQuotaReset $model.ResetAt)"
+    }
+    if(-not @($Account.ModelQuotas).Count){$lines+=Get-HubText ModelMissing}
+    $lines+='';$lines+=((Get-HubText CheckedAt) -f $Account.CheckedAt)
+    return $lines -join "`r`n"
+}
+
 function ConvertTo-HubAccount {
     param($Account,[string]$ActiveEmail)
     $known=[bool]$Account.Success
@@ -25,8 +84,14 @@ function ConvertTo-HubAccount {
     [pscustomobject]@{
         AccountName=$Account.AccountName;Email=$Account.Email;TokenPath=$Account.TokenPath
         PlanText=$planText;PlanHint=$planHint
+        FiveRing=(New-HubQuotaRing $(if($known){$Account.Gemini5H}else{-1}) ((Get-HubText FiveAccessible) -f $fiveText) $(if($known){'Available'}else{'Unknown'}))
+        WeekRing=(New-HubQuotaRing $(if($known){$Account.GeminiWeekly}else{-1}) ((Get-HubText WeekAccessible) -f $weekText) $(if($known){'Available'}else{'Unknown'}))
+        FlashRing=(Get-HubModelRing $Account 'Flash');ArgonRing=(Get-HubModelRing $Account 'Argon')
+        OpusRing=(Get-HubModelRing $Account 'Opus');SonnetRing=(Get-HubModelRing $Account 'Sonnet')
+        GptOssRing=(Get-HubModelRing $Account 'GptOss');CarbonRing=(Get-HubModelRing $Account 'Carbon')
+        QuotaDetails=(Get-HubQuotaDetails $Account)
         IsActive=$active;StateKey=$key;StatusText=(Get-HubText $status)
-        StatusColor=$(if($active -or $ready){'#7EE2B8'}elseif($key -eq 'Low'){'#F2C97D'}else{'#B4BEC9'})
+        StatusColor=$(if($active -or $ready){'#087F73'}elseif($key -eq 'Low'){'#9A6700'}else{'#64748B'})
         FiveValue=[double]$five;WeekValue=[double]$week;ArgonValue=[double]$argon
         FiveText=$fiveText;WeekText=$weekText;ArgonText=$argonText
         ArgonHint=$argonHint;ArgonBarVisibility=$(if($hasArgon){'Visible'}else{'Hidden'})
@@ -65,22 +130,22 @@ function ConvertFrom-HubLog {
         if($line -notmatch '^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (.+)$'){continue}
         $stamp=[datetime]::MinValue
         if(-not [datetime]::TryParseExact($Matches[1],'yyyy-MM-dd HH:mm:ss',[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::None,[ref]$stamp)){continue}
-        $message=$Matches[2];$account='-';$kind='';$detail='';$color='#A6AFBA'
+        $message=$Matches[2];$account='-';$kind='';$detail='';$color='#52647C'
         # Project known events only, not arbitrary provider output or token-bearing text.
         if($message -match '^Verified IDE account: \[([a-zA-Z0-9_.@-]{1,200})\]\.$') {
-            $account=$Matches[1];$kind='Confirmed';$detail='ConfirmedDetail';$color='#7EE2B8'
+            $account=$Matches[1];$kind='Confirmed';$detail='ConfirmedDetail';$color='#087F73'
         } elseif($message -match '^Account \[([a-zA-Z0-9_.@-]{1,200})\] prepared for next IDE launch') {
             $account=$Matches[1];$kind='Prepared';$detail='PreparedDetail'
         } elseif($message.StartsWith('Switch deferred: ')) {
-            $kind='Deferred';$detail='DeferredDetail';$color='#F2C97D'
+            $kind='Deferred';$detail='DeferredDetail';$color='#9A6700'
         } elseif($message.StartsWith('Switch unverified.')) {
-            $kind='Failed';$detail='FailedDetail';$color='#FFADB6'
+            $kind='Failed';$detail='FailedDetail';$color='#B42318'
         } elseif($message -eq 'Low quota; waiting for running agents to finish.') {
-            $kind='Waiting';$detail='BusyDetail';$color='#F2C97D'
+            $kind='Waiting';$detail='BusyDetail';$color='#9A6700'
         } elseif($message -eq 'No healthy account available; waiting for quota reset.') {
-            $kind='Waiting';$detail='PoolDetail';$color='#F2C97D'
+            $kind='Waiting';$detail='PoolDetail';$color='#9A6700'
         } elseif($message -eq 'Rotation paused: previous switch requires verification.') {
-            $kind='Failed';$detail='PausedDetail';$color='#FFADB6'
+            $kind='Failed';$detail='PausedDetail';$color='#B42318'
         } elseif($message.StartsWith('Daemon started; interval ')) {
             $kind='Started';$detail='StartedDetail'
         } else {continue}
@@ -91,7 +156,7 @@ function ConvertFrom-HubLog {
 }
 
 function Get-HubSnapshot {
-    $accounts=@(Get-AllAccountsQuota)
+    $accounts=@(Get-AllAccountsQuota -IncludeModels)
     $identity=$null;$runtimeError=$null
     try{$identity=Get-RuntimeIdentity}catch{$runtimeError=Get-RuntimeFailureMessage $_}
     $daemon=@(Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*AutoRotator.ps1*' -and $_.CommandLine -match '(?i)\s-Daemon(?:\s|$)' }).Count -gt 0
@@ -200,6 +265,16 @@ function Invoke-HubAccountAction {
     param([string]$Action,$Account)
     if($Preview -or -not $Account -or $script:loginProtection){return}
     switch($Action) {
+        'Details' {
+            $dialog=[Windows.Window]::new()
+            $dialog.Title=Get-HubText DetailsTitle;$dialog.Width=780;$dialog.Height=640
+            $dialog.Owner=$window;$dialog.WindowStartupLocation='CenterOwner';$dialog.Background='#FFFFFF'
+            $details=[Windows.Controls.TextBox]::new()
+            $details.Text=$Account.QuotaDetails;$details.IsReadOnly=$true;$details.TextWrapping='Wrap'
+            $details.VerticalScrollBarVisibility='Auto';$details.FontFamily='Segoe UI';$details.FontSize=13
+            $details.Foreground='#172B4D';$details.Background='#FFFFFF';$details.BorderThickness=0;$details.Padding=24
+            $dialog.Content=$details;$null=$dialog.ShowDialog()
+        }
         'Switch' {
             if(-not $Account.CanSwitch){return}
             # The existing engine rechecks quota, drafts, running tasks and identity.
@@ -238,10 +313,10 @@ function Update-HubLayout {
     foreach($name in @('HintTotal','HintReady','HintAttention','HintRotations')) {
         $window.FindName($name).Visibility=if($compact){'Collapsed'}else{'Visible'}
     }
-    $window.FindName('ContentArea').Margin=if($compact){[Windows.Thickness]::new(22,14,22,10)}else{[Windows.Thickness]::new(26,24,26,16)}
-    $window.FindName('HeaderArea').Margin=if($compact){[Windows.Thickness]::new(0,0,0,10)}else{[Windows.Thickness]::new(0,0,0,18)}
-    $window.FindName('StatsArea').Margin=if($compact){[Windows.Thickness]::new(0,0,-12,10)}else{[Windows.Thickness]::new(0,0,-12,18)}
-    $window.FindName('StatusArea').Margin=if($compact){[Windows.Thickness]::new(0,0,0,10)}else{[Windows.Thickness]::new(0,0,0,18)}
+    $window.FindName('ContentArea').Margin=[Windows.Thickness]::new(20,16,20,10)
+    $window.FindName('HeaderArea').Margin=[Windows.Thickness]::new(0,0,0,12)
+    $window.FindName('StatsArea').Margin=[Windows.Thickness]::new(0,0,-12,12)
+    $window.FindName('StatusArea').Margin=[Windows.Thickness]::new(0,0,0,12)
 }
 
 function Initialize-HubDashboard {
@@ -268,7 +343,12 @@ function Initialize-HubDashboard {
         $sample=@();$index=0
         foreach($name in @('studio.team','design.workspace','product.lab','research.team','personal','backup.account')){
             $five=@(.76,.98,.65,.12,.88,0)[$index];$week=@(.82,.94,.57,.43,.69,0)[$index];$argon=@(.64,.91,.52,.06,-1,0)[$index]
-            $sample+=[pscustomobject]@{AccountName=$name;Email="$name@example.test";Success=($index -ne 5);Gemini5H=$five;GeminiWeekly=$week;ArgonWeekly=$argon;TokenPath='';VerificationUrl=$null;ErrorCode=''};$index++
+            $models=@()
+            foreach($family in @('Flash','Argon','Opus','Sonnet','GptOss','Carbon')){
+                $remaining=if($index -eq 5 -or $family -eq 'Carbon'){-1}elseif($family -eq 'Argon'){$argon}else{$five}
+                $models+=[pscustomobject]@{Name="$family (Medium)";Family=$family;Remaining=$remaining;Status=$(if($remaining -ge 0){'Available'}elseif($index -eq 5){'Unknown'}else{'Disabled'});ResetAt='2026-11-18T00:00:00Z'}
+            }
+            $sample+=[pscustomobject]@{AccountName=$name;Email="$name@example.test";Success=($index -ne 5);Gemini5H=$five;GeminiWeekly=$week;ArgonWeekly=$argon;ModelQuotas=$models;Plan=$(if($index -eq 5){'Unknown'}else{'Pro'});PlanSource=$(if($index -eq 5){''}else{'PaidTier'});CheckedAt='2026-11-11T01:30:00Z';TokenPath='';VerificationUrl=$null;ErrorCode=''};$index++
         }
         Set-HubSnapshot ([pscustomobject]@{Accounts=$sample;Email='studio.team@example.test';Connected=$true;Idle=$true;Daemon=$true;State=$null;At=(Get-Date)})
         $window.FindName('PageSubtitle').Text=Get-HubText Preview
@@ -286,7 +366,9 @@ function Initialize-HubDashboard {
     $script:HubTimer.Add_Tick({
         Complete-HubRefresh
         if(((Get-Date)-$script:HubLogTick).TotalSeconds -ge 5){Update-HubHistory;$script:HubLogTick=Get-Date}
-        if(-not $Preview -and -not $script:HubWorker -and -not $script:loginProtection -and ($script:HubRefreshQueued -or ((Get-Date)-$script:HubLastRefresh).TotalSeconds -ge 60)){Load-Accounts-UI}
+        $selection=$window.FindName('RefreshInterval').SelectedItem
+        $interval=if($selection){[int]$selection.Tag}else{30}
+        if(-not $Preview -and -not $script:HubWorker -and -not $script:loginProtection -and ($script:HubRefreshQueued -or ($interval -gt 0 -and ((Get-Date)-$script:HubLastRefresh).TotalSeconds -ge $interval))){Load-Accounts-UI}
     })
     $script:HubTimer.Start()
     $window.Add_Closed({

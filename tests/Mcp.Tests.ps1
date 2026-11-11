@@ -67,7 +67,7 @@ Assert ($failure.result.isError -and -not ($failure | ConvertTo-Json -Depth 12).
 # Real stdio subprocess from a fresh folder with spaces, no account files/config.
 $stage=Join-Path $repo ('work\mcp smoke ' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
-foreach ($file in @('AntigravityMcp.ps1','AutoRotator.ps1','RotationCore.ps1','RuntimeBridge.ps1','Configure-Mcp.ps1')) {
+foreach ($file in @('AntigravityMcp.ps1','AutoRotator.ps1','RotationCore.ps1','ModelQuota.ps1','RuntimeBridge.ps1','Configure-Mcp.ps1')) {
     Copy-Item -LiteralPath (Join-Path $repo $file) -Destination $stage
 }
 $psi=[Diagnostics.ProcessStartInfo]::new()

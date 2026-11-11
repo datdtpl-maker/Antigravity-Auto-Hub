@@ -26,6 +26,8 @@ if ($LASTEXITCODE) { throw 'Quota tests failed' }
 if ($LASTEXITCODE) { throw 'Argon account quota tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Plan.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Account plan tests failed' }
+& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Models.Tests.ps1')
+if ($LASTEXITCODE) { throw 'Model quota tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'OAuth.Tests.ps1')
 if ($LASTEXITCODE) { throw 'OAuth configuration tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'SetupOAuth.Tests.ps1')

@@ -1,7 +1,19 @@
-param([int]$Width=1220,[int]$Height=800)
+param([int]$Width=1440,[int]$Height=920,[ValidateRange(0,100)][int]$AccountCount=0)
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
 . (Join-Path $repo 'AntigravityHub.ps1') -Preview -NoShow
+if($AccountCount -gt 0){
+    $original=@($script:HubAccounts)
+    $script:HubAccounts=@(for($index=0;$index -lt $AccountCount;$index++){
+        $row=$original[$index % $original.Count].PSObject.Copy()
+        if($index -ge $original.Count){$row.AccountName='preview.account.{0:00}' -f ($index+1);$row.Email=$row.AccountName+'@example.test';$row.IsActive=$false;$row.StatusText=Get-HubText $row.StateKey}
+        $row
+    })
+    $window.FindName('StatTotal').Text=[string]$script:HubAccounts.Count
+    $window.FindName('StatReady').Text=[string]@($script:HubAccounts|Where-Object StateKey -eq Ready).Count
+    $window.FindName('StatAttention').Text=[string]@($script:HubAccounts|Where-Object StateKey -ne Ready).Count
+    Update-HubAccountView
+}
 $output=Join-Path $repo 'work\ui-preview'
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 function Save-Preview([string]$Name) {

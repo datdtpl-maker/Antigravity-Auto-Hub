@@ -163,6 +163,7 @@ if (-not $script:GoogleClientId -or -not $script:GoogleClientSecret) {
     }
 }
 . (Join-Path $baseDir 'RuntimeBridge.ps1')
+. (Join-Path $baseDir 'ModelQuota.ps1')
 . (Join-Path $baseDir 'RotationCore.ps1')
 $script:LastSwitchTime = [datetime]::MinValue
 

@@ -119,11 +119,12 @@ function Convert-AccountPlan {
 }
 
 function Get-AccountQuotaInfo {
-    param([string]$tokenFilePath)
+    param([string]$tokenFilePath,[switch]$IncludeModels)
     $result = [ordered]@{
         Success=$false; Email=''; Gemini5H=-1.0; GeminiWeekly=-1.0; ArgonWeekly=-1.0
         ArgonStatus='Unknown'; ArgonQuotaSource=''
         Plan='Unknown'; PlanSource=''
+        ModelQuotas=@(); QuotaGroups=@(); ModelsStatus='NotRequested'; CheckedAt=''
         TokenPath=$tokenFilePath; AccountName=[IO.Path]::GetFileNameWithoutExtension($tokenFilePath)
         Error='Quota unavailable'; ErrorCode='QuotaUnavailable'; VerificationUrl=$null
     }
@@ -140,7 +141,19 @@ function Get-AccountQuotaInfo {
         if ($projectId -and $projectId -isnot [string]) { $projectId = $projectId.id }
         if (-not $projectId) { $projectId = $project.project }
         if (-not $projectId -or $projectId -isnot [string]) { throw 'Project ID unavailable.' }
+        $models=$null
+        if($IncludeModels){
+            $result.ModelsStatus='Unavailable'
+            try {
+                $models=Invoke-RestMethod -Uri 'https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels' -Method Post -Headers $headers -Body (@{project=$projectId}|ConvertTo-Json -Compress) -ContentType 'application/json' -TimeoutSec 10 -ErrorAction Stop
+                if($null -ne $models.models){
+                    $result.ModelQuotas=@(Convert-ModelQuotaCatalog $models)
+                    $result.ModelsStatus='Available'
+                }
+            } catch { }
+        }
         $response = Invoke-RestMethod -Uri 'https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary' -Method Post -Headers $headers -Body (@{project=$projectId} | ConvertTo-Json -Compress) -ContentType 'application/json' -TimeoutSec 10 -ErrorAction Stop
+        if($IncludeModels){$result.QuotaGroups=@(Convert-QuotaGroups $response)}
         $quota = Convert-QuotaSummary $response
         $result.Gemini5H=$quota.Gemini5H; $result.GeminiWeekly=$quota.GeminiWeekly; $result.ArgonWeekly=$quota.ArgonWeekly
         if ($quota.ArgonWeekly -ge 0) {
@@ -150,7 +163,7 @@ function Get-AccountQuotaInfo {
             # A missing summary bucket can mean model-disabled, shared/model quota,
             # or missing data. Never substitute generic Gemini quota for Argon.
             try {
-                $models=Invoke-RestMethod -Uri 'https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels' -Method Post -Headers $headers -Body (@{project=$projectId}|ConvertTo-Json -Compress) -ContentType 'application/json' -TimeoutSec 10 -ErrorAction Stop
+                if(-not $IncludeModels){$models=Invoke-RestMethod -Uri 'https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels' -Method Post -Headers $headers -Body (@{project=$projectId}|ConvertTo-Json -Compress) -ContentType 'application/json' -TimeoutSec 10 -ErrorAction Stop}
                 $argon=Convert-ArgonModelQuota $models
                 $result.ArgonStatus=$argon.Status; $result.ArgonWeekly=$argon.Remaining
                 $result.ArgonQuotaSource='ModelCatalog'
@@ -190,12 +203,14 @@ function Get-AccountQuotaInfo {
             }
         } catch { } # Unknown/malformed errors remain unavailable; no guessed quota.
     }
+    $result.CheckedAt=[datetime]::UtcNow.ToString('o')
     [pscustomobject]$result
 }
 
 function Get-AllAccountsQuota {
+    param([switch]$IncludeModels)
     foreach ($file in (Get-ChildItem -LiteralPath $accDir -Filter '*.json')) {
-        Get-AccountQuotaInfo $file.FullName
+        Get-AccountQuotaInfo $file.FullName -IncludeModels:$IncludeModels
     }
 }
 

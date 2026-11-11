@@ -1,6 +1,6 @@
 # Antigravity Auto-Hub
 
-**Quản lý nhiều tài khoản, theo dõi quota Gemini/Argon và tự động chuyển tài khoản Antigravity Desktop trên Windows.**
+**Quản lý nhiều tài khoản, theo dõi quota Gemini / Claude / GPT-OSS và tự động chuyển tài khoản Antigravity Desktop trên Windows.**
 
 [![Windows validation](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/workflows/validate.yml/badge.svg)](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/workflows/validate.yml)
 
@@ -8,14 +8,17 @@ Hub theo dõi các tài khoản bạn đã lưu và chọn tài khoản còn quo
 
 ### Dashboard quản lý tài khoản
 
-Giao diện WPF mới dùng nền tối, thanh điều hướng và bảng tài khoản, tham khảo cách tổ chức dashboard của [Codex LB](https://github.com/Soju06/codex-lb). Không cần cài thêm thư viện giao diện.
+Giao diện WPF nền sáng, bảng quota dạng vòng tròn %, thanh điều hướng và nhật ký xoay. Không cần cài thêm thư viện giao diện. Các cột model: **Gemini Flash, Gemini Argon, Claude Opus, Claude Sonnet, GPT-OSS 120B, Gemini Carbon**, bên cạnh hai hạn mức Gemini **5 giờ / tuần** và gói tài khoản.
 
 - **Tổng tài khoản, đủ quota, cần chú ý:** tính trên toàn bộ kho, không thay đổi theo bộ lọc. “Đủ quota” nghĩa là 5H > 20%, tuần > 10% và quota **Gemini 4 Argon** (khi đọc được) > 10%; đây chưa phải xác nhận quyền dùng mọi model hoặc IDE sẵn sàng chuyển. Acc chưa được cấp Argon vẫn có thể đủ quota Gemini thông thường.
-- **Quota Argon trên toàn bộ tài khoản:** quét bằng token đã lưu, không cần đăng nhập/chuyển từng acc trong IDE. Ưu tiên quota Argon riêng từ `retrieveUserQuotaSummary`; nếu thiếu, truy vấn `fetchAvailableModels` bằng token/project của chính acc đó. Model có quota hợp lệ hiển thị phần trăm; nếu tất cả biến thể Argon đều bị Google đánh dấu `disabled`, hiển thị **Chưa được cấp**; thiếu dữ liệu hoặc lỗi truy vấn giữ `N/A`. Di chuột lên ô để xem giải thích. Quota theo model không được coi mặc định là một giới hạn tuần riêng; không thay bằng quota Gemini hoặc suy đoán 100%.
+- **Quota mọi tài khoản:** truy vấn `fetchAvailableModels` và `retrieveUserQuotaSummary` bằng token/project của từng acc đã lưu, không đăng nhập/chuyển phiên IDE. Mỗi vòng model lấy mức thấp nhất giữa các biến thể đang bật, chỉ khi tất cả biến thể đang bật có dữ liệu hợp lệ. **0% là hết quota thật; vòng nét đứt với “—” là chưa có quota**, do chưa được cấp hoặc thiếu dữ liệu. Di chuột để phân biệt và xem từng biến thể, thời điểm reset.
+- **Chi tiết đầy đủ:** nút **ⓘ** mở danh sách tất cả model có tên API trả về, kể cả model ngoài sáu cột chính, và mọi hạn mức nhóm 5 giờ / tuần. Claude và GPT có thể dùng chung quota; không cộng các vòng tròn thành tổng dung lượng. Không mặc định quota theo model là quota tuần, không sao chép phần trăm Gemini sang Claude/GPT/Carbon.
 - **Tìm kiếm, lọc và sắp xếp:** tìm theo tên/email, lọc đủ quota/cần chú ý, bấm tiêu đề cột để sắp xếp. Tài khoản đang dùng được nhận diện bằng email runtime và xếp đầu mặc định.
 - **Nhật ký xoay:** xem thời gian, tài khoản, kết quả và lý do hoãn đã nhận diện. Bảng tự cập nhật mỗi 5 giây, hiển thị tối đa 200 sự kiện từ 5.000 dòng cuối `rotator.log`. Bộ đếm “Đã xoay xác minh” chỉ đếm sự kiện xác minh trong phạm vi này, không phải tổng lịch sử trọn đời. Sự kiện không nhận diện được không được đưa vào bảng.
-- **Quét quota chạy nền:** tự quét lại sau 60 giây kể từ khi lượt quét giao diện trước kết thúc; có thể bấm Quét quota để cập nhật ngay. Tìm kiếm và chuyển trang vẫn hoạt động trong lúc quét. Khi quét lỗi, dữ liệu cũ được giữ lại kèm thông báo. Chu kỳ này độc lập với daemon xoay tài khoản.
-- **Cửa sổ co giãn:** có nút phóng to/khôi phục, bố cục gọn hơn khi chiều cao dưới 740px; kích thước tối thiểu 1040 × 640 đơn vị WPF. Danh sách dài cuộn và ảo hóa hàng.
+- **Quét quota chạy nền:** mặc định nghỉ **30 giây sau khi lượt quét hoàn tất**, có thể chọn 15 / 30 / 60 giây hoặc Thủ công. Không chạy chồng lượt quét. Đây là cập nhật gần thời gian thực bằng polling, không phải streaming: thời gian giữa hai bản cập nhật còn gồm thời gian gọi API cho toàn bộ pool. Nút Quét quota cập nhật ngay; nhãn Cập nhật và chi tiết từng acc cho biết thời điểm dữ liệu. Khi cả lượt quét lỗi, giữ dữ liệu cũ kèm cảnh báo; model nào lỗi trong lượt quét mới trở về vòng rỗng, không giữ phần trăm cũ như dữ liệu mới.
+- **Cửa sổ co giãn:** có nút phóng to/khôi phục, kích thước tối thiểu 1180 × 640 đơn vị WPF. Danh sách dài cuộn và ảo hóa hàng; vòng tròn giữ nguyên kích thước để đọc nhanh.
+
+**Phạm vi xoay không đổi:** các cột Claude/GPT/Carbon mới phục vụ theo dõi. Engine vẫn quyết định xoay theo Gemini/Argon, kiểm tra IDE rảnh, bản nháp, cooldown và xác minh danh tính; không tự xoay theo Claude/GPT hoặc thông báo “Model unavailable”. “Sẵn sàng xoay” không có nghĩa mọi model còn quota.
 
 Đóng rồi mở lại Hub để nạp giao diện mới. Các kiểm tra quota, tác vụ đang chạy, bản nháp và xác minh danh tính của engine vẫn áp dụng khi chuyển.
 
@@ -202,14 +205,14 @@ Sau khi tài khoản đã được lưu trong Hub, mỗi lượt quét dùng tok
 | Cột Argon hiển thị | Ý nghĩa |
 | --- | --- |
 | **Phần trăm**, kể cả **0%** | Google trả quota Argon hợp lệ; 0% nghĩa là đã hết quota được báo cáo |
-| **Chưa được cấp** | Trong lượt quét này, Google đánh dấu tất cả biến thể Argon tìm thấy là bị tắt (`disabled: true`); không đồng nghĩa quota bằng 0% |
-| **N/A** | Chưa xác định được quota: thiếu dữ liệu, lỗi truy vấn hoặc phản hồi chưa được hỗ trợ; không đủ căn cứ kết luận tài khoản không có Argon |
+| **Vòng rỗng “—”, tooltip Chưa được cấp / bị tắt** | Trong lượt quét này, Google đánh dấu tất cả biến thể Argon tìm thấy là bị tắt (`disabled: true`); không đồng nghĩa quota bằng 0% |
+| **Vòng rỗng “—”, tooltip Chưa rõ / chưa có dữ liệu** | Thiếu dữ liệu, lỗi truy vấn hoặc phản hồi chưa được hỗ trợ; không đủ căn cứ kết luận tài khoản không có Argon |
 
-Rê chuột lên ô Argon để xem nguồn và giải thích. Hub ưu tiên quota Argon riêng trong bản tổng hợp; nếu thiếu, đọc quota từ danh sách model của chính tài khoản và lấy mức thấp nhất trong các biến thể hợp lệ. Quota theo model không mặc định là quota tuần và không được thay bằng quota Gemini thông thường.
+Rê chuột lên ô Argon để xem nguồn và giải thích. Vòng tròn ưu tiên dữ liệu model để thể hiện trạng thái từng biến thể; nếu không có mục model nhưng có quota Argon tổng hợp hợp lệ, hiển thị quota tổng hợp và ghi nguồn trong tooltip. Engine xoay vẫn ưu tiên quota Argon tổng hợp như trước. Nếu hai nguồn cập nhật lệch thời điểm, xem nút ⓘ để đối chiếu. Quota theo model không mặc định là quota tuần và không được thay bằng quota Gemini thông thường.
 
 **Nếu tài khoản được cấp Argon sau này:** Hub kiểm tra lại quyền và quota ở mỗi lượt quét, không lưu cố định trạng thái “Chưa được cấp”. Khi API Google trả quota Argon hợp lệ, ô này tự đổi sang phần trăm. Với token còn hợp lệ, không cần thêm lại tài khoản, đăng nhập từng acc hay cài lại Hub.
 
-- Khi Hub đang mở, giao diện tự quét lại sau **60 giây kể từ khi lượt quét trước hoàn tất**. Có thể mất thêm thời gian để quét hết danh sách.
+- Khi Hub đang mở, giao diện mặc định tự quét lại sau **30 giây kể từ khi lượt quét trước hoàn tất**; có thể chọn 15 / 30 / 60 giây hoặc Thủ công. Có thể mất thêm thời gian để quét hết danh sách. Đóng Hub thì việc theo dõi đầy đủ model dừng; daemon Gemini/Argon vẫn chạy riêng.
 - Bấm **Quét quota** để yêu cầu cập nhật; nếu đang quét, yêu cầu được xếp chờ. Trong lúc thêm tài khoản/xác minh, Hub có thể tạm hoãn quét.
 - Daemon quét độc lập, nghỉ **25 giây sau mỗi lượt hoàn tất**. Đóng giao diện không dừng daemon.
 
@@ -391,6 +394,7 @@ Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR
 | `AccountLogin.ps1` | Helper đăng nhập và xác minh Google |
 | `AutoRotator.ps1` | Cấu hình, Credential Manager, thông báo, daemon |
 | `RotationCore.ps1` | Quota, chọn tài khoản, chuyển và khôi phục |
+| `ModelQuota.ps1` | Chuẩn hóa quota từng model, nhóm quota và giờ reset; không ghi token hoặc thay đổi chính sách xoay |
 | `RuntimeBridge.ps1` | Runtime/CDP, kiểm tra rảnh và bản nháp |
 | `AntigravityMcp.ps1` | MCP stdio |
 | `OAuthSetup.ps1`, `Configure-OAuth.ps1`, `Configure-Mcp.ps1` | Tự dò/xác minh OAuth, cấu hình OAuth thủ công và MCP |

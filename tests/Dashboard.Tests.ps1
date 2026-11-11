@@ -26,6 +26,30 @@ try {
     Assert ($planRow.PlanText -eq 'Pro' -and $planRow.PlanHint -eq (Get-HubText PlanPaidHint)) 'Known plan is displayed independently of quota availability'
     Assert ($unknown.PlanText -eq (Get-HubText PlanUnknown)) 'Missing plan is never displayed as Free'
     Assert (@($accountsContainer.Columns | Where-Object SortMemberPath -eq 'PlanText').Count -eq 1) 'Account table exposes a sortable plan column'
+    Assert ($unknown.FiveRing.Value -eq -1 -and $unknown.CarbonRing.Dash -eq '2,2') 'Unavailable model uses an empty dashed ring, not zero percent'
+    $emptyRing=New-HubQuotaRing -1 'fixture' 'Unknown'
+    $zeroRing=New-HubQuotaRing 0 'fixture' 'Available'
+    $fullRing=New-HubQuotaRing 1 'fixture' 'Available'
+    Assert ($zeroRing.Text -eq '0%' -and $emptyRing.Text -ne '0%' -and $fullRing.Text -eq '100%') 'Rings distinguish unknown, exhausted and full quota'
+    Assert ($fullRing.Geometry -match '24,44' -and $zeroRing.Geometry -eq 'M 24,4') 'Full quota draws a complete circle while zero draws no arc'
+    $previousCulture=[Threading.Thread]::CurrentThread.CurrentCulture
+    try {
+        [Threading.Thread]::CurrentThread.CurrentCulture=[Globalization.CultureInfo]::GetCultureInfo('de-DE')
+        $geometry=(New-HubQuotaRing .123 'fixture' 'Available').Geometry
+        Assert ($null -ne [Windows.Media.Geometry]::Parse($geometry)) 'Ring geometry remains valid under comma-decimal locales'
+    } finally {[Threading.Thread]::CurrentThread.CurrentCulture=$previousCulture}
+    $modelAccount=[pscustomobject]@{ModelQuotas=@(
+        [pscustomobject]@{Name='Opus High';Family='Opus';Status='Available';Remaining=.7;ResetAt=''}
+        [pscustomobject]@{Name='Opus Medium';Family='Opus';Status='Available';Remaining=.8;ResetAt=''}
+        [pscustomobject]@{Name='Opus Disabled';Family='Opus';Status='Disabled';Remaining=-1;ResetAt=''}
+    );Success=$false}
+    $ring=Get-HubModelRing $modelAccount 'Opus'
+    Assert ($ring.Value -eq 70 -and $ring.Hint -match 'Opus High' -and $ring.Hint -match 'Opus Medium') 'Family ring uses minimum enabled variant and preserves all variants in tooltip'
+    Assert ((ConvertTo-HubAccount $modelAccount '').OpusRing.Value -eq 70) 'Valid model quota is visible even if Gemini summary fails'
+    $modelAccount.ModelQuotas[1].Status='Unknown'
+    Assert ((Get-HubModelRing $modelAccount 'Opus').Value -eq -1) 'Incomplete family never invents a complete quota percentage'
+    Assert ($window.FindName('RefreshInterval').SelectedItem.Tag -eq '30') 'Background model monitoring defaults to thirty seconds after completion'
+    Assert (@($accountsContainer.Columns|Where-Object SortMemberPath -match 'Ring.Value').Count -eq 8) 'Compact dashboard includes two Gemini windows and all six requested model families'
     $window.FindName('FilterReady').IsChecked=$true
     Assert ($accountsContainer.Items.Count -eq 4 -and $window.FindName('StatTotal').Text -eq '6') 'Ready filter does not alter pool totals'
     $window.FindName('SearchAccounts').Text='PRODUCT'
