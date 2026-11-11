@@ -62,14 +62,19 @@ function Get-HubQuotaDetails {
 }
 
 function ConvertTo-HubAccount {
-    param($Account,[string]$ActiveEmail)
+    param($Account,[string]$ActiveEmail,[string]$SelectedModel='')
     $known=[bool]$Account.Success
     $active=[bool]($ActiveEmail -and $Account.Email -ieq $ActiveEmail)
     $hasArgon=$known -and $null -ne $Account.ArgonWeekly -and [double]$Account.ArgonWeekly -ge 0
     $argonOk=(-not $hasArgon) -or ([double]$Account.ArgonWeekly -gt .10)
     $argonSwitchOk=(-not $hasArgon) -or ([double]$Account.ArgonWeekly -gt .08)
     $ready=$known -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .10 -and $argonOk
-    $key=if(-not $known){'Unknown'}elseif($ready){'Ready'}else{'Low'}
+    $modelQuota=$null
+    if($SelectedModel){
+        $modelQuota=Get-SelectedModelQuota $Account $SelectedModel
+        $ready=$modelQuota.Known -and $modelQuota.Remaining -gt .20
+    }
+    $key=if(($SelectedModel -and -not $modelQuota.Known) -or -not $known){'Unknown'}elseif($ready){'Ready'}else{'Low'}
     $verify=[bool]($Account.VerificationUrl -and $Account.ErrorCode -eq 'AccountVerificationRequired')
     $status=if($active){'Active'}elseif($verify){'Verify'}else{$key}
     $five=if($known){[math]::Round($Account.Gemini5H*100,1)}else{0}
@@ -100,7 +105,7 @@ function ConvertTo-HubAccount {
         FiveAccessible=((Get-HubText FiveAccessible) -f $fiveText)
         WeekAccessible=((Get-HubText WeekAccessible) -f $weekText)
         ArgonAccessible=((Get-HubText ArgonAccessible) -f $argonText)
-        CanSwitch=($known -and -not $active -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .08 -and $argonSwitchOk)
+        CanSwitch=$(if($SelectedModel){$ready -and -not $active}else{$known -and -not $active -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .08 -and $argonSwitchOk})
         VerificationUrl=$Account.VerificationUrl
         VerifyVisibility=$(if($verify){'Visible'}else{'Collapsed'})
         SwitchVisibility=$(if($verify){'Collapsed'}else{'Visible'})
@@ -144,6 +149,10 @@ function ConvertFrom-HubLog {
             $kind='Waiting';$detail='BusyDetail';$color='#9A6700'
         } elseif($message -eq 'No healthy account available; waiting for quota reset.') {
             $kind='Waiting';$detail='PoolDetail';$color='#9A6700'
+        } elseif($message -eq 'Selected model unknown or ambiguous; no rotation.') {
+            $kind='Waiting';$detail='ModelRotationUnknown';$color='#9A6700'
+        } elseif($message -eq 'Selected model quota unavailable; no rotation.') {
+            $kind='Waiting';$detail='ModelQuotaUnknown';$color='#9A6700'
         } elseif($message -eq 'Rotation paused: previous switch requires verification.') {
             $kind='Failed';$detail='PausedDetail';$color='#B42318'
         } elseif($message.StartsWith('Daemon started; interval ')) {
@@ -159,8 +168,10 @@ function Get-HubSnapshot {
     $accounts=@(Get-AllAccountsQuota -IncludeModels)
     $identity=$null;$runtimeError=$null
     try{$identity=Get-RuntimeIdentity}catch{$runtimeError=Get-RuntimeFailureMessage $_}
+    $selectedModel=''
+    if($identity -and $identity.Runtimes){try{$selectedModel=Get-RuntimeSelectedModel $identity.Runtimes[0]}catch{}}
     $daemon=@(Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*AutoRotator.ps1*' -and $_.CommandLine -match '(?i)\s-Daemon(?:\s|$)' }).Count -gt 0
-    [pscustomobject]@{Accounts=$accounts;Email=$(if($identity){$identity.Email}else{''});Connected=[bool]$identity;Idle=$(if($identity){$identity.Idle}else{$false});RuntimeError=$runtimeError;Daemon=$daemon;State=(Read-RotationState);At=(Get-Date)}
+    [pscustomobject]@{Accounts=$accounts;SelectedModel=$selectedModel;Email=$(if($identity){$identity.Email}else{''});Connected=[bool]$identity;Idle=$(if($identity){$identity.Idle}else{$false});RuntimeError=$runtimeError;Daemon=$daemon;State=(Read-RotationState);At=(Get-Date)}
 }
 
 function Update-HubAccountView {
@@ -178,7 +189,7 @@ function Update-HubAccountView {
 
 function Set-HubSnapshot {
     param($Snapshot)
-    $script:HubAccounts=@($Snapshot.Accounts | ForEach-Object {ConvertTo-HubAccount $_ $Snapshot.Email} | Sort-Object @{Expression='IsActive';Descending=$true},AccountName)
+    $script:HubAccounts=@($Snapshot.Accounts | ForEach-Object {ConvertTo-HubAccount $_ $Snapshot.Email $Snapshot.SelectedModel} | Sort-Object @{Expression='IsActive';Descending=$true},AccountName)
     $window.FindName('StatTotal').Text=[string]$script:HubAccounts.Count
     $window.FindName('StatReady').Text=[string]@($script:HubAccounts | Where-Object StateKey -eq Ready).Count
     $window.FindName('StatAttention').Text=[string]@($script:HubAccounts | Where-Object StateKey -ne Ready).Count
@@ -186,7 +197,10 @@ function Set-HubSnapshot {
         elseif($Snapshot.RuntimeError){$Snapshot.RuntimeError}
         elseif(-not $Snapshot.Connected){Get-HubText NoRuntime}
         elseif(-not $Snapshot.Daemon){Get-HubText NoDaemon}
+        elseif(-not $Snapshot.SelectedModel -and -not $Preview){Get-HubText ModelRotationUnknown}
         elseif(-not $Snapshot.Idle){Get-HubText Busy}else{Get-HubText Monitoring}
+    $window.FindName('PageSubtitle').Text=if($Snapshot.SelectedModel){(Get-HubText RotationModel) -f $Snapshot.SelectedModel}else{Get-HubText AccountsSubtitle}
+    $window.FindName('HintReady').Text=if($Snapshot.SelectedModel){Get-HubText SelectedModelReady}else{Get-HubText LegacyReady}
     $window.FindName('TxtDaemonStatus').Text=$status
     $window.FindName('TxtActiveAccount').Text=if($Snapshot.Email){(Get-HubText ActiveAccount) -f $Snapshot.Email}else{Get-HubText Unverified}
     $window.FindName('TxtUpdated').Text=(Get-HubText Updated) -f $Snapshot.At.ToString('HH:mm:ss')

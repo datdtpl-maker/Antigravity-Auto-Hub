@@ -291,6 +291,7 @@ function Get-SwitchFailureMessage {
         'Target quota unavailable or exhausted.' { return "T$([char]0x00E0)i kho$([char]0x1EA3)n $([char]0x0111)$([char]0x00ED)ch ch$([char]0x01B0)a $([char]0x0111)$([char]0x1ECD)c $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c quota ho$([char]0x1EB7)c quota qu$([char]0x00E1) th$([char]0x1EA5)p." }
         'Stored credential does not match the runtime; reconcile before switching.' { return "T$([char]0x00E0)i kho$([char]0x1EA3)n l$([char]0x01B0)u trong Windows kh$([char]0x00E1)c t$([char]0x00E0)i kho$([char]0x1EA3)n Antigravity $([char]0x0111)ang d$([char]0x00F9)ng. C$([char]0x1EA7)n $([char]0x0111)$([char]0x1ED1)i chi$([char]0x1EBF)u l$([char]0x1EA1)i." }
         'Debugger unavailable.' { return "Ch$([char]0x01B0)a k$([char]0x1EBF)t n$([char]0x1ED1)i $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c c$([char]0x1EED)a s$([char]0x1ED5) Antigravity $([char]0x0111)$([char]0x1EC3) b$([char]0x1EA3)o v$([char]0x1EC7) b$([char]0x1EA3)n nh$([char]0x00E1)p." }
+        'Selected model changed or unavailable.' { return 'Model da thay doi hoac chua xac minh duoc. Hub hoan chuyen; hay quet lai.' }
         'New runtime identity not confirmed.' { return "Ch$([char]0x01B0)a x$([char]0x00E1)c minh $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c t$([char]0x00E0)i kho$([char]0x1EA3)n m$([char]0x1EDB)i. T$([char]0x1EF1) $([char]0x0111)$([char]0x1ED9)ng xoay $([char]0x0111)$([char]0x00E3) t$([char]0x1EA1)m d$([char]0x1EEB)ng." }
         'Window changed or user is editing; cannot restore navigation.' { return "T$([char]0x00E0)i kho$([char]0x1EA3)n $([char]0x0111)$([char]0x00E3) $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c x$([char]0x1EED) l$([char]0x00FD) nh$([char]0x01B0)ng c$([char]0x1EED)a s$([char]0x1ED5) thay $([char]0x0111)$([char]0x1ED5)i ho$([char]0x1EB7)c $([char]0x0111)ang nh$([char]0x1EAD)p. C$([char]0x1EA7)n ki$([char]0x1EC3)m tra tr$([char]0x01B0)$([char]0x1EDB)c khi xoay ti$([char]0x1EBF)p." }
         default { return "Ch$([char]0x01B0)a chuy$([char]0x1EC3)n $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c t$([char]0x00E0)i kho$([char]0x1EA3)n. Ki$([char]0x1EC3)m tra k$([char]0x1EBF)t n$([char]0x1ED1)i, c$([char]0x1EA5)u h$([char]0x00EC)nh OAuth v$([char]0x00E0) tr$([char]0x1EA1)ng th$([char]0x00E1)i Hub." }
@@ -298,7 +299,7 @@ function Get-SwitchFailureMessage {
 }
 
 function Switch-ActiveAccount {
-    param([string]$targetAccountName, [string]$Reason='', [switch]$Notify)
+    param([string]$targetAccountName, [string]$Reason='', [switch]$Notify,[string]$ExpectedModel='',[string]$ExpectedEmail='')
     $ErrorActionPreference='Stop'
     $script:LastSwitchMessage=''
     $mutex = [Threading.Mutex]::new($false, 'Local\AntigravityAutoHub.Switch')
@@ -314,12 +315,21 @@ function Switch-ActiveAccount {
         if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt 120) { throw 'SwitchCooldown' }
         if ($targetAccountName -notmatch '^[a-zA-Z0-9_.@-]+$' -or $targetAccountName -in @('.','..')) { throw 'Invalid account name.' }
         $source = Join-Path $accDir "$targetAccountName.json"
-        $quota = Get-AccountQuotaInfo $source
+        $runtime = Get-RuntimeIdentity
+        if($ExpectedEmail -and $runtime.Email -ne $ExpectedEmail){throw 'Selected model changed or unavailable.'}
+        $selectedModel=''
+        if($runtime -and $runtime.Runtimes){try{$selectedModel=Get-RuntimeSelectedModel $runtime.Runtimes[0]}catch{}}
+        if($ExpectedModel -and (Get-ModelSelectionKey $selectedModel) -ne (Get-ModelSelectionKey $ExpectedModel)){throw 'Selected model changed or unavailable.'}
+        $quota = Get-AccountQuotaInfo $source -IncludeModels:([bool]$selectedModel)
         $argonLimit = if ($null -ne $MinArgonThreshold) { [double]$MinArgonThreshold } else { [double]$MinWeeklyThreshold }
         $argonExhausted = $null -ne $quota.ArgonWeekly -and $quota.ArgonWeekly -ge 0 -and $quota.ArgonWeekly -le $argonLimit
-        if (-not $quota.Success -or $quota.Gemini5H -le $MinQuotaThreshold -or $quota.GeminiWeekly -le $MinWeeklyThreshold -or $argonExhausted) { throw 'Target quota unavailable or exhausted.' }
+        if($selectedModel){
+            $modelQuota=Get-SelectedModelQuota $quota $selectedModel
+            if(-not $modelQuota.Known -or $modelQuota.Remaining -le .20){throw 'Target quota unavailable or exhausted.'}
+        } elseif (-not $quota.Success -or $quota.Gemini5H -le $MinQuotaThreshold -or $quota.GeminiWeekly -le $MinWeeklyThreshold -or $argonExhausted) { throw 'Target quota unavailable or exhausted.' }
         $fresh = Get-FreshToken (Get-Content -LiteralPath $source -Raw -Encoding UTF8 | ConvertFrom-Json)
         $runtime = Get-RuntimeIdentity
+        if($ExpectedEmail -and $runtime.Email -ne $ExpectedEmail){throw 'Selected model changed or unavailable.'}
         if ($runtime -and (-not $runtime.Idle)) {
             throw 'SwitchAgentRunning'
         }
@@ -333,6 +343,7 @@ function Switch-ActiveAccount {
         $oldCredential=Get-StoredCredential
         if (-not $oldCredential) { throw 'Missing rollback credential.' }
         if ($runtime -and (Get-CredentialEmail $oldCredential) -ne $oldEmail) { throw 'Stored credential does not match the runtime; reconcile before switching.' }
+        if($selectedModel -and (Get-ModelSelectionKey (Get-RuntimeSelectedModel $runtime.Runtimes[0])) -ne (Get-ModelSelectionKey $selectedModel)){throw 'Selected model changed or unavailable.'}
         if (Test-Path -LiteralPath $geminiTokenPath) { $oldFile=[IO.File]::ReadAllText($geminiTokenPath) }
         Set-RotationState 'Switching' $targetAccountName $quota.Email
         $written=$true
@@ -341,6 +352,17 @@ function Switch-ActiveAccount {
             foreach ($server in $runtime.Runtimes) { Restart-AntigravityRuntime $server }
             if (-not (Wait-AntigravityIdentity $quota.Email)) { throw 'New runtime identity not confirmed.' }
             Restore-RuntimeWindows $savedWindows
+            if($selectedModel){
+                $confirmed=$false
+                for($attempt=0;$attempt -lt 5;$attempt++){
+                    $newRuntime=Get-RuntimeIdentity
+                    $newModel=Get-RuntimeSelectedModel $newRuntime.Runtimes[0]
+                    if((Get-ModelSelectionKey $newModel) -eq (Get-ModelSelectionKey $selectedModel)){$confirmed=$true;break}
+                    if($newModel){break}
+                    Start-Sleep -Milliseconds 500
+                }
+                if(-not $confirmed){throw 'Selected model changed or unavailable.'}
+            }
             Set-RotationState 'Verified' $targetAccountName $quota.Email
             Write-AtomicText $activeFile $targetAccountName
             Write-RotatorLog "Verified IDE account: [$targetAccountName]."
@@ -390,24 +412,22 @@ function Invoke-AutoRotationCheck {
     if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt 120) { return }
     try { $runtime=Get-RuntimeIdentity } catch { Write-RotatorLog (Get-RuntimeFailureMessage $_); return }
     if (-not $runtime) { Write-RotatorLog 'IDE is closed; monitoring only.'; return }
-    $accounts = @(Get-AllAccountsQuota)
+    try{$selectedModel=Get-RuntimeSelectedModel $runtime.Runtimes[0]}catch{$selectedModel=''}
+    if(-not $selectedModel){Write-RotatorLog 'Selected model unknown or ambiguous; no rotation.';return}
+    $accounts = @(Get-AllAccountsQuota -IncludeModels)
     $current = $accounts | Where-Object { $_.Email -eq $runtime.Email } | Select-Object -First 1
     if (-not $current -or -not $current.Success) { Write-RotatorLog 'Active quota unknown; no rotation.'; return }
-    $argonLimit = if ($null -ne $MinArgonThreshold) { [double]$MinArgonThreshold } else { [double]$MinWeeklyThreshold }
-    $hasArgon = $null -ne $current.ArgonWeekly -and $current.ArgonWeekly -ge 0
-    $argonLog = if ($hasArgon) { ", Argon=$([math]::Round($current.ArgonWeekly*100))%" } else { '' }
-    Write-RotatorLog "Active [$($current.AccountName)]: 5H=$([math]::Round($current.Gemini5H*100))%, week=$([math]::Round($current.GeminiWeekly*100))%$argonLog."
-    $argonLow = $hasArgon -and $current.ArgonWeekly -le $argonLimit
-    if ($current.Gemini5H -ge $MinQuotaThreshold -and $current.GeminiWeekly -gt $MinWeeklyThreshold -and -not $argonLow) { return }
+    $currentQuota=Get-SelectedModelQuota $current $selectedModel
+    if(-not $currentQuota.Known){Write-RotatorLog 'Selected model quota unavailable; no rotation.';return}
+    Write-RotatorLog "Active [$($current.AccountName)]: selected model quota=$([math]::Round($currentQuota.Remaining*100,1))%."
+    if($currentQuota.Remaining -ge .20){return}
     if (-not $runtime.Idle) { Write-RotatorLog 'Low quota; waiting for running agents to finish.'; return }
-    $best = $accounts | Where-Object {
-        $_.Success -and $_.Email -ne $runtime.Email -and
-        $_.Gemini5H -gt [math]::Max(.15,$MinQuotaThreshold) -and $_.GeminiWeekly -gt [math]::Max(.10,$MinWeeklyThreshold) -and
-        (-not $argonLow -or ($null -ne $_.ArgonWeekly -and $_.ArgonWeekly -gt [math]::Max(.10,$argonLimit))) -and
-        ($null -eq $_.ArgonWeekly -or $_.ArgonWeekly -lt 0 -or $_.ArgonWeekly -gt [math]::Max(.10,$argonLimit))
-    } | Sort-Object -Property @{Expression={ if ($null -ne $_.ArgonWeekly -and $_.ArgonWeekly -ge 0) { [double]$_.ArgonWeekly } else { -1.0 } };Descending=$true}, @{Expression='Gemini5H';Descending=$true}, @{Expression='GeminiWeekly';Descending=$true} | Select-Object -First 1
+    $best = $accounts | Where-Object {$_.Email -ne $runtime.Email} | ForEach-Object {
+        $candidateQuota=Get-SelectedModelQuota $_ $selectedModel
+        if($candidateQuota.Known -and $candidateQuota.Remaining -gt .20){[pscustomobject]@{AccountName=$_.AccountName;Remaining=$candidateQuota.Remaining}}
+    } | Sort-Object @{Expression='Remaining';Descending=$true},AccountName | Select-Object -First 1
     if (-not $best) { Write-RotatorLog 'No healthy account available; waiting for quota reset.'; return }
-    Switch-ActiveAccount $best.AccountName -Reason 'Low quota' -Notify | Out-Null
+    Switch-ActiveAccount $best.AccountName -Reason 'Selected model below 20 percent' -ExpectedModel $selectedModel -ExpectedEmail $runtime.Email -Notify | Out-Null
 }
 
 function Repair-RotationState {

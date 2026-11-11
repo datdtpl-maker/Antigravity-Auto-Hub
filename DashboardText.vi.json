@@ -1,4 +1,9 @@
 {
+  "ModelRotationUnknown": "Tự động chờ · Chưa xác định duy nhất model đang chọn trong IDE",
+  "ModelQuotaUnknown": "Tự động chờ · Chưa xác minh được quota của model đang chọn",
+  "RotationModel": "Tự động ưu tiên: {0} · Xoay khi dưới 20%, chỉ khi IDE rảnh",
+  "SelectedModelReady": "Model đang chọn > 20%",
+  "LegacyReady": "Gemini/Argon · Chuyển tay",
   "ModelRingHint": "Phần trăm còn lại do API model trả về; vòng tròn lấy mức thấp nhất của các biến thể đã bật. Di chuột để xem từng biến thể, không mặc định là quota tuần.",
   "ModelDisabled": "Chưa được cấp / bị tắt",
   "ModelUnknown": "Chưa rõ quota",

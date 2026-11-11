@@ -201,7 +201,7 @@ function Restart-AntigravityRuntime {
     Stop-Process -Id $Runtime.ProcessId -ErrorAction Stop
 }
 
-function Get-RuntimeWindows {
+function Get-RuntimePages {
     param($Runtime)
     $portFile = Join-Path $env:APPDATA 'Antigravity\DevToolsActivePort'
     $debugPort = 0
@@ -216,9 +216,48 @@ function Get-RuntimeWindows {
     if (-not $pages.Count) { throw 'No desktop window to preserve.' }
     foreach ($page in $pages) {
         $uri = [uri]$page.url
+        if($uri.Scheme -eq 'data' -or $page.url -eq 'about:blank'){continue}
         if ($uri.Scheme -ne 'https' -or $uri.Host -ne '127.0.0.1' -or $uri.Port -ne $Runtime.Port) { throw 'Unrecognized IDE page.' }
         $ws = [uri]$page.webSocketDebuggerUrl
         if ($ws.Port -ne $debugPort) { throw 'Unexpected debugger endpoint.' }
+        $page
+    }
+}
+
+function Get-RuntimeSelectedModel {
+    param($Runtime)
+    $pages=@(Get-RuntimePages $Runtime)
+    if(-not $pages.Count){return ''}
+    $names=@()
+    $modelExpression = @'
+(() => {
+  const triggers = Array.from(document.querySelectorAll('[data-testid="model-selector-trigger"]'))
+    .filter(element => element.getClientRects().length > 0);
+  if (triggers.length !== 1) return '';
+  const trigger = triggers[0];
+  const label = (trigger.innerText || '').trim().replace(/\s+/g, ' ');
+  if (!/^(Gemini|Claude|GPT-OSS)\b/.test(label) || label.length > 100) return '';
+  if (trigger.getAttribute('aria-label') !== 'Select model, current: ' + label) return '';
+  return label;
+})()
+'@
+    foreach($page in $pages){
+        $response=[AntigravityLocalRpc]::Cdp($page.webSocketDebuggerUrl,(@{id=1;method='Runtime.evaluate';params=@{expression=$modelExpression;returnByValue=$true}}|ConvertTo-Json -Depth 5 -Compress))|ConvertFrom-Json
+        $name=[string]$response.result.result.value
+        if($response.error -or $response.result.exceptionDetails -or -not $name -or $name.Length -gt 100){return ''}
+        $names+=$name
+    }
+    $unique=@($names|Select-Object -Unique)
+    if($unique.Count -eq 1){return $unique[0]}
+    return ''
+}
+
+function Get-RuntimeWindows {
+    param($Runtime)
+    $pages=@(Get-RuntimePages $Runtime)
+    if(-not $pages.Count){throw 'No desktop window to preserve.'}
+    foreach($page in $pages){
+        $uri=[uri]$page.url;$ws=[uri]$page.webSocketDebuggerUrl
         # Do not capture draft content. Only a boolean leaves the renderer.
         $expression = @'
 (() => {

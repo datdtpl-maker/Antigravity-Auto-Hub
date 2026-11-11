@@ -1,3 +1,28 @@
+function Get-ModelSelectionKey {
+    param([string]$Name)
+    return (($Name -replace '[()]','' -replace '\s+',' ').Trim().ToLowerInvariant())
+}
+
+function Get-SelectedModelQuota {
+    param($Account,[string]$SelectedModel)
+    $unknown=[pscustomobject]@{Known=$false;Remaining=-1.0;Model=$SelectedModel}
+    if(-not $SelectedModel -or $Account.ModelsStatus -ne 'Available' -or -not $Account.Email){return $unknown}
+    $key=Get-ModelSelectionKey $SelectedModel
+    $models=@($Account.ModelQuotas|Where-Object {(Get-ModelSelectionKey $_.Name) -eq $key})
+    if(-not $models.Count -or @($models|Where-Object {$_.Status -ne 'Available' -or (ConvertTo-QuotaFraction $_.Remaining) -lt 0}).Count){return $unknown}
+    $values=@($models|ForEach-Object {ConvertTo-QuotaFraction $_.Remaining})
+    $family=$models[0].Family
+    $groups=@($Account.QuotaGroups|Where-Object {
+        if($family -in @('Opus','Sonnet','GptOss')){$_.Name -match '(?i)claude|gpt'}
+        elseif($family -eq 'Argon'){$_.Name -match '(?i)argon'}
+        elseif($family -eq 'Carbon'){$_.Name -match '(?i)carbon'}
+        else{$_.Name -match '(?i)gemini' -and $_.Name -notmatch '(?i)argon|carbon'}
+    })
+    if(-not $Account.Success){return $unknown}
+    foreach($group in $groups){$fraction=ConvertTo-QuotaFraction $group.Remaining;if($fraction -lt 0){return $unknown};$values+=$fraction}
+    return [pscustomobject]@{Known=$true;Remaining=[double]($values|Measure-Object -Minimum).Minimum;Model=$SelectedModel}
+}
+
 function Get-ModelQuotaFamily {
     param([string]$Id,[string]$Name)
     $label="$Id $Name"

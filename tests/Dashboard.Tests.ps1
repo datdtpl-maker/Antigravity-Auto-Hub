@@ -49,6 +49,13 @@ try {
     $modelAccount.ModelQuotas[1].Status='Unknown'
     Assert ((Get-HubModelRing $modelAccount 'Opus').Value -eq -1) 'Incomplete family never invents a complete quota percentage'
     Assert ($window.FindName('RefreshInterval').SelectedItem.Tag -eq '30') 'Background model monitoring defaults to thirty seconds after completion'
+    . (Join-Path $repo 'ModelQuota.ps1')
+    $selectedFixture=[pscustomobject]@{Email='target@example.test';Success=$true;ModelsStatus='Available';Gemini5H=0;GeminiWeekly=0;ArgonWeekly=0;ModelQuotas=@([pscustomobject]@{Name='Claude Sonnet 5.5 (Medium)';Family='Sonnet';Status='Available';Remaining=.9});QuotaGroups=@([pscustomobject]@{Name='Claude and GPT models';Remaining=.8})}
+    $selectedRow=ConvertTo-HubAccount $selectedFixture '' 'Claude Sonnet 5.5 Medium'
+    Assert ($selectedRow.CanSwitch -and $selectedRow.StateKey -eq 'Ready' -and $selectedRow.FiveText -eq '0%') 'Manual button follows selected-model quota without hiding other exhausted quotas'
+    $selectedFixture.ModelQuotas[0].Status='Disabled'
+    $selectedRow=ConvertTo-HubAccount $selectedFixture '' 'Claude Sonnet 5.5 Medium'
+    Assert (-not $selectedRow.CanSwitch -and $selectedRow.StateKey -eq 'Unknown') 'Missing selected model access disables manual target action without inventing quota'
     $quotaColumns=@($accountsContainer.Columns|Where-Object SortMemberPath -match 'Ring.Value'|ForEach-Object {$_.SortMemberPath})
     Assert (($quotaColumns -join ',') -eq 'FiveRing.Value,WeekRing.Value,FlashRing.Value,ArgonRing.Value,CarbonRing.Value,OpusRing.Value,SonnetRing.Value') 'Gemini columns stay together with Carbon after Argon and no GPT-OSS column'
     $window.FindName('FilterReady').IsChecked=$true

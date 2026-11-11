@@ -16,6 +16,8 @@ foreach ($name in @('BtnRefresh','BtnAddAccount','AccountsContainer','TxtDaemonS
 Write-Host 'PASS: ASCII, PowerShell syntax and WPF XAML load'
 & node (Join-Path $PSScriptRoot 'RuntimeWindow.Tests.js')
 if ($LASTEXITCODE) { throw 'Runtime window safety tests failed' }
+& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'RuntimeSelection.Tests.ps1')
+if ($LASTEXITCODE) { throw 'Runtime selection tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Rotation.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Rotation tests failed' }
 & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'Core.Tests.ps1')

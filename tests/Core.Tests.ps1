@@ -118,4 +118,35 @@ Write-AtomicText $stateFile ($expired | ConvertTo-Json -Compress)
 $script:StoredEmail='mismatch@example.test'
 Assert (-not (Switch-ActiveAccount 'target')) 'Manual switch blocks when NeedsAttention cannot be reconciled'
 Assert ($script:LastSwitchMessage -eq (Get-SwitchFailureMessage 'Previous switch requires reconciliation.')) 'Failure message indicates previous switch requires reconciliation'
+function Get-AccountQuotaInfo {
+    param($tokenFilePath,[switch]$IncludeModels)
+    [pscustomobject]@{Success=$true;Email='target@example.test';ModelsStatus='Available';Gemini5H=0;GeminiWeekly=0;ArgonWeekly=0;QuotaGroups=@(@{Name='Claude and GPT models';Remaining=$script:ModelRemaining});ModelQuotas=@(@{Name='Claude Sonnet 5.5 (Medium)';Family='Sonnet';Status='Available';Remaining=$script:ModelRemaining})}
+}
+function Get-RuntimeSelectedModel {
+    param($Runtime)
+    $script:ModelReads++
+    if($script:ChangeAfterRestart -and $script:ModelReads -gt 2){return 'Gemini 3.8 Flash High'}
+    if($script:ChangeModel -and $script:ModelReads -gt 1){return 'Gemini 3.8 Flash High'}
+    return 'Claude Sonnet 5.5 Medium'
+}
+Reset-Fixture
+$script:ModelRemaining=.8;$script:ModelReads=0;$script:ChangeModel=$false
+Assert (Switch-ActiveAccount 'target' -ExpectedModel 'Claude Sonnet 5.5 Medium' -ExpectedEmail 'old@example.test') 'Model-aware switch ignores exhausted unused Gemini and Argon quotas'
+Reset-Fixture
+$script:ModelRemaining=.2;$script:ModelReads=0
+Assert (-not (Switch-ActiveAccount 'target' -ExpectedModel 'Claude Sonnet 5.5 Medium') -and $script:Writes -eq 0) 'Transaction rechecks selected-model target quota before credential writes'
+Reset-Fixture
+$script:ModelRemaining=.8;$script:ModelReads=0;$script:ChangeModel=$true
+Assert (-not (Switch-ActiveAccount 'target' -ExpectedModel 'Claude Sonnet 5.5 Medium') -and $script:Writes -eq 0) 'Model changed during quota lookup aborts before credential writes'
+Reset-Fixture
+$script:ModelReads=0;$script:ChangeModel=$false
+Assert (-not (Switch-ActiveAccount 'target' -ExpectedModel 'Gemini 3.8 Flash High') -and $script:Writes -eq 0) 'Stale automatic model intent cannot switch the current selection'
+Reset-Fixture
+Assert (-not (Switch-ActiveAccount 'target' -ExpectedEmail 'different@example.test') -and $script:Writes -eq 0) 'Changed active identity invalidates pending automatic switch'
+Reset-Fixture
+$script:ModelReads=0
+Assert (Switch-ActiveAccount 'target') 'Manual switching remains available with selected-model quota policy'
+Reset-Fixture
+$script:ModelReads=0;$script:ChangeAfterRestart=$true
+Assert (-not (Switch-ActiveAccount 'target' -ExpectedModel 'Claude Sonnet 5.5 Medium') -and $script:Rollbacks -eq 1 -and (Read-RotationState).Status -eq 'NeedsAttention') 'Changed model after restart cannot be reported as a verified successful switch'
 if ($script:Failed) { throw "$script:Failed test(s) failed" }

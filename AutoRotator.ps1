@@ -1,5 +1,5 @@
 # ==============================================================================
-# ANTIGRAVITY AUTO-ROTATOR ENGINE (ROTATE BELOW 20% WHEN IDLE)
+# ANTIGRAVITY AUTO-ROTATOR ENGINE (SELECTED MODEL BELOW 20%, IDLE ONLY)
 # ==============================================================================
 param (
     [switch]$RunOnce,
@@ -179,7 +179,7 @@ if ($Reconcile) {
         catch [Threading.AbandonedMutexException] { $daemonLocked = $true }
         if (-not $daemonLocked) { return }
         Write-RotatorLog "Daemon started; interval ${IntervalSeconds}s after each completed scan."
-        Write-RotatorLog "Rotation thresholds: 5H < $($MinQuotaThreshold*100)%, week <= $($MinWeeklyThreshold*100)%, Argon <= $($MinArgonThreshold*100)%; cooldown 120s."
+        Write-RotatorLog 'Automatic rotation: selected model below 20%; target above 20%; idle only; cooldown 120s. Unknown model defers.'
         while ($true) {
             try { Invoke-AutoRotationCheck }
             catch { Write-RotatorLog 'Scan failed; retrying on next interval.' }

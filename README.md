@@ -10,7 +10,7 @@ Hub theo dõi các tài khoản bạn đã lưu và chọn tài khoản còn quo
 
 Giao diện WPF nền sáng, bảng quota dạng vòng tròn %, thanh điều hướng và nhật ký xoay. Không cần cài thêm thư viện giao diện. Các cột model theo thứ tự: **Gemini Flash, Gemini Argon, Gemini Carbon, Claude Opus, Claude Sonnet**, bên cạnh hai hạn mức Gemini **5 giờ / tuần** và gói tài khoản. GPT-OSS không có cột riêng trên bảng tổng quan; dữ liệu API vẫn được giữ trong Chi tiết.
 
-- **Tổng tài khoản, đủ quota, cần chú ý:** tính trên toàn bộ kho, không thay đổi theo bộ lọc. “Đủ quota” nghĩa là 5H > 20%, tuần > 10% và quota **Gemini 4 Argon** (khi đọc được) > 10%; đây chưa phải xác nhận quyền dùng mọi model hoặc IDE sẵn sàng chuyển. Acc chưa được cấp Argon vẫn có thể đủ quota Gemini thông thường.
+- **Tổng tài khoản, đủ quota, cần chú ý:** tính trên toàn bộ kho, không thay đổi theo bộ lọc. Khi đọc được model đang chọn trong IDE, “Sẵn sàng xoay” nghĩa là đúng model/biến thể đó có quota hiệu dụng **> 20%**. Quota hiệu dụng là mức thấp nhất giữa quota model và các hạn mức nhóm liên quan mà API trả về. Không xác nhận mọi model đều còn quota hay IDE đang rảnh. Khi model chưa xác định, dashboard ghi rõ tiêu chí Gemini/Argon cho chuyển tay; tự động hoãn.
 - **Quota mọi tài khoản:** truy vấn `fetchAvailableModels` và `retrieveUserQuotaSummary` bằng token/project của từng acc đã lưu, không đăng nhập/chuyển phiên IDE. Mỗi vòng model lấy mức thấp nhất giữa các biến thể đang bật, chỉ khi tất cả biến thể đang bật có dữ liệu hợp lệ. **0% là hết quota thật; vòng nét đứt với “—” là chưa có quota**, do chưa được cấp hoặc thiếu dữ liệu. Di chuột để phân biệt và xem từng biến thể, thời điểm reset.
 - **Chi tiết đầy đủ:** nút **ⓘ** mở danh sách tất cả model có tên API trả về, kể cả model ngoài năm cột chính, và mọi hạn mức nhóm 5 giờ / tuần. Claude và GPT có thể dùng chung quota; không cộng các vòng tròn thành tổng dung lượng. Không mặc định quota theo model là quota tuần, không sao chép phần trăm Gemini sang Claude/GPT/Carbon.
 - **Tìm kiếm, lọc và sắp xếp:** tìm theo tên/email, lọc đủ quota/cần chú ý, bấm tiêu đề cột để sắp xếp. Tài khoản đang dùng được nhận diện bằng email runtime và xếp đầu mặc định.
@@ -18,7 +18,7 @@ Giao diện WPF nền sáng, bảng quota dạng vòng tròn %, thanh điều h�
 - **Quét quota chạy nền:** mặc định nghỉ **30 giây sau khi lượt quét hoàn tất**, có thể chọn 15 / 30 / 60 giây hoặc Thủ công. Không chạy chồng lượt quét. Đây là cập nhật gần thời gian thực bằng polling, không phải streaming: thời gian giữa hai bản cập nhật còn gồm thời gian gọi API cho toàn bộ pool. Nút Quét quota cập nhật ngay; nhãn Cập nhật và chi tiết từng acc cho biết thời điểm dữ liệu. Khi cả lượt quét lỗi, giữ dữ liệu cũ kèm cảnh báo; model nào lỗi trong lượt quét mới trở về vòng rỗng, không giữ phần trăm cũ như dữ liệu mới.
 - **Cửa sổ co giãn:** có nút phóng to/khôi phục, kích thước tối thiểu 1180 × 640 đơn vị WPF. Khi phóng to, cửa sổ dùng vùng làm việc của màn hình hiện tại, không che phần đáy dưới taskbar. Footer và nút Mở thư mục nằm ngoài vùng cuộn; danh sách dài cuộn riêng và ảo hóa hàng. Tiêu đề quota căn giữa với vòng tròn cùng cột.
 
-**Phạm vi xoay không đổi:** các cột Claude/GPT/Carbon mới phục vụ theo dõi. Engine vẫn quyết định xoay theo Gemini/Argon, kiểm tra IDE rảnh, bản nháp, cooldown và xác minh danh tính; không tự xoay theo Claude/GPT hoặc thông báo “Model unavailable”. “Sẵn sàng xoay” không có nghĩa mọi model còn quota.
+**Ưu tiên tự động, luôn giữ nút Chuyển:** engine đọc model đang chọn từ bộ chọn model của IDE, không đọc nội dung chat. Quota model đó **< 20%** thì tìm acc có đúng model/biến thể, quota hiệu dụng **> 20%** cao nhất. Áp dụng Gemini Flash/Argon/Carbon, Claude Opus/Sonnet và model có tên khớp trong catalog (kể cả GPT-OSS dù không có cột riêng). Không xoay chỉ vì model không sử dụng bị cạn; không xoay chỉ vì thông báo “Model unavailable”.
 
 Đóng rồi mở lại Hub để nạp giao diện mới. Các kiểm tra quota, tác vụ đang chạy, bản nháp và xác minh danh tính của engine vẫn áp dụng khi chuyển.
 
@@ -171,7 +171,7 @@ Google báo thành công chỉ xác nhận bước OAuth. Hub vẫn cần Antigr
 - Có ít nhất **hai tài khoản khác nhau** trong danh sách.
 - Tài khoản hiện tại có nhãn **ĐANG KẾT NỐI**.
 - Quota tài khoản hiện tại và dự phòng đọc được thành phần trăm.
-- Tài khoản dự phòng còn trên **20% quota 5H** và **10% quota tuần**.
+- Tài khoản dự phòng có đúng model/biến thể đang chọn và quota hiệu dụng còn **trên 20%**.
 - Daemon đang chạy, không có trạng thái yêu cầu kiểm tra.
 
 Để thử thủ công lần đầu: chờ mọi tác vụ hoàn tất, gửi hoặc lưu bản nháp, chuyển sang cửa sổ Hub rồi bấm **Chuyển Thủ Công** trên tài khoản đích. Đợi kết quả trước khi bấm tiếp. Kiểm tra email trong Antigravity và thử một yêu cầu ngắn sau chuyển.
@@ -212,7 +212,7 @@ Rê chuột lên ô Argon để xem nguồn và giải thích. Vòng tròn ưu t
 
 **Nếu tài khoản được cấp Argon sau này:** Hub kiểm tra lại quyền và quota ở mỗi lượt quét, không lưu cố định trạng thái “Chưa được cấp”. Khi API Google trả quota Argon hợp lệ, ô này tự đổi sang phần trăm. Với token còn hợp lệ, không cần thêm lại tài khoản, đăng nhập từng acc hay cài lại Hub.
 
-- Khi Hub đang mở, giao diện mặc định tự quét lại sau **30 giây kể từ khi lượt quét trước hoàn tất**; có thể chọn 15 / 30 / 60 giây hoặc Thủ công. Có thể mất thêm thời gian để quét hết danh sách. Đóng Hub thì việc theo dõi đầy đủ model dừng; daemon Gemini/Argon vẫn chạy riêng.
+- Khi Hub đang mở, giao diện mặc định tự quét lại sau **30 giây kể từ khi lượt quét trước hoàn tất**; có thể chọn 15 / 30 / 60 giây hoặc Thủ công. Có thể mất thêm thời gian để quét hết danh sách. Đóng Hub không tắt daemon: daemon vẫn tự đọc model đang chọn và quét quota các acc để xoay khi cần. Chọn Thủ công chỉ tắt tự làm mới giao diện, không tắt daemon.
 - Bấm **Quét quota** để yêu cầu cập nhật; nếu đang quét, yêu cầu được xếp chờ. Trong lúc thêm tài khoản/xác minh, Hub có thể tạm hoãn quét.
 - Daemon quét độc lập, nghỉ **25 giây sau mỗi lượt hoàn tất**. Đóng giao diện không dừng daemon.
 
@@ -224,21 +224,25 @@ Sau Setup không cần bật thêm: daemon đã được khởi chạy. Chuyển
 
 | Điều kiện mặc định | Giá trị |
 | --- | --- |
-| Tìm tài khoản thay thế | Quota 5H **< 20%**, tuần **≤ 8%**, hoặc **Gemini 4 Argon ≤ 8%** (khi đọc được quota Argon) |
-| Tài khoản đích cho xoay tự động | Quota 5H **> 20%**, tuần **> 10%**, và **Gemini 4 Argon > 10%** khi đọc được; bắt buộc biết quota Argon nếu xoay do cạn Argon |
-| Ưu tiên | Tài khoản có quota **Gemini 4 Argon** cao nhất trước, sau đó quota 5H và quota tuần cao nhất |
+| Tìm tài khoản thay thế | Quota hiệu dụng của **model đang chọn < 20%**; đúng 20% chưa xoay |
+| Tài khoản đích cho xoay tự động | Đúng model và biến thể đang chọn, API xác nhận có quyền dùng, quota hiệu dụng **> 20%** |
+| Ưu tiên | Quota hiệu dụng model đang chọn cao nhất; bằng nhau thì thứ tự tên tài khoản |
 | Khoảng nghỉ giữa lượt quét | **25 giây sau khi lượt trước hoàn tất** |
 | Khoảng chờ giữa lần chuyển | **120 giây** |
 
-Khi quota Argon đang dùng cạn, tài khoản đích phải có **quota Argon đã đọc được và > 10%**; không xoay vào acc Argon bị tắt hoặc chưa rõ quota chỉ vì Gemini còn nhiều. Nếu không có acc phù hợp, giữ nguyên và ghi nhật ký chờ. Chuyển thủ công sang acc chưa có Argon vẫn có thể dùng cho model Gemini khác.
+Model đang chọn được xác minh qua `model-selector-trigger` và nhãn truy cập của IDE. Nếu không có bộ chọn, tên không khớp catalog, CDP lỗi hoặc nhiều cửa sổ chọn model khác nhau, **hoãn tự động**, không dùng quota Gemini thay thế. Trang `data:`/`about:blank` không thuộc phiên IDE được bỏ qua; origin mạng lạ vẫn chặn. Cửa sổ IDE phải thuộc runtime và debugger đã xác minh.
+
+Với Flash, kiểm tra thêm nhóm Gemini 5 giờ/tuần; với Claude/GPT, kiểm tra nhóm dùng chung Claude/GPT; với Argon/Carbon, kiểm tra nhóm tương ứng nếu API trả về. Phần trăm hiển thị trong vòng model có thể cao hơn quota hiệu dụng nếu nhóm tuần thấp. Không suy ra quyền từ nhãn Pro/Ultra, không lấy quota biến thể khác thay thế. Không có acc phù hợp thì giữ nguyên, không xoay qua lại.
+
+**Chuyển tay vẫn hoạt động:** nút Chuyển áp dụng cùng tiêu chí > 20% cho model đọc được, cùng bảo vệ tác vụ, bản nháp và cooldown. Nếu không xác định model, chuyển tay dùng kiểm tra Gemini/Argon cũ (5 giờ > 20%, tuần > 8%, Argon > 8% khi có); không tự suy đoán model. Thao tác tay không tắt daemon; daemon tiếp tục theo dõi sau cooldown.
 
 Google quyết định quyền dùng Argon theo tài khoản/gói; đăng nhập lại không được coi là cách tự cấp quyền. Tham khảo [bảng model chính thức](https://www.antigravity.google/docs/models/). Tên gói Pro từ API chưa đủ để tự suy ra quota Argon. Trong lần kiểm tra thực tế ngày 23/10/2026, cả 10 acc được truy vấn mà không đổi phiên IDE: 1 acc có quota Argon, 9 acc được Google trả model Argon với `disabled: true`. Hub không thể tạo phần trăm quota cho các acc này.
 
-Ví dụ: A còn 19% quota 5H, B còn 80%. Daemon chuyển từ A sang B ngay trong lượt quét phát hiện quota thấp nếu Antigravity rảnh, không có bản nháp, B đạt ngưỡng quota tuần và đã hết thời gian chờ. Đúng 20% chưa kích hoạt điều kiện quota 5H. Nếu tác vụ còn chạy, Hub chờ lượt quét sau.
+Ví dụ: đang chọn Sonnet Medium, A còn 19% quota hiệu dụng, B còn 80%. Daemon chuyển A → B khi IDE rảnh, không có bản nháp và hết cooldown. Argon của A bằng 0% không ảnh hưởng nếu Sonnet còn tốt. Nếu đang chạy tác vụ, Hub chờ lượt quét sau chứ không cưỡng ép dừng.
 
 Quota được kiểm tra theo lượt quét, không theo từng request. Khoảng chờ 120 giây được tính theo UTC để không bị kéo dài do múi giờ Windows.
 
-Engine xác minh danh tính, kiểm tra trạng thái rảnh, ghi credential đích, khởi động lại đúng tiến trình `language_server`, rồi xác minh email mới và khôi phục đường dẫn cửa sổ.
+Engine kiểm tra lại model và danh tính đang dùng để hủy ý định xoay cũ nếu người dùng vừa đổi model/acc; quét lại quota acc đích trong khóa chuyển. Sau đó kiểm tra trạng thái rảnh/bản nháp, ghi credential đích, khởi động lại đúng `language_server`, xác minh email mới, khôi phục đường dẫn cửa sổ và xác minh model vẫn giữ nguyên. Không xác minh được thì đưa về trạng thái cần kiểm tra thay vì báo xoay thành công.
 
 Các trường hợp hoãn:
 
