@@ -49,7 +49,8 @@ try {
     $modelAccount.ModelQuotas[1].Status='Unknown'
     Assert ((Get-HubModelRing $modelAccount 'Opus').Value -eq -1) 'Incomplete family never invents a complete quota percentage'
     Assert ($window.FindName('RefreshInterval').SelectedItem.Tag -eq '30') 'Background model monitoring defaults to thirty seconds after completion'
-    Assert (@($accountsContainer.Columns|Where-Object SortMemberPath -match 'Ring.Value').Count -eq 8) 'Compact dashboard includes two Gemini windows and all six requested model families'
+    $quotaColumns=@($accountsContainer.Columns|Where-Object SortMemberPath -match 'Ring.Value'|ForEach-Object {$_.SortMemberPath})
+    Assert (($quotaColumns -join ',') -eq 'FiveRing.Value,WeekRing.Value,FlashRing.Value,ArgonRing.Value,CarbonRing.Value,OpusRing.Value,SonnetRing.Value') 'Gemini columns stay together with Carbon after Argon and no GPT-OSS column'
     $window.FindName('FilterReady').IsChecked=$true
     Assert ($accountsContainer.Items.Count -eq 4 -and $window.FindName('StatTotal').Text -eq '6') 'Ready filter does not alter pool totals'
     $window.FindName('SearchAccounts').Text='PRODUCT'

@@ -16,7 +16,7 @@ try {
     $window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::ApplicationIdle)
     $window.UpdateLayout()
     $headers=@(Find-Visual $accountsContainer ([Windows.Controls.Primitives.DataGridColumnHeader]) | Where-Object {$_.Column -and $_.Column.SortMemberPath -match 'Ring.Value'})
-    Assert ($headers.Count -eq 8) 'All quota column headers are realized'
+    Assert ($headers.Count -eq 7) 'All quota column headers are realized'
     $area=[Windows.Forms.Screen]::FromHandle([Windows.Interop.WindowInteropHelper]::new($window).Handle).WorkingArea
     foreach($name in @('TxtFooterPath','BtnOpenFolder','TxtAccountCount')){
         $element=$window.FindName($name)
