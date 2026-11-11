@@ -46,3 +46,5 @@ if ($LASTEXITCODE) { throw 'Account login tests failed' }
 if ($LASTEXITCODE) { throw 'MCP tests failed' }
 & powershell.exe -NoProfile -STA -File (Join-Path $PSScriptRoot 'Dashboard.Tests.ps1')
 if ($LASTEXITCODE) { throw 'Dashboard tests failed' }
+& powershell.exe -NoProfile -STA -File (Join-Path $PSScriptRoot 'WindowLayout.Tests.ps1')
+if ($LASTEXITCODE) { throw 'Window layout tests failed' }

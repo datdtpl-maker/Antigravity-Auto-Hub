@@ -16,7 +16,7 @@ Giao diện WPF nền sáng, bảng quota dạng vòng tròn %, thanh điều h�
 - **Tìm kiếm, lọc và sắp xếp:** tìm theo tên/email, lọc đủ quota/cần chú ý, bấm tiêu đề cột để sắp xếp. Tài khoản đang dùng được nhận diện bằng email runtime và xếp đầu mặc định.
 - **Nhật ký xoay:** xem thời gian, tài khoản, kết quả và lý do hoãn đã nhận diện. Bảng tự cập nhật mỗi 5 giây, hiển thị tối đa 200 sự kiện từ 5.000 dòng cuối `rotator.log`. Bộ đếm “Đã xoay xác minh” chỉ đếm sự kiện xác minh trong phạm vi này, không phải tổng lịch sử trọn đời. Sự kiện không nhận diện được không được đưa vào bảng.
 - **Quét quota chạy nền:** mặc định nghỉ **30 giây sau khi lượt quét hoàn tất**, có thể chọn 15 / 30 / 60 giây hoặc Thủ công. Không chạy chồng lượt quét. Đây là cập nhật gần thời gian thực bằng polling, không phải streaming: thời gian giữa hai bản cập nhật còn gồm thời gian gọi API cho toàn bộ pool. Nút Quét quota cập nhật ngay; nhãn Cập nhật và chi tiết từng acc cho biết thời điểm dữ liệu. Khi cả lượt quét lỗi, giữ dữ liệu cũ kèm cảnh báo; model nào lỗi trong lượt quét mới trở về vòng rỗng, không giữ phần trăm cũ như dữ liệu mới.
-- **Cửa sổ co giãn:** có nút phóng to/khôi phục, kích thước tối thiểu 1180 × 640 đơn vị WPF. Danh sách dài cuộn và ảo hóa hàng; vòng tròn giữ nguyên kích thước để đọc nhanh.
+- **Cửa sổ co giãn:** có nút phóng to/khôi phục, kích thước tối thiểu 1180 × 640 đơn vị WPF. Khi phóng to, cửa sổ dùng vùng làm việc của màn hình hiện tại, không che phần đáy dưới taskbar. Footer và nút Mở thư mục nằm ngoài vùng cuộn; danh sách dài cuộn riêng và ảo hóa hàng. Tiêu đề quota căn giữa với vòng tròn cùng cột.
 
 **Phạm vi xoay không đổi:** các cột Claude/GPT/Carbon mới phục vụ theo dõi. Engine vẫn quyết định xoay theo Gemini/Argon, kiểm tra IDE rảnh, bản nháp, cooldown và xác minh danh tính; không tự xoay theo Claude/GPT hoặc thông báo “Model unavailable”. “Sẵn sàng xoay” không có nghĩa mọi model còn quota.
 
@@ -395,6 +395,7 @@ Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR
 | `AutoRotator.ps1` | Cấu hình, Credential Manager, thông báo, daemon |
 | `RotationCore.ps1` | Quota, chọn tài khoản, chuyển và khôi phục |
 | `ModelQuota.ps1` | Chuẩn hóa quota từng model, nhóm quota và giờ reset; không ghi token hoặc thay đổi chính sách xoay |
+| `WindowBounds.ps1` | Giới hạn phóng to theo vùng làm việc của màn hình hiện tại, tránh taskbar che footer |
 | `RuntimeBridge.ps1` | Runtime/CDP, kiểm tra rảnh và bản nháp |
 | `AntigravityMcp.ps1` | MCP stdio |
 | `OAuthSetup.ps1`, `Configure-OAuth.ps1`, `Configure-Mcp.ps1` | Tự dò/xác minh OAuth, cấu hình OAuth thủ công và MCP |

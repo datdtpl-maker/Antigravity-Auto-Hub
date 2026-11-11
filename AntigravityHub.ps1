@@ -53,6 +53,8 @@ $xamlText = [System.IO.File]::ReadAllText($xamlFile, [System.Text.Encoding]::UTF
 $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xamlText))
 $window = [System.Windows.Markup.XamlReader]::Load($reader)
 $reader.Dispose()
+. (Join-Path $baseDir 'WindowBounds.ps1')
+[HubWindowBounds]::Attach($window)
 $window.Width=[math]::Min($window.Width,[Windows.SystemParameters]::WorkArea.Width)
 $window.Height=[math]::Min($window.Height,[Windows.SystemParameters]::WorkArea.Height)
 
