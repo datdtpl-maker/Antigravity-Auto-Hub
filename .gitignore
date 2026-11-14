@@ -5,6 +5,7 @@ accounts/**
 work/
 oauth.local.clixml
 rotation-state.json
+hub-config.json
 *.tmp
 current_active.txt
 rotator.log

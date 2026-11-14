@@ -312,7 +312,8 @@ function Switch-ActiveAccount {
             if (-not (Repair-RotationState)) { throw 'Previous switch requires reconciliation.' }
             $state = Read-RotationState
         }
-        if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt 120) { throw 'SwitchCooldown' }
+        $cooldownSec = if (Get-Command Get-HubConfig -ErrorAction SilentlyContinue) { (Get-HubConfig).CooldownSeconds } else { 120 }
+        if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt $cooldownSec) { throw 'SwitchCooldown' }
         if ($targetAccountName -notmatch '^[a-zA-Z0-9_.@-]+$' -or $targetAccountName -in @('.','..')) { throw 'Invalid account name.' }
         $source = Join-Path $accDir "$targetAccountName.json"
         $runtime = Get-RuntimeIdentity
@@ -401,6 +402,12 @@ function Switch-ActiveAccount {
 }
 
 function Invoke-AutoRotationCheck {
+    $cfg = if (Get-Command Get-HubConfig -ErrorAction SilentlyContinue) { Get-HubConfig } else { [pscustomobject]@{AutoRotationEnabled=$true;MinQuotaPercent=20;CooldownSeconds=120} }
+    if (-not $cfg.AutoRotationEnabled) {
+        Write-RotatorLog 'Auto-rotation is paused by user.'
+        return
+    }
+    $threshold = [double]$cfg.MinQuotaPercent / 100.0
     $state = Read-RotationState
     if ($state.Status -in @('Switching','NeedsAttention')) {
         if (-not (Repair-RotationState)) {
@@ -409,7 +416,7 @@ function Invoke-AutoRotationCheck {
         }
         $state = Read-RotationState
     }
-    if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt 120) { return }
+    if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt $cfg.CooldownSeconds) { return }
     try { $runtime=Get-RuntimeIdentity } catch { Write-RotatorLog (Get-RuntimeFailureMessage $_); return }
     if (-not $runtime) { Write-RotatorLog 'IDE is closed; monitoring only.'; return }
     try{$selectedModel=Get-RuntimeSelectedModel $runtime.Runtimes[0]}catch{$selectedModel=''}
@@ -420,14 +427,14 @@ function Invoke-AutoRotationCheck {
     $currentQuota=Get-SelectedModelQuota $current $selectedModel
     if(-not $currentQuota.Known){Write-RotatorLog 'Selected model quota unavailable; no rotation.';return}
     Write-RotatorLog "Active [$($current.AccountName)]: selected model quota=$([math]::Round($currentQuota.Remaining*100,1))%."
-    if($currentQuota.Remaining -ge .20){return}
+    if($currentQuota.Remaining -ge $threshold){return}
     if (-not $runtime.Idle) { Write-RotatorLog 'Low quota; waiting for running agents to finish.'; return }
     $best = $accounts | Where-Object {$_.Email -ne $runtime.Email} | ForEach-Object {
         $candidateQuota=Get-SelectedModelQuota $_ $selectedModel
-        if($candidateQuota.Known -and $candidateQuota.Remaining -gt .20){[pscustomobject]@{AccountName=$_.AccountName;Remaining=$candidateQuota.Remaining}}
+        if($candidateQuota.Known -and $candidateQuota.Remaining -gt $threshold){[pscustomobject]@{AccountName=$_.AccountName;Remaining=$candidateQuota.Remaining}}
     } | Sort-Object @{Expression='Remaining';Descending=$true},AccountName | Select-Object -First 1
     if (-not $best) { Write-RotatorLog 'No healthy account available; waiting for quota reset.'; return }
-    Switch-ActiveAccount $best.AccountName -Reason 'Selected model below 20 percent' -ExpectedModel $selectedModel -ExpectedEmail $runtime.Email -Notify | Out-Null
+    Switch-ActiveAccount $best.AccountName -Reason "Selected model below $($cfg.MinQuotaPercent) percent" -ExpectedModel $selectedModel -ExpectedEmail $runtime.Email -Notify | Out-Null
 }
 
 function Repair-RotationState {

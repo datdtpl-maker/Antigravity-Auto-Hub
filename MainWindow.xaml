@@ -196,6 +196,9 @@
               <RadioButton x:Name="NavHistory" GroupName="Navigation" Style="{StaticResource Nav}">
                 <StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE81C;" Margin="0,2,10,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Nhật ký xoay" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
               </RadioButton>
+              <RadioButton x:Name="NavSettings" GroupName="Navigation" Style="{StaticResource Nav}">
+                <StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE713;" Margin="0,2,10,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Cài đặt" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
+              </RadioButton>
             </StackPanel>
             <StackPanel DockPanel.Dock="Bottom">
               <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12,11" Margin="0,0,0,14">
@@ -203,11 +206,11 @@
                   <TextBlock Text="CHÍNH SÁCH XOAY" FontSize="10" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,8"/>
                   <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                     <Ellipse Width="5" Height="5" Fill="#D97706" Margin="0,0,7,0"/>
-                    <TextBlock Text="Model dùng &lt; 20%" FontSize="12" Foreground="#334155"/>
+                    <TextBlock x:Name="TxtPolicyThreshold" Text="Model dùng &lt; 20%" FontSize="12" Foreground="#334155"/>
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                     <Ellipse Width="5" Height="5" Fill="#0F766E" Margin="0,0,7,0"/>
-                    <TextBlock Text="Acc đích &gt; 20%" FontSize="12" Foreground="#334155"/>
+                    <TextBlock x:Name="TxtPolicyTarget" Text="Acc đích &gt; 20%" FontSize="12" Foreground="#334155"/>
                   </StackPanel>
                   <TextBlock Text="Chỉ chuyển khi IDE rảnh" TextWrapping="Wrap" FontSize="11.5" Foreground="#64748B"/>
                 </StackPanel>
@@ -276,9 +279,9 @@
           </UniformGrid>
           <Border x:Name="StatusArea" Grid.Row="2" Style="{StaticResource Panel}" BorderBrush="#A7F3D0" Background="#ECFDF5" Padding="16,10" Margin="0,0,0,16">
             <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Ellipse Width="9" Height="9" Fill="#10B981" VerticalAlignment="Top" Margin="0,5,10,0"/>
+                <Ellipse x:Name="StatusDot" Width="9" Height="9" Fill="#10B981" VerticalAlignment="Top" Margin="0,5,10,0"/>
                 <StackPanel>
                   <TextBlock x:Name="TxtDaemonStatus" Text="Đang đọc trạng thái…" Foreground="#065F46" FontWeight="SemiBold" TextWrapping="Wrap"/>
                   <TextBlock x:Name="TxtActiveAccount" Text="Đang xác minh tài khoản trong Antigravity" Foreground="#047857" FontSize="12" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
@@ -288,6 +291,7 @@
                 <TextBlock x:Name="TxtUpdated" Text="Chưa quét quota" Foreground="#065F46" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
                 <TextBlock Text="Tự cập nhật sau mỗi lượt quét" Foreground="#047857" FontSize="11.5" Margin="0,3,0,0" HorizontalAlignment="Right"/>
               </StackPanel>
+              <Button Grid.Column="2" x:Name="BtnToggleRotation" Style="{StaticResource ModernBtn}" Content="Tạm dừng xoay" Padding="12,6" Margin="14,0,0,0" MinHeight="32" FontSize="12" VerticalAlignment="Center" ToolTip="Tạm dừng hoặc bật lại tự động xoay tài khoản"/>
             </Grid>
           </Border>
           <Grid Grid.Row="3">
@@ -384,6 +388,46 @@
               </Border>
               <TextBlock Grid.Row="2" x:Name="TxtHistoryCount" Text="Đang đọc nhật ký…" Style="{StaticResource MutedText}" Margin="0,10,0,0"/>
             </Grid>
+            <ScrollViewer x:Name="SettingsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+              <StackPanel MaxWidth="760" HorizontalAlignment="Left" Margin="0,0,0,16">
+                <Border Style="{StaticResource Panel}" Padding="20,18" Margin="0,0,0,16">
+                  <StackPanel>
+                    <TextBlock Text="CHÍNH SÁCH XOAY TỰ ĐỘNG" FontSize="11" FontWeight="Bold" Foreground="#0F766E" Margin="0,0,0,12"/>
+                    <CheckBox x:Name="ChkAutoRotate" Content="Bật tự động xoay tài khoản khi quota xuống thấp" IsChecked="True" FontWeight="SemiBold" FontSize="13.5" Margin="0,0,0,14"/>
+                    <Grid Margin="0,0,0,12">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="160"/></Grid.ColumnDefinitions>
+                      <StackPanel VerticalAlignment="Center"><TextBlock Text="Ngưỡng kích hoạt xoay (%)" FontWeight="Medium"/><TextBlock Text="Xoay khi model đang dùng giảm dưới mức này" Style="{StaticResource MutedText}" Margin="0,2,0,0"/></StackPanel>
+                      <ComboBox Grid.Column="1" x:Name="CboThreshold" Height="34" VerticalContentAlignment="Center" SelectedIndex="2">
+                        <ComboBoxItem Content="10%" Tag="10"/><ComboBoxItem Content="15%" Tag="15"/><ComboBoxItem Content="20% (Mặc định)" Tag="20"/><ComboBoxItem Content="25%" Tag="25"/><ComboBoxItem Content="30%" Tag="30"/>
+                      </ComboBox>
+                    </Grid>
+                    <Grid Margin="0,0,0,14">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="160"/></Grid.ColumnDefinitions>
+                      <StackPanel VerticalAlignment="Center"><TextBlock Text="Thời gian nghỉ (Cooldown)" FontWeight="Medium"/><TextBlock Text="Khoảng chờ tối thiểu giữa 2 lần chuyển acc" Style="{StaticResource MutedText}" Margin="0,2,0,0"/></StackPanel>
+                      <ComboBox Grid.Column="1" x:Name="CboCooldown" Height="34" VerticalContentAlignment="Center" SelectedIndex="1">
+                        <ComboBoxItem Content="60 giây" Tag="60"/><ComboBoxItem Content="120 giây (Mặc định)" Tag="120"/><ComboBoxItem Content="180 giây" Tag="180"/><ComboBoxItem Content="300 giây" Tag="300"/>
+                      </ComboBox>
+                    </Grid>
+                    <CheckBox x:Name="ChkNotifications" Content="Hiển thị thông báo Windows Toast khi xoay tài khoản" IsChecked="True" FontWeight="Medium" Margin="0,0,0,16"/>
+                    <StackPanel Orientation="Horizontal">
+                      <Button x:Name="BtnSaveSettings" Style="{StaticResource PrimaryBtn}" Content="Lưu cài đặt"/>
+                      <TextBlock x:Name="TxtSettingsSaved" Text="" Foreground="#0F766E" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Panel}" Padding="20,18">
+                  <StackPanel>
+                    <TextBlock Text="CẬP NHẬT TỪ GITHUB" FontSize="11" FontWeight="Bold" Foreground="#0F766E" Margin="0,0,0,10"/>
+                    <TextBlock Text="Kiểm tra phiên bản mới từ kho lưu trữ datdtpl-maker/Antigravity-Auto-Hub." Style="{StaticResource MutedText}" Margin="0,0,0,12"/>
+                    <StackPanel Orientation="Horizontal">
+                      <Button x:Name="BtnCheckUpdate" Style="{StaticResource ModernBtn}" Content="Kiểm tra cập nhật"/>
+                      <Button x:Name="BtnApplyUpdate" Style="{StaticResource PrimaryBtn}" Content="Cập nhật ngay" Visibility="Collapsed" Margin="10,0,0,0"/>
+                      <TextBlock x:Name="TxtUpdateStatus" Text="" Foreground="#475569" FontWeight="Medium" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </ScrollViewer>
           </Grid>
           <Border Grid.Row="4" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>

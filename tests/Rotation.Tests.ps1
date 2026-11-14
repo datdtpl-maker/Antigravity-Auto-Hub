@@ -2,6 +2,8 @@ $ErrorActionPreference='Stop'
 . (Join-Path (Split-Path $PSScriptRoot -Parent) 'AutoRotator.ps1')
 function Assert($Condition,$Name){if(-not $Condition){throw $Name};Write-Host "PASS: $Name"}
 $script:Selected='Claude Sonnet 5.5 Medium';$script:Idle=$true;$script:FixtureState=$null
+$script:FixtureConfig=[pscustomobject]@{AutoRotationEnabled=$true;MinQuotaPercent=20;CooldownSeconds=120;EnableNotifications=$true}
+function Get-HubConfig {$script:FixtureConfig}
 function Write-RotatorLog {param($Message)}
 function Get-RuntimeIdentity {[pscustomobject]@{Email='current@example.test';Idle=$script:Idle;Runtimes=@(@{})}}
 function Get-RuntimeSelectedModel {param($Runtime) $script:Selected}
@@ -48,3 +50,7 @@ foreach($name in @('Gemini 3.8 Flash High','Gemini 4 Argon Medium','Gemini 4 Hyd
     foreach($account in @($current,$target)){$account.ModelQuotas[0].Name=$name;$account.ModelQuotas[0].Family=Get-ModelQuotaFamily '' $name;$account.QuotaGroups=@()}
     Check @($current,$target) 'other' "Selected model supported: $name"
 }
+$script:FixtureConfig.AutoRotationEnabled=$false
+$script:Switched='';$script:FixtureAccounts=@((Account current .1),(Account other .8))
+Invoke-AutoRotationCheck
+Assert ($script:Switched -eq '') 'Paused auto-rotation skips switching'

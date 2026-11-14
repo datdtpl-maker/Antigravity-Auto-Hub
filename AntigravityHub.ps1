@@ -296,4 +296,62 @@ $btnAddAccount.Add_Click({
 
 Initialize-HubDashboard
 
-if (-not $NoShow) { $window.ShowDialog() | Out-Null }
+$script:HubForceExit = $false
+$script:HubTrayIcon = $null
+$script:HubTrayToggleItem = $null
+if (-not $NoShow -and -not $Preview) {
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        $tray = [System.Windows.Forms.NotifyIcon]::new()
+        $agExe = "$env:LOCALAPPDATA\Programs\Antigravity\Antigravity.exe"
+        $tray.Icon = if (Test-Path -LiteralPath $agExe) { [System.Drawing.Icon]::ExtractAssociatedIcon($agExe) } else { [System.Drawing.SystemIcons]::Application }
+        $tray.Text = 'Antigravity Auto-Hub'
+        $menu = [System.Windows.Forms.ContextMenuStrip]::new()
+        $itemOpen = $menu.Items.Add((Get-HubText TrayOpen))
+        $itemOpen.Font = [System.Drawing.Font]::new($itemOpen.Font, [System.Drawing.FontStyle]::Bold)
+        $itemOpen.Add_Click({
+            $window.Show()
+            if ($window.WindowState -eq 'Minimized') { $window.WindowState = 'Normal' }
+            $window.Activate()
+        })
+        $itemScan = $menu.Items.Add((Get-HubText TrayScan))
+        $itemScan.Add_Click({ Load-Accounts-UI -Reconcile })
+        $cfgNow = if (Get-Command Get-HubConfig -ErrorAction SilentlyContinue) { Get-HubConfig } else { [pscustomobject]@{AutoRotationEnabled=$true} }
+        $script:HubTrayToggleItem = $menu.Items.Add($(if ($cfgNow.AutoRotationEnabled) { Get-HubText BtnPauseRotation } else { Get-HubText BtnResumeRotation }))
+        $script:HubTrayToggleItem.Add_Click({
+            $c = Get-HubConfig; $c.AutoRotationEnabled = -not $c.AutoRotationEnabled; Save-HubConfig $c
+            Update-HubSettingsUi; Load-Accounts-UI
+        })
+        $null = $menu.Items.Add('-')
+        $itemExit = $menu.Items.Add((Get-HubText TrayExit))
+        $itemExit.Add_Click({
+            $script:HubForceExit = $true
+            if ($script:HubTrayIcon) { $script:HubTrayIcon.Visible = $false; $script:HubTrayIcon.Dispose(); $script:HubTrayIcon = $null }
+            $window.Close()
+        })
+        $tray.ContextMenuStrip = $menu
+        $tray.Add_DoubleClick({
+            $window.Show()
+            if ($window.WindowState -eq 'Minimized') { $window.WindowState = 'Normal' }
+            $window.Activate()
+        })
+        $tray.Visible = $true
+        $script:HubTrayIcon = $tray
+        $script:HubTrayNotified = $false
+        $window.Add_Closing({ param($s, $e)
+            if (-not $script:HubForceExit -and $script:HubTrayIcon) {
+                $e.Cancel = $true
+                $window.Hide()
+                if (-not $script:HubTrayNotified) {
+                    $script:HubTrayNotified = $true
+                    $script:HubTrayIcon.ShowBalloonTip(2000, 'Antigravity Auto-Hub', (Get-HubText TrayHiddenTip), [System.Windows.Forms.ToolTipIcon]::Info)
+                }
+            }
+        })
+    } catch {}
+}
+if (-not $NoShow) {
+    try { $window.ShowDialog() | Out-Null }
+    finally { if ($script:HubTrayIcon) { $script:HubTrayIcon.Visible = $false; $script:HubTrayIcon.Dispose() } }
+}

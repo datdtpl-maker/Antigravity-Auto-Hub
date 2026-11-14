@@ -36,5 +36,17 @@
   "HistoryCount": "{0} sự kiện · Tối đa 200 sự kiện từ 5.000 dòng log cuối · Tự cập nhật 5s",
   "HistoryError": "Chưa đọc được nhật ký. Thử làm mới hoặc kiểm tra file rotator.log.", "NoHistory": "Chưa có sự kiện xoay trong nhật ký gần đây.",
   "DeleteTitle": "Xóa khỏi kho tài khoản", "DeleteQuestion": "Xóa tài khoản '{0}' khỏi kho xoay trên máy này?", "DeleteError": "Không xóa được tài khoản. Kiểm tra quyền truy cập file.",
-  "ActionError": "Không hoàn tất được thao tác. Kiểm tra trạng thái và thử lại.", "SwitchSuccess": "Đã hoàn tất yêu cầu chuyển. Đang cập nhật trạng thái…", "Switching": "Đang chuyển tài khoản…", "Preview": "BẢN XEM TRƯỚC · Dữ liệu minh họa", "FiveAccessible": "Quota 5 giờ: {0}", "WeekAccessible": "Quota tuần: {0}", "ArgonAccessible": "Quota Gemini 4 Argon: {0}", "HydrogenAccessible": "Quota Gemini 4 Hydrogen: {0}", "GptOssAccessible": "Quota GPT-OSS: {0}"
+  "ActionError": "Không hoàn tất được thao tác. Kiểm tra trạng thái và thử lại.", "SwitchSuccess": "Đã hoàn tất yêu cầu chuyển. Đang cập nhật trạng thái…", "Switching": "Đang chuyển tài khoản…", "Preview": "BẢN XEM TRƯỚC · Dữ liệu minh họa", "FiveAccessible": "Quota 5 giờ: {0}", "WeekAccessible": "Quota tuần: {0}", "ArgonAccessible": "Quota Gemini 4 Argon: {0}", "HydrogenAccessible": "Quota Gemini 4 Hydrogen: {0}", "GptOssAccessible": "Quota GPT-OSS: {0}",
+  "ResetSoon": "Sắp đặt lại", "ResetCountdown": "Còn {0} ({1})",
+  "PausedState": "Tự động xoay đang tạm dừng · Chỉ theo dõi quota",
+  "BtnPauseRotation": "Tạm dừng xoay", "BtnResumeRotation": "Bật xoay tự động",
+  "SettingsTitle": "Cài đặt hệ thống", "SettingsSubtitle": "Tùy chỉnh ngưỡng xoay, thông báo và cập nhật từ GitHub.",
+  "SettingsSaved": "Đã lưu cài đặt. Daemon sẽ áp dụng ngay ở lượt quét kế tiếp.",
+  "UpdateChecking": "Đang kiểm tra cập nhật từ GitHub…",
+  "UpdateLatest": "Bạn đang dùng phiên bản mới nhất.",
+  "UpdateAvailable": "Có {0} bản cập nhật mới trên GitHub!",
+  "UpdateSuccess": "Đã cập nhật thành công! Đóng và mở lại Hub để nạp bản mới.",
+  "UpdateError": "Không kiểm tra/cập nhật được. Kiểm tra mạng hoặc Git trên máy.",
+  "TrayOpen": "Mở Antigravity Hub", "TrayScan": "Quét quota ngay", "TrayExit": "Thoát hẳn", "TrayHiddenTip": "Antigravity Hub đang chạy ẩn dưới khay hệ thống.",
+  "DetailsNoGroups": "Chưa có dữ liệu hạn mức nhóm.", "DetailsNoModels": "Chưa có dữ liệu model."
 }

@@ -109,11 +109,38 @@ function Write-RotatorLog {
     } catch {}
 }
 
+function Get-HubConfig {
+    $cfg = [pscustomobject]@{
+        AutoRotationEnabled = $true
+        MinQuotaPercent = 20
+        CooldownSeconds = 120
+        EnableNotifications = $true
+    }
+    $path = Join-Path $baseDir 'hub-config.json'
+    if (Test-Path -LiteralPath $path) {
+        try {
+            $raw = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($null -ne $raw.AutoRotationEnabled) { $cfg.AutoRotationEnabled = [bool]$raw.AutoRotationEnabled }
+            if ($null -ne $raw.MinQuotaPercent -and [int]$raw.MinQuotaPercent -ge 5 -and [int]$raw.MinQuotaPercent -le 50) { $cfg.MinQuotaPercent = [int]$raw.MinQuotaPercent }
+            if ($null -ne $raw.CooldownSeconds -and [int]$raw.CooldownSeconds -ge 30 -and [int]$raw.CooldownSeconds -le 600) { $cfg.CooldownSeconds = [int]$raw.CooldownSeconds }
+            if ($null -ne $raw.EnableNotifications) { $cfg.EnableNotifications = [bool]$raw.EnableNotifications }
+        } catch {}
+    }
+    return $cfg
+}
+
+function Save-HubConfig {
+    param($Config)
+    $path = Join-Path $baseDir 'hub-config.json'
+    $Config | ConvertTo-Json -Compress | Set-Content -LiteralPath $path -Encoding UTF8
+}
+
 function Send-ToastNotification {
     param (
         [string]$Title = "Antigravity Auto-Hub",
         [string]$Message = ""
     )
+    if (-not (Get-HubConfig).EnableNotifications) { return }
     try {
         [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
         [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
