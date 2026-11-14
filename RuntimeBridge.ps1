@@ -236,7 +236,7 @@ function Get-RuntimeSelectedModel {
   if (triggers.length !== 1) return '';
   const trigger = triggers[0];
   const label = (trigger.innerText || '').trim().replace(/\s+/g, ' ');
-  if (!/^(Gemini|Claude|GPT-OSS)\b/.test(label) || label.length > 100) return '';
+  if (!/^(Gemini|Claude|GPT-OSS|Orchestrator)\b/.test(label) || label.length > 100) return '';
   if (trigger.getAttribute('aria-label') !== 'Select model, current: ' + label) return '';
   return label;
 })()

@@ -52,6 +52,7 @@ function trigger(text, label = 'Select model, current: ' + text, visible = true)
   return { innerText: text, getAttribute: () => label, getClientRects: () => visible ? [{}] : [] };
 }
 modelCheck('Read only the selected model trigger', [trigger('Gemini 3.8 Flash High')], 'Gemini 3.8 Flash High');
+modelCheck('Read orchestrator model trigger', [trigger('Orchestrator (Argon)')], 'Orchestrator (Argon)');
 modelCheck('Multiple visible selectors are ambiguous', [trigger('Claude Opus Medium'), trigger('Gemini Flash High')], '');
 modelCheck('Hidden selectors are ignored', [trigger('Claude Opus Medium'), trigger('Gemini Flash High', '', false)], 'Claude Opus Medium');
 modelCheck('Missing selector does not infer from conversation text', [], '');

@@ -9,6 +9,9 @@ function Get-SelectedModelQuota {
     if(-not $SelectedModel -or $Account.ModelsStatus -ne 'Available' -or -not $Account.Email){return $unknown}
     $key=Get-ModelSelectionKey $SelectedModel
     $models=@($Account.ModelQuotas|Where-Object {(Get-ModelSelectionKey $_.Name) -eq $key})
+    if(-not $models.Count -and $key -match '(?i)orchestrator.*argon'){
+        $models=@($Account.ModelQuotas|Where-Object {$_.Family -eq 'Argon'})
+    }
     if(-not $models.Count -or @($models|Where-Object {$_.Status -ne 'Available' -or (ConvertTo-QuotaFraction $_.Remaining) -lt 0}).Count){return $unknown}
     $values=@($models|ForEach-Object {ConvertTo-QuotaFraction $_.Remaining})
     $family=$models[0].Family
@@ -28,6 +31,7 @@ function Get-ModelQuotaFamily {
     $label="$Id $Name"
     if($label -match '(?i)\bargon\b|[-_]argon[-_]'){return 'Argon'}
     if($label -match '(?i)\bcarbon\b|[-_]carbon[-_]'){return 'Carbon'}
+    if($label -match '(?i)\bhydrogen\b|[-_]hydrogen[-_]'){return 'Hydrogen'}
     if($label -match '(?i)claude.*opus'){return 'Opus'}
     if($label -match '(?i)claude.*sonnet'){return 'Sonnet'}
     if($label -match '(?i)gpt[- ]oss'){return 'GptOss'}

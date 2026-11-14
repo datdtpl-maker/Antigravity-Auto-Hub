@@ -57,7 +57,7 @@ try {
     $selectedRow=ConvertTo-HubAccount $selectedFixture '' 'Claude Sonnet 5.5 Medium'
     Assert (-not $selectedRow.CanSwitch -and $selectedRow.StateKey -eq 'Unknown') 'Missing selected model access disables manual target action without inventing quota'
     $quotaColumns=@($accountsContainer.Columns|Where-Object SortMemberPath -match 'Ring.Value'|ForEach-Object {$_.SortMemberPath})
-    Assert (($quotaColumns -join ',') -eq 'FiveRing.Value,WeekRing.Value,FlashRing.Value,ArgonRing.Value,CarbonRing.Value,OpusRing.Value,SonnetRing.Value') 'Gemini columns stay together with Carbon after Argon and no GPT-OSS column'
+    Assert (($quotaColumns -join ',') -eq 'FiveRing.Value,WeekRing.Value,FlashRing.Value,ArgonRing.Value,HydrogenRing.Value,CarbonRing.Value,OpusRing.Value,SonnetRing.Value,GptOssRing.Value') 'Gemini columns include Hydrogen and Carbon, followed by Claude Opus, Sonnet and GPT-OSS'
     $window.FindName('FilterReady').IsChecked=$true
     Assert ($accountsContainer.Items.Count -eq 4 -and $window.FindName('StatTotal').Text -eq '6') 'Ready filter does not alter pool totals'
     $window.FindName('SearchAccounts').Text='PRODUCT'

@@ -92,8 +92,9 @@ function ConvertTo-HubAccount {
         FiveRing=(New-HubQuotaRing $(if($known){$Account.Gemini5H}else{-1}) ((Get-HubText FiveAccessible) -f $fiveText) $(if($known){'Available'}else{'Unknown'}))
         WeekRing=(New-HubQuotaRing $(if($known){$Account.GeminiWeekly}else{-1}) ((Get-HubText WeekAccessible) -f $weekText) $(if($known){'Available'}else{'Unknown'}))
         FlashRing=(Get-HubModelRing $Account 'Flash');ArgonRing=(Get-HubModelRing $Account 'Argon')
+        HydrogenRing=(Get-HubModelRing $Account 'Hydrogen');CarbonRing=(Get-HubModelRing $Account 'Carbon')
         OpusRing=(Get-HubModelRing $Account 'Opus');SonnetRing=(Get-HubModelRing $Account 'Sonnet')
-        GptOssRing=(Get-HubModelRing $Account 'GptOss');CarbonRing=(Get-HubModelRing $Account 'Carbon')
+        GptOssRing=(Get-HubModelRing $Account 'GptOss')
         QuotaDetails=(Get-HubQuotaDetails $Account)
         IsActive=$active;StateKey=$key;StatusText=(Get-HubText $status)
         StatusColor=$(if($active -or $ready){'#087F73'}elseif($key -eq 'Low'){'#9A6700'}else{'#64748B'})
@@ -358,7 +359,7 @@ function Initialize-HubDashboard {
         foreach($name in @('studio.team','design.workspace','product.lab','research.team','personal','backup.account')){
             $five=@(.76,.98,.65,.12,.88,0)[$index];$week=@(.82,.94,.57,.43,.69,0)[$index];$argon=@(.64,.91,.52,.06,-1,0)[$index]
             $models=@()
-            foreach($family in @('Flash','Argon','Opus','Sonnet','GptOss','Carbon')){
+            foreach($family in @('Flash','Argon','Hydrogen','Carbon','Opus','Sonnet','GptOss')){
                 $remaining=if($index -eq 5 -or $family -eq 'Carbon'){-1}elseif($family -eq 'Argon'){$argon}else{$five}
                 $models+=[pscustomobject]@{Name="$family (Medium)";Family=$family;Remaining=$remaining;Status=$(if($remaining -ge 0){'Available'}elseif($index -eq 5){'Unknown'}else{'Disabled'});ResetAt='2026-11-18T00:00:00Z'}
             }

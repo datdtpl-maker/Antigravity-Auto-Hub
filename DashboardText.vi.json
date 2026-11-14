@@ -36,5 +36,5 @@
   "HistoryCount": "{0} sự kiện · Tối đa 200 sự kiện từ 5.000 dòng log cuối · Tự cập nhật 5s",
   "HistoryError": "Chưa đọc được nhật ký. Thử làm mới hoặc kiểm tra file rotator.log.", "NoHistory": "Chưa có sự kiện xoay trong nhật ký gần đây.",
   "DeleteTitle": "Xóa khỏi kho tài khoản", "DeleteQuestion": "Xóa tài khoản '{0}' khỏi kho xoay trên máy này?", "DeleteError": "Không xóa được tài khoản. Kiểm tra quyền truy cập file.",
-  "ActionError": "Không hoàn tất được thao tác. Kiểm tra trạng thái và thử lại.", "SwitchSuccess": "Đã hoàn tất yêu cầu chuyển. Đang cập nhật trạng thái…", "Switching": "Đang chuyển tài khoản…", "Preview": "BẢN XEM TRƯỚC · Dữ liệu minh họa", "FiveAccessible": "Quota 5 giờ: {0}", "WeekAccessible": "Quota tuần: {0}", "ArgonAccessible": "Quota Gemini 4 Argon: {0}"
+  "ActionError": "Không hoàn tất được thao tác. Kiểm tra trạng thái và thử lại.", "SwitchSuccess": "Đã hoàn tất yêu cầu chuyển. Đang cập nhật trạng thái…", "Switching": "Đang chuyển tài khoản…", "Preview": "BẢN XEM TRƯỚC · Dữ liệu minh họa", "FiveAccessible": "Quota 5 giờ: {0}", "WeekAccessible": "Quota tuần: {0}", "ArgonAccessible": "Quota Gemini 4 Argon: {0}", "HydrogenAccessible": "Quota Gemini 4 Hydrogen: {0}", "GptOssAccessible": "Quota GPT-OSS: {0}"
 }

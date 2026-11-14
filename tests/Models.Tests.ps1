@@ -6,14 +6,15 @@ $catalog=[pscustomobject]@{models=[pscustomobject]@{
     'claude-sonnet-5-5-high'=[pscustomobject]@{displayName='Claude Sonnet 5.5 High';quotaInfo=@{remainingFraction=0}}
     'gpt-oss-120b'=[pscustomobject]@{displayName='GPT-OSS 120B';quotaInfo=@{remainingFraction=1}}
     'gemini-4-carbon-disabled'=[pscustomobject]@{displayName='Gemini 4 Carbon';disabled=$true;quotaInfo=@{remainingFraction=1}}
+    'gemini-4-hydrogen-medium'=[pscustomobject]@{displayName='Gemini 4 Hydrogen (Medium)';quotaInfo=@{remainingFraction=.85}}
     'gemini-3.8-flash-high'=[pscustomobject]@{displayName='Gemini 3.8 Flash High';quotaInfo=@{remainingFraction=.9}}
     'gemini-4-argon-low'=[pscustomobject]@{displayName='Gemini 4 Argon Low';quotaInfo=@{remainingFraction=.5}}
     'gemini-2.5-flash'=[pscustomobject]@{displayName='Gemini 3.5 Flash Lite';quotaInfo=@{remainingFraction=.8}}
     'internal-model'=[pscustomobject]@{quotaInfo=@{remainingFraction=1};access_token='PRIVATE_SENTINEL'}
 }}
 $models=@(Convert-ModelQuotaCatalog $catalog)
-Assert ($models.Count -eq 7 -and @($models | Where-Object Family -eq 'Other').Count -eq 1) 'Catalog preserves named models and excludes internal unnamed models'
-foreach($family in @('Opus','Sonnet','GptOss','Carbon','Flash','Argon')){Assert (@($models|Where-Object Family -eq $family).Count -eq 1) "Recognizes model family $family"}
+Assert ($models.Count -eq 8 -and @($models | Where-Object Family -eq 'Other').Count -eq 1) 'Catalog preserves named models and excludes internal unnamed models'
+foreach($family in @('Opus','Sonnet','GptOss','Carbon','Hydrogen','Flash','Argon')){Assert (@($models|Where-Object Family -eq $family).Count -eq 1) "Recognizes model family $family"}
 Assert (($models|Where-Object Family -eq Carbon).Status -eq 'Disabled' -and ($models|Where-Object Family -eq Carbon).Remaining -eq -1) 'Explicit disabled wins over quota and never becomes 100 percent'
 Assert (($models|Where-Object Family -eq Sonnet).Remaining -eq 0) 'Zero quota remains available but exhausted'
 Assert (($models|Where-Object Family -eq Opus).ResetAt -eq '2026-11-18T00:00:00.0000000Z') 'Reset timestamp is normalized to UTC'
@@ -46,7 +47,7 @@ function Invoke-RestMethod {
     throw 'Unexpected API call'
 }
 $quota=Get-AccountQuotaInfo 'fixture.json' -IncludeModels
-Assert ($quota.Success -and $quota.ModelQuotas.Count -eq 7 -and $quota.QuotaGroups.Count -eq 5 -and $script:catalogCalls -eq 1) 'Full scan fetches all models once and preserves shared quota windows'
+Assert ($quota.Success -and $quota.ModelQuotas.Count -eq 8 -and $quota.QuotaGroups.Count -eq 5 -and $script:catalogCalls -eq 1) 'Full scan fetches all models once and preserves shared quota windows'
 Assert ($quota.ArgonWeekly -eq .3 -and $quota.Gemini5H -eq .7) 'Read-only model monitoring does not alter rotation quota policy'
 Assert ($quota.CheckedAt -and $quota.ModelsStatus -eq 'Available') 'Account result exposes completion timestamp and model scan status'
 $catalog.models.'gemini-4-carbon-disabled'.disabled=$false
@@ -58,7 +59,7 @@ $quota=Get-AccountQuotaInfo 'fixture.json' -IncludeModels
 Assert ($quota.Success -and $quota.ModelQuotas.Count -eq 0 -and $quota.ModelsStatus -eq 'Unavailable') 'Catalog failure preserves valid summary and clears previous models'
 $script:catalogFails=$false;$script:summaryFails=$true
 $quota=Get-AccountQuotaInfo 'fixture.json' -IncludeModels
-Assert (-not $quota.Success -and $quota.ModelQuotas.Count -eq 7) 'Summary failure does not discard independent model quota'
+Assert (-not $quota.Success -and $quota.ModelQuotas.Count -eq 8) 'Summary failure does not discard independent model quota'
 Assert (($quota|ConvertTo-Json -Depth 6) -notmatch 'PRIVATE_SENTINEL') 'Failed API requests never expose raw error contents'
 $script:summaryFails=$false;$script:catalogCalls=0
 $quota=Get-AccountQuotaInfo 'fixture.json'

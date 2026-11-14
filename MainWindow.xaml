@@ -3,144 +3,394 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Antigravity Hub" Width="1440" Height="920" MinWidth="1180" MinHeight="640"
         WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResize"
-        Background="#F4F7FB" Foreground="#172B4D" FontFamily="Segoe UI" FontSize="13"
+        Background="#F1F5F9" Foreground="#0F172A" FontFamily="Segoe UI" FontSize="13"
         UseLayoutRounding="True" SnapsToDevicePixels="True">
   <shell:WindowChrome.WindowChrome><shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="0" GlassFrameThickness="0"/></shell:WindowChrome.WindowChrome>
   <Window.Resources>
     <SolidColorBrush x:Key="Surface" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="Line" Color="#DAE2EC"/>
-    <SolidColorBrush x:Key="Muted" Color="#52647C"/>
+    <SolidColorBrush x:Key="Line" Color="#E2E8F0"/>
+    <SolidColorBrush x:Key="Muted" Color="#64748B"/>
     <SolidColorBrush x:Key="Accent" Color="#0F766E"/>
-    <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#172B4D"/></Style>
+    <DropShadowEffect x:Key="CardShadow" BlurRadius="10" ShadowDepth="2" Direction="270" Color="#0F172A" Opacity="0.04"/>
+    <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#0F172A"/></Style>
     <Style x:Key="MutedText" TargetType="TextBlock"><Setter Property="Foreground" Value="{StaticResource Muted}"/><Setter Property="FontSize" Value="12"/></Style>
-    <Style x:Key="Panel" TargetType="Border"><Setter Property="Background" Value="{StaticResource Surface}"/><Setter Property="BorderBrush" Value="{StaticResource Line}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="10"/></Style>
+    <Style x:Key="Panel" TargetType="Border">
+      <Setter Property="Background" Value="{StaticResource Surface}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
+    </Style>
     <Style x:Key="ModernBtn" TargetType="Button">
-      <Setter Property="Background" Value="#FFFFFF"/><Setter Property="Foreground" Value="#172B4D"/><Setter Property="BorderBrush" Value="#CBD5E1"/>
-      <Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="14,9"/><Setter Property="MinHeight" Value="36"/><Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Background" Value="#FFFFFF"/><Setter Property="Foreground" Value="#1E293B"/><Setter Property="BorderBrush" Value="#CBD5E1"/>
+      <Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="14,8"/><Setter Property="MinHeight" Value="36"/><Setter Property="Cursor" Value="Hand"/>
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
-        <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+        <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}">
           <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
         <ControlTemplate.Triggers>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="#0F766E"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="#0F766E"/><Setter TargetName="Chrome" Property="Background" Value="#F8FAFC"/></Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="#0F766E"/><Setter TargetName="Chrome" Property="BorderThickness" Value="2"/></Trigger>
-          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value="0.7"/></Trigger>
+          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value="0.75"/></Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chrome" Property="Opacity" Value="0.4"/></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
     </Style>
-    <Style x:Key="PrimaryBtn" TargetType="Button" BasedOn="{StaticResource ModernBtn}"><Setter Property="Background" Value="{StaticResource Accent}"/><Setter Property="Foreground" Value="#FFFFFF"/><Setter Property="BorderBrush" Value="{StaticResource Accent}"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style x:Key="SuccessBtn" TargetType="Button" BasedOn="{StaticResource ModernBtn}"/>
-    <Style x:Key="DangerBtn" TargetType="Button" BasedOn="{StaticResource ModernBtn}"><Setter Property="Foreground" Value="#B42318"/><Setter Property="Background" Value="Transparent"/></Style>
-    <Style x:Key="TitleBtn" TargetType="Button" BasedOn="{StaticResource ModernBtn}"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Width" Value="42"/><Setter Property="MinHeight" Value="32"/><Setter Property="Padding" Value="8"/></Style>
-    <Style x:Key="Nav" TargetType="RadioButton">
-      <Setter Property="Foreground" Value="#52647C"/><Setter Property="Padding" Value="14,12"/><Setter Property="Margin" Value="0,3"/><Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
-        <Border x:Name="NavBox" CornerRadius="6" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
+    <Style x:Key="PrimaryBtn" TargetType="Button" BasedOn="{StaticResource ModernBtn}">
+      <Setter Property="Background" Value="{StaticResource Accent}"/><Setter Property="Foreground" Value="#FFFFFF"/><Setter Property="BorderBrush" Value="{StaticResource Accent}"/><Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
         <ControlTemplate.Triggers>
-          <Trigger Property="IsChecked" Value="True"><Setter TargetName="NavBox" Property="Background" Value="#E4F2EF"/><Setter Property="Foreground" Value="#0F766E"/></Trigger>
-          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavBox" Property="BorderBrush" Value="#94A3B8"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#0D9488"/><Setter TargetName="Chrome" Property="BorderBrush" Value="#0D9488"/></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="#134E4A"/><Setter TargetName="Chrome" Property="BorderThickness" Value="2"/></Trigger>
+          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value="0.8"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chrome" Property="Opacity" Value="0.45"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="SuccessBtn" TargetType="Button" BasedOn="{StaticResource ModernBtn}"/>
+    <Style x:Key="DangerBtn" TargetType="Button" BasedOn="{StaticResource ModernBtn}">
+      <Setter Property="Foreground" Value="#B42318"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="#FECACA"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#FEF2F2"/><Setter TargetName="Chrome" Property="BorderBrush" Value="#EF4444"/></Trigger>
+          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value="0.75"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chrome" Property="Opacity" Value="0.4"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="TitleBtn" TargetType="Button">
+      <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#475569"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Width" Value="42"/><Setter Property="Height" Value="32"/><Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="6"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#F1F5F9"/></Trigger>
+          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value="0.7"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="CloseTitleBtn" TargetType="Button" BasedOn="{StaticResource TitleBtn}">
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="6"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#FEE2E2"/><Setter Property="Foreground" Value="#DC2626"/></Trigger>
+          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value="0.8"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="Nav" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="#475569"/><Setter Property="Padding" Value="12,10"/><Setter Property="Margin" Value="0,2"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+        <Border x:Name="NavBox" CornerRadius="8" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsChecked" Value="True"><Setter TargetName="NavBox" Property="Background" Value="#E6F4F1"/><Setter Property="Foreground" Value="#0F766E"/><Setter Property="FontWeight" Value="SemiBold"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavBox" Property="Background" Value="#F1F5F9"/></Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="NavBox" Property="BorderBrush" Value="#0F766E"/></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
     </Style>
-    <Style TargetType="TextBox"><Setter Property="Background" Value="#F4F7FB"/><Setter Property="Foreground" Value="#172B4D"/><Setter Property="BorderBrush" Value="#94A3B8"/><Setter Property="CaretBrush" Value="#0F766E"/><Setter Property="Padding" Value="10,7"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="MinHeight" Value="36"/></Style>
+    <Style x:Key="FilterPill" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="#475569"/><Setter Property="Padding" Value="12,6"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="12.5"/><Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+        <Border x:Name="PillBox" CornerRadius="6" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsChecked" Value="True"><Setter TargetName="PillBox" Property="Background" Value="#FFFFFF"/><Setter Property="Foreground" Value="#0F766E"/><Setter Property="FontWeight" Value="SemiBold"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="PillBox" Property="Opacity" Value="0.85"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="TextBox">
+      <Setter Property="Background" Value="#FFFFFF"/><Setter Property="Foreground" Value="#0F172A"/><Setter Property="BorderBrush" Value="#CBD5E1"/><Setter Property="CaretBrush" Value="#0F766E"/>
+      <Setter Property="Padding" Value="10,7"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="MinHeight" Value="36"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox">
+        <Border x:Name="BoxBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="7">
+          <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" Margin="2,0"/>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="BoxBorder" Property="BorderBrush" Value="#0F766E"/><Setter TargetName="BoxBorder" Property="BorderThickness" Value="1.5"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
     <Style TargetType="ProgressBar"><Setter Property="Height" Value="5"/><Setter Property="Background" Value="#E2E8F0"/><Setter Property="Foreground" Value="#0F766E"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Maximum" Value="100"/></Style>
     <Style TargetType="DataGrid">
-      <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#172B4D"/><Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#0F172A"/><Setter Property="BorderThickness" Value="0"/>
       <Setter Property="AutoGenerateColumns" Value="False"/><Setter Property="IsReadOnly" Value="True"/><Setter Property="CanUserAddRows" Value="False"/><Setter Property="CanUserDeleteRows" Value="False"/><Setter Property="CanUserReorderColumns" Value="False"/>
-      <Setter Property="GridLinesVisibility" Value="Horizontal"/><Setter Property="HorizontalGridLinesBrush" Value="#E9EEF5"/><Setter Property="HeadersVisibility" Value="Column"/><Setter Property="RowHeaderWidth" Value="0"/><Setter Property="RowHeight" Value="54"/>
+      <Setter Property="GridLinesVisibility" Value="Horizontal"/><Setter Property="HorizontalGridLinesBrush" Value="#F1F5F9"/><Setter Property="HeadersVisibility" Value="Column"/><Setter Property="RowHeaderWidth" Value="0"/><Setter Property="RowHeight" Value="58"/>
       <Setter Property="SelectionMode" Value="Single"/><Setter Property="SelectionUnit" Value="FullRow"/><Setter Property="EnableRowVirtualization" Value="True"/><Setter Property="EnableColumnVirtualization" Value="True"/><Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
     </Style>
-    <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#FFFFFF"/><Setter Property="Foreground" Value="#52647C"/><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Padding" Value="8,8"/><Setter Property="BorderBrush" Value="#DAE2EC"/><Setter Property="BorderThickness" Value="0,0,0,1"/></Style>
+    <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#F8FAFC"/><Setter Property="Foreground" Value="#475569"/><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Padding" Value="6,10"/><Setter Property="BorderBrush" Value="#E2E8F0"/><Setter Property="BorderThickness" Value="0,0,0,1"/></Style>
     <Style x:Key="CenteredHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}"><Setter Property="HorizontalContentAlignment" Value="Center"/></Style>
     <Style TargetType="DataGridRow"><Setter Property="Background" Value="#FFFFFF"/><Setter Property="BorderThickness" Value="0"/>
-      <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#F5F8FC"/></Trigger><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#E5F0FF"/></Trigger><DataTrigger Binding="{Binding IsActive}" Value="True"><Setter Property="Background" Value="#EEF8F4"/></DataTrigger></Style.Triggers>
+      <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#F8FAFC"/></Trigger><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#EFF6FF"/></Trigger><DataTrigger Binding="{Binding IsActive}" Value="True"><Setter Property="Background" Value="#ECFDF5"/></DataTrigger></Style.Triggers>
     </Style>
-    <Style TargetType="DataGridCell"><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="8,3"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="DataGridCell"><Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}"><ContentPresenter VerticalAlignment="Center"/></Border></ControlTemplate></Setter.Value></Setter><Style.Triggers><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#172B4D"/></Trigger><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="Background" Value="#DDEDE9"/></Trigger></Style.Triggers></Style>
+    <Style TargetType="DataGridCell"><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="8,3"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="DataGridCell"><Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}"><ContentPresenter VerticalAlignment="Center"/></Border></ControlTemplate></Setter.Value></Setter><Style.Triggers><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#0F172A"/></Trigger><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="Background" Value="#E6F4F1"/></Trigger></Style.Triggers></Style>
     <Style TargetType="ScrollBar">
-      <Setter Property="Background" Value="#FFFFFF"/><Setter Property="Width" Value="10"/>
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar"><Grid Background="{TemplateBinding Background}"><Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="{TemplateBinding Orientation}"><Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/></Track.DecreaseRepeatButton><Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="#94A3B8" CornerRadius="3" Margin="2"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb><Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/></Track.IncreaseRepeatButton></Track></Grid></ControlTemplate></Setter.Value></Setter>
-      <Style.Triggers><Trigger Property="Orientation" Value="Horizontal"><Setter Property="Width" Value="Auto"/><Setter Property="Height" Value="10"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar"><Track x:Name="PART_Track" Orientation="Horizontal"><Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageLeftCommand" Opacity="0" Focusable="False"/></Track.DecreaseRepeatButton><Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="#94A3B8" CornerRadius="3" Margin="2"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb><Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageRightCommand" Opacity="0" Focusable="False"/></Track.IncreaseRepeatButton></Track></ControlTemplate></Setter.Value></Setter></Trigger></Style.Triggers>
+      <Setter Property="Background" Value="Transparent"/><Setter Property="Width" Value="10"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar"><Grid Background="{TemplateBinding Background}"><Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="{TemplateBinding Orientation}"><Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/></Track.DecreaseRepeatButton><Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="#CBD5E1" CornerRadius="3" Margin="2"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb><Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/></Track.IncreaseRepeatButton></Track></Grid></ControlTemplate></Setter.Value></Setter>
+      <Style.Triggers><Trigger Property="Orientation" Value="Horizontal"><Setter Property="Width" Value="Auto"/><Setter Property="Height" Value="10"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar"><Track x:Name="PART_Track" Orientation="Horizontal"><Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageLeftCommand" Opacity="0" Focusable="False"/></Track.DecreaseRepeatButton><Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="#CBD5E1" CornerRadius="3" Margin="2"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb><Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageRightCommand" Opacity="0" Focusable="False"/></Track.IncreaseRepeatButton></Track></ControlTemplate></Setter.Value></Setter></Trigger></Style.Triggers>
+    </Style>
+    <Style x:Key="PlanBadge" TargetType="Border">
+      <Setter Property="Background" Value="#F1F5F9"/><Setter Property="BorderBrush" Value="#E2E8F0"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="11"/><Setter Property="Padding" Value="9,3"/><Setter Property="HorizontalAlignment" Value="Center"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding PlanText}" Value="Pro"><Setter Property="Background" Value="#E0F2FE"/><Setter Property="BorderBrush" Value="#BAE6FD"/></DataTrigger>
+        <DataTrigger Binding="{Binding PlanText}" Value="Ultra"><Setter Property="Background" Value="#FEF3C7"/><Setter Property="BorderBrush" Value="#FDE68A"/></DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="PlanBadgeText" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="#475569"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="FontSize" Value="11"/><Setter Property="HorizontalAlignment" Value="Center"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding PlanText}" Value="Pro"><Setter Property="Foreground" Value="#0369A1"/></DataTrigger>
+        <DataTrigger Binding="{Binding PlanText}" Value="Ultra"><Setter Property="Foreground" Value="#B45309"/></DataTrigger>
+      </Style.Triggers>
     </Style>
     <DataTemplate x:Key="QuotaRing">
       <Grid Width="48" Height="48" ToolTip="{Binding Hint}" AutomationProperties.Name="{Binding Accessible}">
-        <Ellipse Width="40" Height="40" Stroke="#E2E8F0" StrokeThickness="4" StrokeDashArray="{Binding Dash}"/>
-        <Path Data="{Binding Geometry}" Stroke="{Binding Color}" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+        <Ellipse Width="40" Height="40" Stroke="#E2E8F0" StrokeThickness="4.5" StrokeDashArray="{Binding Dash}"/>
+        <Path Data="{Binding Geometry}" Stroke="{Binding Color}" StrokeThickness="4.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
         <TextBlock Text="{Binding Text}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding Color}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
       </Grid>
     </DataTemplate>
-    <Style TargetType="ToolTip"><Setter Property="MaxWidth" Value="580"/><Setter Property="Background" Value="White"/><Setter Property="Foreground" Value="#172B4D"/><Setter Property="Padding" Value="12"/></Style>
+    <Style TargetType="ToolTip"><Setter Property="MaxWidth" Value="580"/><Setter Property="Background" Value="#FFFFFF"/><Setter Property="BorderBrush" Value="#CBD5E1"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="#0F172A"/><Setter Property="Padding" Value="12"/></Style>
   </Window.Resources>
-  <Border Background="#F4F7FB" BorderBrush="#39414B" BorderThickness="1">
+  <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1">
     <Grid>
-      <Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Border x:Name="TitleBar" Background="#FFFFFF" BorderBrush="#DAE2EC" BorderThickness="0,0,0,1">
-        <Grid Margin="18,0,6,0"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="ANTIGRAVITY" FontSize="11" FontWeight="Bold" Foreground="#0F766E"/><TextBlock Text=" /  ACCOUNT HUB" FontSize="11" Foreground="#52647C" Margin="8,0,0,0"/></StackPanel>
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="BtnMinimize" Style="{StaticResource TitleBtn}" FontFamily="Segoe MDL2 Assets" Content="&#xE921;" ToolTip="Thu nhỏ" AutomationProperties.Name="Thu nhỏ"/><Button x:Name="BtnMaximize" Style="{StaticResource TitleBtn}" FontFamily="Segoe MDL2 Assets" Content="&#xE922;" ToolTip="Phóng to / Khôi phục" AutomationProperties.Name="Phóng to / Khôi phục"/><Button x:Name="BtnClose" Style="{StaticResource TitleBtn}" FontFamily="Segoe MDL2 Assets" Content="&#xE8BB;" ToolTip="Đóng giao diện" AutomationProperties.Name="Đóng giao diện"/></StackPanel>
+      <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <Border x:Name="TitleBar" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+        <Grid Margin="18,0,8,0">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Ellipse Width="8" Height="8" Fill="#0F766E" Margin="0,0,8,0"/>
+            <TextBlock Text="ANTIGRAVITY" FontSize="11" FontWeight="Bold" Foreground="#0F766E"/>
+            <TextBlock Text=" /  ACCOUNT HUB" FontSize="11" Foreground="#64748B" Margin="6,0,0,0"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="BtnMinimize" Style="{StaticResource TitleBtn}" FontFamily="Segoe MDL2 Assets" Content="&#xE921;" ToolTip="Thu nhỏ" AutomationProperties.Name="Thu nhỏ"/>
+            <Button x:Name="BtnMaximize" Style="{StaticResource TitleBtn}" FontFamily="Segoe MDL2 Assets" Content="&#xE922;" ToolTip="Phóng to / Khôi phục" AutomationProperties.Name="Phóng to / Khôi phục"/>
+            <Button x:Name="BtnClose" Style="{StaticResource CloseTitleBtn}" FontFamily="Segoe MDL2 Assets" Content="&#xE8BB;" ToolTip="Đóng giao diện" AutomationProperties.Name="Đóng giao diện"/>
+          </StackPanel>
         </Grid>
       </Border>
-      <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="158"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Border Background="#FFFFFF" BorderBrush="#DAE2EC" BorderThickness="0,0,1,0" Padding="14,24,14,16">
+      <Grid Grid.Row="1">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="188"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0" Padding="14,22,14,16">
           <DockPanel LastChildFill="True">
-            <StackPanel DockPanel.Dock="Top"><Grid Margin="6,0,0,30"><Grid.ColumnDefinitions><ColumnDefinition Width="38"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#0F766E" CornerRadius="8" Width="30" Height="30"><Path Data="M 4,20 L 12,2 L 20,20 M 8,13 L 16,13" Stroke="#FFFFFF" StrokeThickness="2" Stretch="Uniform" Margin="7"/></Border><StackPanel Grid.Column="1"><TextBlock Text="Antigravity" FontWeight="SemiBold" FontSize="15"/><TextBlock Text="Account Hub" Style="{StaticResource MutedText}"/></StackPanel></Grid>
-              <TextBlock Text="KHÔNG GIAN LÀM VIỆC" FontSize="10" Foreground="#52647C" Margin="10,0,0,12"/>
-              <RadioButton x:Name="NavAccounts" GroupName="Navigation" IsChecked="True" Style="{StaticResource Nav}"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE716;" Margin="0,2,10,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Tài khoản" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel></RadioButton>
-              <RadioButton x:Name="NavHistory" GroupName="Navigation" Style="{StaticResource Nav}"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE81C;" Margin="0,2,10,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Nhật ký xoay" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel></RadioButton>
+            <StackPanel DockPanel.Dock="Top">
+              <Grid Margin="4,0,0,28">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Background="#0F766E" CornerRadius="9" Width="34" Height="34">
+                  <Path Data="M 4,20 L 12,2 L 20,20 M 8,13 L 16,13" Stroke="#FFFFFF" StrokeThickness="2.2" Stretch="Uniform" Margin="8"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                  <TextBlock Text="Antigravity" FontWeight="Bold" FontSize="15"/>
+                  <TextBlock Text="Account Hub" Style="{StaticResource MutedText}" FontSize="11.5"/>
+                </StackPanel>
+              </Grid>
+              <TextBlock Text="KHÔNG GIAN LÀM VIỆC" FontSize="10" FontWeight="SemiBold" Foreground="#94A3B8" Margin="8,0,0,10"/>
+              <RadioButton x:Name="NavAccounts" GroupName="Navigation" IsChecked="True" Style="{StaticResource Nav}">
+                <StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE716;" Margin="0,2,10,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Tài khoản" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
+              </RadioButton>
+              <RadioButton x:Name="NavHistory" GroupName="Navigation" Style="{StaticResource Nav}">
+                <StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE81C;" Margin="0,2,10,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Nhật ký xoay" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
+              </RadioButton>
             </StackPanel>
-            <StackPanel DockPanel.Dock="Bottom"><Border BorderBrush="#DAE2EC" BorderThickness="0,1,0,0" Padding="8,18,0,16"><StackPanel><TextBlock Text="CHÍNH SÁCH XOAY" FontSize="10" Foreground="#52647C"/><TextBlock Text="Model đang dùng &lt; 20%" TextWrapping="Wrap" Margin="0,10,0,4"/><TextBlock Text="Acc đích &gt; 20%"/><TextBlock Text="Chỉ chuyển khi IDE rảnh" TextWrapping="Wrap" Style="{StaticResource MutedText}" Margin="0,10,0,0"/></StackPanel></Border><Button x:Name="BtnOpenFolder" Style="{StaticResource ModernBtn}" Content="Mở thư mục"/><TextBlock Text="LOCAL DESKTOP" FontSize="10" Foreground="#52647C" Margin="10,16,0,0"/></StackPanel>
+            <StackPanel DockPanel.Dock="Bottom">
+              <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12,11" Margin="0,0,0,14">
+                <StackPanel>
+                  <TextBlock Text="CHÍNH SÁCH XOAY" FontSize="10" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,8"/>
+                  <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <Ellipse Width="5" Height="5" Fill="#D97706" Margin="0,0,7,0"/>
+                    <TextBlock Text="Model dùng &lt; 20%" FontSize="12" Foreground="#334155"/>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Ellipse Width="5" Height="5" Fill="#0F766E" Margin="0,0,7,0"/>
+                    <TextBlock Text="Acc đích &gt; 20%" FontSize="12" Foreground="#334155"/>
+                  </StackPanel>
+                  <TextBlock Text="Chỉ chuyển khi IDE rảnh" TextWrapping="Wrap" FontSize="11.5" Foreground="#64748B"/>
+                </StackPanel>
+              </Border>
+              <Button x:Name="BtnOpenFolder" Style="{StaticResource ModernBtn}">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B7;" Margin="0,1,8,0" Foreground="#475569"/>
+                  <TextBlock Text="Mở thư mục" Foreground="#1E293B"/>
+                </StackPanel>
+              </Button>
+              <TextBlock Text="LOCAL DESKTOP" FontSize="10" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,12,0,0"/>
+            </StackPanel>
             <Grid/>
           </DockPanel>
         </Border>
-        <Grid x:Name="ContentArea" Grid.Column="1" Margin="26,24,26,16">
+        <Grid x:Name="ContentArea" Grid.Column="1" Margin="26,22,26,16">
           <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-          <Grid x:Name="HeaderArea" Margin="0,0,0,18"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <StackPanel><TextBlock x:Name="PageTitle" Text="Tổng quan quota" FontSize="24" FontWeight="SemiBold"/><TextBlock x:Name="PageSubtitle" Text="Mọi tài khoản. Mọi model. Một góc nhìn." Foreground="#52647C" Margin="0,6,0,0"/></StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><Button x:Name="BtnSaveCurrent" Style="{StaticResource ModernBtn}" Content="Lưu acc hiện tại" Margin="0,0,8,0"/><Button x:Name="BtnAddAccount" Style="{StaticResource PrimaryBtn}" Content="+ Thêm tài khoản"/></StackPanel>
+          <Grid x:Name="HeaderArea" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock x:Name="PageTitle" Text="Tổng quan quota" FontSize="24" FontWeight="Bold"/>
+              <TextBlock x:Name="PageSubtitle" Text="Mọi tài khoản. Mọi model. Một góc nhìn." Foreground="#64748B" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="BtnSaveCurrent" Style="{StaticResource ModernBtn}" Content="Lưu acc hiện tại" Margin="0,0,8,0"/>
+              <Button x:Name="BtnAddAccount" Style="{StaticResource PrimaryBtn}" Content="+ Thêm tài khoản"/>
+            </StackPanel>
           </Grid>
-          <UniformGrid x:Name="StatsArea" Grid.Row="1" Columns="4" Margin="0,0,-12,18">
-<Border Style="{StaticResource Panel}" Margin="0,0,12,0" Padding="14,10"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel VerticalAlignment="Center"><TextBlock Text="TỔNG TÀI KHOẢN" FontSize="11" Foreground="#52647C"/><TextBlock x:Name="HintTotal" Text="Trong kho trên máy này" FontSize="11" Foreground="#52647C" Margin="0,3,0,0"/></StackPanel><TextBlock Grid.Column="1" x:Name="StatTotal" Text="0" Foreground="#172B4D" FontSize="26" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center"/></Grid></Border>
-<Border Style="{StaticResource Panel}" Margin="0,0,12,0" Padding="14,10"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel VerticalAlignment="Center"><TextBlock Text="SẴN SÀNG XOAY" FontSize="11" Foreground="#52647C"/><TextBlock x:Name="HintReady" Text="Model đang chọn &gt; 20%" FontSize="11" Foreground="#52647C" Margin="0,3,0,0"/></StackPanel><TextBlock Grid.Column="1" x:Name="StatReady" Text="0" Foreground="#087F73" FontSize="26" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center"/></Grid></Border>
-<Border Style="{StaticResource Panel}" Margin="0,0,12,0" Padding="14,10"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel VerticalAlignment="Center"><TextBlock Text="CẦN CHÚ Ý" FontSize="11" Foreground="#52647C"/><TextBlock x:Name="HintAttention" Text="Quota thấp / Chưa rõ" FontSize="11" Foreground="#52647C" Margin="0,3,0,0"/></StackPanel><TextBlock Grid.Column="1" x:Name="StatAttention" Text="0" Foreground="#9A6700" FontSize="26" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center"/></Grid></Border>
-<Border Style="{StaticResource Panel}" Margin="0,0,12,0" Padding="14,10"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel VerticalAlignment="Center"><TextBlock Text="ĐÃ XOAY XÁC MINH" FontSize="11" Foreground="#52647C"/><TextBlock x:Name="HintRotations" Text="Trong nhật ký gần đây" FontSize="11" Foreground="#52647C" Margin="0,3,0,0"/></StackPanel><TextBlock Grid.Column="1" x:Name="StatRotations" Text="0" Foreground="#172B4D" FontSize="26" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center"/></Grid></Border>
-</UniformGrid>
-          <Border x:Name="StatusArea" Grid.Row="2" Style="{StaticResource Panel}" BorderBrush="#C5E1D8" Background="#EEF8F4" Padding="14,8" Margin="0,0,0,18">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <StackPanel><TextBlock x:Name="TxtDaemonStatus" Text="Đang đọc trạng thái…" Foreground="#0F766E" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock x:Name="TxtActiveAccount" Text="Đang xác minh tài khoản trong Antigravity" Style="{StaticResource MutedText}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/></StackPanel>
-              <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0,0,0"><TextBlock x:Name="TxtUpdated" Text="Chưa quét quota" Style="{StaticResource MutedText}"/><TextBlock Text="Tự cập nhật sau mỗi lượt quét" Style="{StaticResource MutedText}" Margin="0,4,0,0"/></StackPanel>
+          <UniformGrid x:Name="StatsArea" Grid.Row="1" Columns="4" Margin="0,0,-12,16">
+            <Border Style="{StaticResource Panel}" Margin="0,0,12,0" Padding="0">
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Background="#64748B" CornerRadius="10,0,0,10"/>
+                <Grid Grid.Column="1" Margin="14,11"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel VerticalAlignment="Center"><TextBlock Text="TỔNG TÀI KHOẢN" FontSize="10.5" FontWeight="SemiBold" Foreground="#64748B"/><TextBlock x:Name="HintTotal" Text="Trong kho trên máy này" FontSize="11.5" Foreground="#64748B" Margin="0,3,0,0"/></StackPanel>
+                  <TextBlock Grid.Column="1" x:Name="StatTotal" Text="0" Foreground="#0F172A" FontSize="28" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                </Grid>
+              </Grid>
+            </Border>
+            <Border Style="{StaticResource Panel}" Margin="0,0,12,0" Padding="0">
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Background="#0F766E" CornerRadius="10,0,0,10"/>
+                <Grid Grid.Column="1" Margin="14,11"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel VerticalAlignment="Center"><TextBlock Text="SẴN SÀNG XOAY" FontSize="10.5" FontWeight="SemiBold" Foreground="#64748B"/><TextBlock x:Name="HintReady" Text="Model đang chọn &gt; 20%" FontSize="11.5" Foreground="#64748B" Margin="0,3,0,0"/></StackPanel>
+                  <TextBlock Grid.Column="1" x:Name="StatReady" Text="0" Foreground="#0F766E" FontSize="28" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                </Grid>
+              </Grid>
+            </Border>
+            <Border Style="{StaticResource Panel}" Margin="0,0,12,0" Padding="0">
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Background="#D97706" CornerRadius="10,0,0,10"/>
+                <Grid Grid.Column="1" Margin="14,11"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel VerticalAlignment="Center"><TextBlock Text="CẦN CHÚ Ý" FontSize="10.5" FontWeight="SemiBold" Foreground="#64748B"/><TextBlock x:Name="HintAttention" Text="Quota thấp / Chưa rõ" FontSize="11.5" Foreground="#64748B" Margin="0,3,0,0"/></StackPanel>
+                  <TextBlock Grid.Column="1" x:Name="StatAttention" Text="0" Foreground="#B45309" FontSize="28" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                </Grid>
+              </Grid>
+            </Border>
+            <Border Style="{StaticResource Panel}" Margin="0,0,12,0" Padding="0">
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Background="#4F46E5" CornerRadius="10,0,0,10"/>
+                <Grid Grid.Column="1" Margin="14,11"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel VerticalAlignment="Center"><TextBlock Text="ĐÃ XOAY XÁC MINH" FontSize="10.5" FontWeight="SemiBold" Foreground="#64748B"/><TextBlock x:Name="HintRotations" Text="Trong nhật ký gần đây" FontSize="11.5" Foreground="#64748B" Margin="0,3,0,0"/></StackPanel>
+                  <TextBlock Grid.Column="1" x:Name="StatRotations" Text="0" Foreground="#0F172A" FontSize="28" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                </Grid>
+              </Grid>
+            </Border>
+          </UniformGrid>
+          <Border x:Name="StatusArea" Grid.Row="2" Style="{StaticResource Panel}" BorderBrush="#A7F3D0" Background="#ECFDF5" Padding="16,10" Margin="0,0,0,16">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Ellipse Width="9" Height="9" Fill="#10B981" VerticalAlignment="Top" Margin="0,5,10,0"/>
+                <StackPanel>
+                  <TextBlock x:Name="TxtDaemonStatus" Text="Đang đọc trạng thái…" Foreground="#065F46" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                  <TextBlock x:Name="TxtActiveAccount" Text="Đang xác minh tài khoản trong Antigravity" Foreground="#047857" FontSize="12" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+              </StackPanel>
+              <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0,0,0">
+                <TextBlock x:Name="TxtUpdated" Text="Chưa quét quota" Foreground="#065F46" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
+                <TextBlock Text="Tự cập nhật sau mỗi lượt quét" Foreground="#047857" FontSize="11.5" Margin="0,3,0,0" HorizontalAlignment="Right"/>
+              </StackPanel>
             </Grid>
           </Border>
           <Grid Grid.Row="3">
-            <Grid x:Name="AccountsPage"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-              <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Orientation="Horizontal"><StackPanel Orientation="Horizontal"><TextBlock Text="Tìm" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#52647C"/><TextBox x:Name="SearchAccounts" Width="220" AutomationProperties.Name="Tìm tài khoản theo tên hoặc email" ToolTip="Tìm theo tên hoặc email"/></StackPanel><StackPanel Margin="14,0,0,0"><StackPanel Orientation="Horizontal"><RadioButton x:Name="FilterAll" GroupName="Filter" IsChecked="True" Tag="All" Content="Tất cả" Style="{StaticResource Nav}" Padding="10,8"/><RadioButton x:Name="FilterReady" GroupName="Filter" Tag="Ready" Content="Đủ quota" Style="{StaticResource Nav}" Padding="10,8"/><RadioButton x:Name="FilterAttention" GroupName="Filter" Tag="Attention" Content="Cần chú ý" Style="{StaticResource Nav}" Padding="10,8"/></StackPanel></StackPanel></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom"><ComboBox x:Name="RefreshInterval" Width="105" Height="36" Margin="0,0,8,0" SelectedIndex="1" VerticalContentAlignment="Center" ToolTip="Thời gian nghỉ sau mỗi lượt quét" AutomationProperties.Name="Chu kỳ cập nhật quota"><ComboBoxItem Content="Nghỉ 15 giây" Tag="15"/><ComboBoxItem Content="Nghỉ 30 giây" Tag="30"/><ComboBoxItem Content="Nghỉ 60 giây" Tag="60"/><ComboBoxItem Content="Thủ công" Tag="0"/></ComboBox><Button x:Name="BtnRefresh" Content="Quét quota" Style="{StaticResource PrimaryBtn}"/></StackPanel></Grid>
-              <Border Grid.Row="1" Style="{StaticResource Panel}"><Grid><DataGrid x:Name="AccountsContainer" AutomationProperties.Name="Danh sách tài khoản">
-                <DataGrid.Columns>
-<DataGridTemplateColumn Header="TÀI KHOẢN / TRẠNG THÁI" Width="2*" MinWidth="190" SortMemberPath="AccountName"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel ToolTip="{Binding Email}"><TextBlock Text="{Binding AccountName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><StackPanel Orientation="Horizontal" Margin="0,5,0,0"><Ellipse Width="6" Height="6" Fill="{Binding StatusColor}" Margin="0,0,6,0"/><TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusColor}" FontSize="11"/></StackPanel></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-<DataGridTemplateColumn Header="GÓI" Width="70" SortMemberPath="PlanText"><DataGridTemplateColumn.CellTemplate><DataTemplate><Border Background="#EFF3F8" CornerRadius="5" Padding="5,4" ToolTip="{Binding PlanHint}"><TextBlock Text="{Binding PlanText}" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"/></Border></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-<DataGridTemplateColumn Width="*" MinWidth="66" SortMemberPath="FiveRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;5 giờ" TextAlignment="Center" FontSize="11" Foreground="#52647C"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding FiveRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-<DataGridTemplateColumn Width="*" MinWidth="66" SortMemberPath="WeekRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;Tuần" TextAlignment="Center" FontSize="11" Foreground="#52647C"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding WeekRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-<DataGridTemplateColumn Width="*" MinWidth="66" SortMemberPath="FlashRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;Flash" TextAlignment="Center" FontSize="11" Foreground="#52647C"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding FlashRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-<DataGridTemplateColumn Width="*" MinWidth="66" SortMemberPath="ArgonRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;Argon" TextAlignment="Center" FontSize="11" Foreground="#52647C"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding ArgonRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-<DataGridTemplateColumn Width="*" MinWidth="66" SortMemberPath="CarbonRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;Carbon" TextAlignment="Center" FontSize="11" Foreground="#52647C"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding CarbonRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-<DataGridTemplateColumn Width="*" MinWidth="66" SortMemberPath="OpusRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Claude&#10;Opus" TextAlignment="Center" FontSize="11" Foreground="#52647C"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding OpusRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-<DataGridTemplateColumn Width="*" MinWidth="66" SortMemberPath="SonnetRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Claude&#10;Sonnet" TextAlignment="Center" FontSize="11" Foreground="#52647C"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding SonnetRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-<DataGridTemplateColumn Header="THAO TÁC" HeaderStyle="{StaticResource CenteredHeader}" Width="156" CanUserSort="False"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Button Tag="Details" Content="&#xE946;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource ModernBtn}" Padding="6" Margin="0,0,5,0" ToolTip="Chi tiết quota tất cả model" AutomationProperties.Name="Chi tiết quota tất cả model"/><Button Tag="Switch" Content="Chuyển" IsEnabled="{Binding CanSwitch}" Visibility="{Binding SwitchVisibility}" Style="{StaticResource ModernBtn}" Padding="8,6" Margin="0,0,5,0" ToolTip="Chuyển khi IDE rảnh và đủ quota"/><Button Tag="Verify" Content="Xác minh" Visibility="{Binding VerifyVisibility}" Style="{StaticResource ModernBtn}" Padding="5,6" Margin="0,0,5,0"/><Button Tag="Delete" Content="&#xE74D;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource DangerBtn}" Padding="6" ToolTip="Xóa tài khoản" AutomationProperties.Name="Xóa tài khoản"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-</DataGrid.Columns>
-              </DataGrid><StackPanel x:Name="EmptyAccounts" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24"><TextBlock x:Name="EmptyTitle" Text="Chưa có tài khoản" FontSize="18" FontWeight="SemiBold" TextAlignment="Center"/><TextBlock x:Name="EmptyDescription" Text="Thêm tài khoản hoặc lưu tài khoản Antigravity đang dùng." Foreground="#52647C" Margin="0,10,0,0" TextAlignment="Center" TextWrapping="Wrap"/></StackPanel></Grid></Border>
-              <Grid Grid.Row="2" Margin="0,12,0,0"><TextBlock x:Name="TxtAccountCount" Text="0 tài khoản" Style="{StaticResource MutedText}"/><TextBlock Text="Vòng rỗng: chưa có quota · ⓘ Chi tiết tất cả model" HorizontalAlignment="Right" Style="{StaticResource MutedText}"/></Grid>
+            <Grid x:Name="AccountsPage">
+              <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Tìm" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#475569" FontWeight="Medium"/>
+                    <TextBox x:Name="SearchAccounts" Width="230" AutomationProperties.Name="Tìm tài khoản theo tên hoặc email" ToolTip="Tìm theo tên hoặc email"/>
+                  </StackPanel>
+                  <Border Background="#E2E8F0" CornerRadius="8" Padding="3" Margin="14,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                      <RadioButton x:Name="FilterAll" GroupName="Filter" IsChecked="True" Tag="All" Content="Tất cả" Style="{StaticResource FilterPill}"/>
+                      <RadioButton x:Name="FilterReady" GroupName="Filter" Tag="Ready" Content="Đủ quota" Style="{StaticResource FilterPill}"/>
+                      <RadioButton x:Name="FilterAttention" GroupName="Filter" Tag="Attention" Content="Cần chú ý" Style="{StaticResource FilterPill}"/>
+                    </StackPanel>
+                  </Border>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                  <ComboBox x:Name="RefreshInterval" Width="112" Height="36" Margin="0,0,8,0" SelectedIndex="1" VerticalContentAlignment="Center" ToolTip="Thời gian nghỉ sau mỗi lượt quét" AutomationProperties.Name="Chu kỳ cập nhật quota">
+                    <ComboBoxItem Content="Nghỉ 15 giây" Tag="15"/><ComboBoxItem Content="Nghỉ 30 giây" Tag="30"/><ComboBoxItem Content="Nghỉ 60 giây" Tag="60"/><ComboBoxItem Content="Thủ công" Tag="0"/>
+                  </ComboBox>
+                  <Button x:Name="BtnRefresh" Content="Quét quota" Style="{StaticResource PrimaryBtn}"/>
+                </StackPanel>
+              </Grid>
+              <Border Grid.Row="1" Style="{StaticResource Panel}">
+                <Grid>
+                  <DataGrid x:Name="AccountsContainer" AutomationProperties.Name="Danh sách tài khoản">
+                    <DataGrid.Columns>
+                      <DataGridTemplateColumn Header="TÀI KHOẢN / TRẠNG THÁI" Width="2*" MinWidth="180" SortMemberPath="AccountName">
+                        <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                          <StackPanel ToolTip="{Binding Email}" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding AccountName}" FontWeight="SemiBold" FontSize="13.5" TextTrimming="CharacterEllipsis"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                              <Ellipse Width="7" Height="7" Fill="{Binding StatusColor}" Margin="0,0,6,0"/>
+                              <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusColor}" FontSize="11.5" FontWeight="Medium"/>
+                            </StackPanel>
+                          </StackPanel>
+                        </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                      </DataGridTemplateColumn>
+                      <DataGridTemplateColumn Header="GÓI" HeaderStyle="{StaticResource CenteredHeader}" Width="90" SortMemberPath="PlanText">
+                        <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                          <Border Style="{StaticResource PlanBadge}" ToolTip="{Binding PlanHint}">
+                            <TextBlock Text="{Binding PlanText}" Style="{StaticResource PlanBadgeText}" TextWrapping="Wrap"/>
+                          </Border>
+                        </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                      </DataGridTemplateColumn>
+                      <DataGridTemplateColumn Width="*" MinWidth="60" SortMemberPath="FiveRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;5 giờ" TextAlignment="Center" FontSize="11" Foreground="#475569"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding FiveRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTemplateColumn Width="*" MinWidth="60" SortMemberPath="WeekRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;Tuần" TextAlignment="Center" FontSize="11" Foreground="#475569"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding WeekRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTemplateColumn Width="*" MinWidth="60" SortMemberPath="FlashRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;Flash" TextAlignment="Center" FontSize="11" Foreground="#475569"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding FlashRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTemplateColumn Width="*" MinWidth="60" SortMemberPath="ArgonRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;Argon" TextAlignment="Center" FontSize="11" Foreground="#475569"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding ArgonRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTemplateColumn Width="*" MinWidth="60" SortMemberPath="HydrogenRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;Hydrogen" TextAlignment="Center" FontSize="11" Foreground="#475569"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding HydrogenRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTemplateColumn Width="*" MinWidth="60" SortMemberPath="CarbonRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Gemini&#10;Carbon" TextAlignment="Center" FontSize="11" Foreground="#475569"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding CarbonRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTemplateColumn Width="*" MinWidth="60" SortMemberPath="OpusRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Claude&#10;Opus" TextAlignment="Center" FontSize="11" Foreground="#475569"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding OpusRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTemplateColumn Width="*" MinWidth="60" SortMemberPath="SonnetRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="Claude&#10;Sonnet" TextAlignment="Center" FontSize="11" Foreground="#475569"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding SonnetRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTemplateColumn Width="*" MinWidth="60" SortMemberPath="GptOssRing.Value" HeaderStyle="{StaticResource CenteredHeader}"><DataGridTemplateColumn.Header><TextBlock Text="GPT-OSS&#10;120B" TextAlignment="Center" FontSize="11" Foreground="#475569"/></DataGridTemplateColumn.Header><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl Content="{Binding GptOssRing}" ContentTemplate="{StaticResource QuotaRing}" HorizontalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTemplateColumn Header="THAO TÁC" HeaderStyle="{StaticResource CenteredHeader}" Width="162" CanUserSort="False">
+                        <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Tag="Details" Content="&#xE946;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource ModernBtn}" Padding="7,6" Margin="0,0,5,0" ToolTip="Chi tiết quota tất cả model" AutomationProperties.Name="Chi tiết quota tất cả model"/>
+                            <Button Tag="Switch" Content="Chuyển" IsEnabled="{Binding CanSwitch}" Visibility="{Binding SwitchVisibility}" Style="{StaticResource ModernBtn}" Padding="9,6" Margin="0,0,5,0" ToolTip="Chuyển khi IDE rảnh và đủ quota"/>
+                            <Button Tag="Verify" Content="Xác minh" Visibility="{Binding VerifyVisibility}" Style="{StaticResource ModernBtn}" Padding="6,6" Margin="0,0,5,0"/>
+                            <Button Tag="Delete" Content="&#xE74D;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource DangerBtn}" Padding="7,6" ToolTip="Xóa tài khoản" AutomationProperties.Name="Xóa tài khoản"/>
+                          </StackPanel>
+                        </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                      </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                  </DataGrid>
+                  <StackPanel x:Name="EmptyAccounts" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24">
+                    <TextBlock x:Name="EmptyTitle" Text="Chưa có tài khoản" FontSize="18" FontWeight="SemiBold" TextAlignment="Center"/>
+                    <TextBlock x:Name="EmptyDescription" Text="Thêm tài khoản hoặc lưu tài khoản Antigravity đang dùng." Foreground="#64748B" Margin="0,10,0,0" TextAlignment="Center" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Grid>
+              </Border>
+              <Grid Grid.Row="2" Margin="0,10,0,0"><TextBlock x:Name="TxtAccountCount" Text="0 tài khoản" Style="{StaticResource MutedText}"/><TextBlock Text="Vòng nét đứt: chưa có quota / chưa cấp · ⓘ Chi tiết tất cả model" HorizontalAlignment="Right" Style="{StaticResource MutedText}"/></Grid>
             </Grid>
-            <Grid x:Name="HistoryPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-              <Grid Margin="0,0,0,14"><TextBlock Text="Chuyển thành công, trì hoãn và các sự kiện cần chú ý." Foreground="#52647C" VerticalAlignment="Center"/><Button x:Name="BtnRefreshHistory" Content="Làm mới nhật ký" Style="{StaticResource ModernBtn}" HorizontalAlignment="Right"/></Grid>
-              <Border Grid.Row="1" Style="{StaticResource Panel}"><Grid><DataGrid x:Name="HistoryGrid" RowHeight="64" AutomationProperties.Name="Nhật ký xoay tài khoản"><DataGrid.Columns>
-                <DataGridTextColumn Header="THỜI GIAN" Binding="{Binding TimeText}" Width="142" SortMemberPath="Timestamp"/>
-                <DataGridTemplateColumn Header="KẾT QUẢ" Width="135" SortMemberPath="Kind"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{Binding Color}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-                <DataGridTextColumn Header="TÀI KHOẢN" Binding="{Binding Account}" Width="165"/>
-                <DataGridTemplateColumn Header="CHI TIẾT" Width="*"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Foreground="#52647C"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-              </DataGrid.Columns></DataGrid><TextBlock x:Name="EmptyHistory" Text="Chưa có sự kiện xoay trong nhật ký gần đây." Foreground="#52647C" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid></Border>
-              <TextBlock Grid.Row="2" x:Name="TxtHistoryCount" Text="Đang đọc nhật ký…" Style="{StaticResource MutedText}" Margin="0,12,0,0"/>
+            <Grid x:Name="HistoryPage" Visibility="Collapsed">
+              <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+              <Grid Margin="0,0,0,14"><TextBlock Text="Chuyển thành công, trì hoãn và các sự kiện cần chú ý." Foreground="#64748B" VerticalAlignment="Center"/><Button x:Name="BtnRefreshHistory" Content="Làm mới nhật ký" Style="{StaticResource ModernBtn}" HorizontalAlignment="Right"/></Grid>
+              <Border Grid.Row="1" Style="{StaticResource Panel}">
+                <Grid>
+                  <DataGrid x:Name="HistoryGrid" RowHeight="64" AutomationProperties.Name="Nhật ký xoay tài khoản">
+                    <DataGrid.Columns>
+                      <DataGridTextColumn Header="THỜI GIAN" Binding="{Binding TimeText}" Width="142" SortMemberPath="Timestamp"/>
+                      <DataGridTemplateColumn Header="KẾT QUẢ" Width="135" SortMemberPath="Kind"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding Label}" Foreground="{Binding Color}" FontWeight="SemiBold"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                      <DataGridTextColumn Header="TÀI KHOẢN" Binding="{Binding Account}" Width="165" FontWeight="Medium"/>
+                      <DataGridTemplateColumn Header="CHI TIẾT" Width="*"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Foreground="#475569"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                  </DataGrid>
+                  <TextBlock x:Name="EmptyHistory" Text="Chưa có sự kiện xoay trong nhật ký gần đây." Foreground="#64748B" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+              </Border>
+              <TextBlock Grid.Row="2" x:Name="TxtHistoryCount" Text="Đang đọc nhật ký…" Style="{StaticResource MutedText}" Margin="0,10,0,0"/>
             </Grid>
           </Grid>
-          <Border Grid.Row="4" BorderBrush="#DAE2EC" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="TxtFooterPath" Text="" Style="{StaticResource MutedText}" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="Đóng cửa sổ vẫn giữ daemon chạy nền" Style="{StaticResource MutedText}" Margin="16,0,0,0"/></Grid></Border>
+          <Border Grid.Row="4" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,8,0,0">
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock x:Name="TxtFooterPath" Text="" Style="{StaticResource MutedText}" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Grid.Column="1" Text="Đóng cửa sổ vẫn giữ daemon chạy nền" Style="{StaticResource MutedText}" Margin="16,0,0,0"/>
+            </Grid>
+          </Border>
         </Grid>
       </Grid>
     </Grid>

@@ -43,7 +43,7 @@ $script:FixtureState=@{Status='Verified';UpdatedAt=[datetime]::UtcNow.AddSeconds
 Check @((Account current .1),(Account other .9)) '' 'Persistent cooldown protects manual and automatic switches'
 $script:FixtureState=@{Status='Verified';UpdatedAt=[datetime]::UtcNow.AddMinutes(-3).ToString('o')}
 Check @((Account current .1),(Account other .9)) 'other' 'Expired cooldown permits automatic rotation'
-foreach($name in @('Gemini 3.8 Flash High','Gemini 4 Argon Medium','Gemini 4 Carbon High','Claude Opus 5.5 Medium','GPT-OSS 120B Medium')){
+foreach($name in @('Gemini 3.8 Flash High','Gemini 4 Argon Medium','Gemini 4 Hydrogen Medium','Gemini 4 Carbon High','Claude Opus 5.5 Medium','GPT-OSS 120B Medium')){
     $script:Selected=$name;$current=Account current .1;$target=Account other .8
     foreach($account in @($current,$target)){$account.ModelQuotas[0].Name=$name;$account.ModelQuotas[0].Family=Get-ModelQuotaFamily '' $name;$account.QuotaGroups=@()}
     Check @($current,$target) 'other' "Selected model supported: $name"
