@@ -1,410 +1,130 @@
 # Antigravity Auto-Hub
 
-**Quản lý nhiều tài khoản, theo dõi quota Gemini / Claude / GPT-OSS và tự động chuyển tài khoản Antigravity Desktop trên Windows.**
+**Quản lý đa tài khoản, theo dõi quota theo từng model và tự động xoay tài khoản Antigravity Desktop trên Windows.**
 
 [![Windows validation](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/workflows/validate.yml/badge.svg)](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/workflows/validate.yml)
 
-Hub theo dõi các tài khoản bạn đã lưu và chọn tài khoản còn quota khi Antigravity rảnh. Bạn cũng có thể chuyển thủ công và xử lý yêu cầu xác minh Google từ giao diện.
+---
 
-### Dashboard quản lý tài khoản
+## Tính năng chính
 
-Giao diện WPF nền sáng, bảng quota dạng vòng tròn %, thanh điều hướng và nhật ký xoay. Không cần cài thêm thư viện giao diện. Các cột model được bố trí cân đối theo nhóm: **Gemini Flash, Gemini Argon, Gemini Hydrogen, Gemini Carbon, Claude Opus, Claude Sonnet, GPT-OSS 120B**, bên cạnh hai hạn mức tổng Gemini **5 giờ / tuần** và gói tài khoản.
+- **Dashboard trực quan (WPF, không cần cài thêm thư viện):** Hiển thị toàn bộ pool tài khoản với gói (**Free / Pro / Ultra**), tìm kiếm, bộ lọc trạng thái, sắp xếp theo cột và nhật ký xoay.
+- **Theo dõi đầy đủ từng dòng model:**
+  - **Hạn mức chung:** `Gemini 5 giờ`, `Gemini Tuần`
+  - **Nhóm Gemini:** `Gemini Flash`, `Gemini Argon`, `Gemini Hydrogen`, `Gemini Carbon`
+  - **Nhóm Claude & GPT:** `Claude Opus`, `Claude Sonnet`, `GPT-OSS 120B`
+- **Phân biệt rõ trạng thái quota:**
+  - **Phần trăm (`0%` – `100%`):** Quota thực tế do Google trả về (`0%` là hết quota thật).
+  - **Vòng nét đứt (`—`):** Model chưa được cấp quyền / bị tắt (`disabled: true`, ví dụ *Carbon Unavailable*) hoặc chưa có dữ liệu. Rê chuột vào vòng tròn hoặc bấm **ⓘ** để xem chi tiết từng biến thể và thời điểm reset.
+- **Xoay tài khoản tự động & an toàn:**
+  - Đọc trực tiếp model đang chọn trong Antigravity IDE (bao gồm `Gemini`, `Claude`, `GPT-OSS`, `Orchestrator (Argon)`).
+  - Khi quota hiệu dụng của model đang chọn **< 20%**, tự động chuyển sang tài khoản có cùng model còn **> 20%** cao nhất.
+  - **Bảo vệ tác vụ:** Chỉ chuyển khi IDE rảnh, không có bản nháp/ô nhập đang soạn dở và đã qua thời gian chờ (cooldown) **120 giây**.
+- **Quản lý & xác minh tài khoản:** Hỗ trợ **Lưu acc hiện tại**, **+ Thêm tài khoản** qua helper riêng và mở liên kết **Xác minh Google** khi cần.
 
-- **Tổng tài khoản, đủ quota, cần chú ý:** tính trên toàn bộ kho, không thay đổi theo bộ lọc. Khi đọc được model đang chọn trong IDE, “Sẵn sàng xoay” nghĩa là đúng model/biến thể đó có quota hiệu dụng **> 20%**. Quota hiệu dụng là mức thấp nhất giữa quota model và các hạn mức nhóm liên quan mà API trả về. Không xác nhận mọi model đều còn quota hay IDE đang rảnh. Khi model chưa xác định, dashboard ghi rõ tiêu chí Gemini/Argon cho chuyển tay; tự động hoãn.
-- **Quota mọi tài khoản:** truy vấn `fetchAvailableModels` và `retrieveUserQuotaSummary` bằng token/project của từng acc đã lưu, không đăng nhập/chuyển phiên IDE. Mỗi vòng model lấy mức thấp nhất giữa các biến thể đang bật, chỉ khi tất cả biến thể đang bật có dữ liệu hợp lệ. **0% là hết quota thật; vòng nét đứt với “—” là chưa có quota**, do chưa được cấp hoặc thiếu dữ liệu (như Gemini Carbon đang Unavailable hoặc tài khoản chưa được cấp Argon/Hydrogen). Di chuột để phân biệt và xem từng biến thể, thời điểm reset.
-- **Chi tiết đầy đủ:** nút **ⓘ** mở danh sách tất cả model có tên API trả về và mọi hạn mức nhóm 5 giờ / tuần. Claude và GPT có thể dùng chung quota; không cộng các vòng tròn thành tổng dung lượng. Không mặc định quota theo model là quota tuần, không sao chép phần trăm Gemini sang Claude/GPT/Carbon.
-- **Tìm kiếm, lọc và sắp xếp:** tìm theo tên/email, lọc đủ quota/cần chú ý, bấm tiêu đề cột để sắp xếp. Tài khoản đang dùng được nhận diện bằng email runtime và xếp đầu mặc định.
-- **Nhật ký xoay:** xem thời gian, tài khoản, kết quả và lý do hoãn đã nhận diện. Bảng tự cập nhật mỗi 5 giây, hiển thị tối đa 200 sự kiện từ 5.000 dòng cuối `rotator.log`. Bộ đếm “Đã xoay xác minh” chỉ đếm sự kiện xác minh trong phạm vi này, không phải tổng lịch sử trọn đời. Sự kiện không nhận diện được không được đưa vào bảng.
-- **Quét quota chạy nền:** mặc định nghỉ **30 giây sau khi lượt quét hoàn tất**, có thể chọn 15 / 30 / 60 giây hoặc Thủ công. Không chạy chồng lượt quét. Đây là cập nhật gần thời gian thực bằng polling, không phải streaming: thời gian giữa hai bản cập nhật còn gồm thời gian gọi API cho toàn bộ pool. Nút Quét quota cập nhật ngay; nhãn Cập nhật và chi tiết từng acc cho biết thời điểm dữ liệu. Khi cả lượt quét lỗi, giữ dữ liệu cũ kèm cảnh báo; model nào lỗi trong lượt quét mới trở về vòng rỗng, không giữ phần trăm cũ như dữ liệu mới.
-- **Cửa sổ co giãn:** có nút phóng to/khôi phục, kích thước tối thiểu 1180 × 640 đơn vị WPF. Khi phóng to, cửa sổ dùng vùng làm việc của màn hình hiện tại, không che phần đáy dưới taskbar. Footer và nút Mở thư mục nằm ngoài vùng cuộn; danh sách dài cuộn riêng và ảo hóa hàng. Tiêu đề quota căn giữa với vòng tròn cùng cột.
+---
 
-**Ưu tiên tự động, luôn giữ nút Chuyển:** engine đọc model đang chọn từ bộ chọn model của IDE, không đọc nội dung chat. Quota model đó **< 20%** thì tìm acc có đúng model/biến thể, quota hiệu dụng **> 20%** cao nhất. Áp dụng Gemini Flash/Argon/Hydrogen/Carbon, Claude Opus/Sonnet, GPT-OSS và Orchestrator (Argon). Không xoay chỉ vì model không sử dụng bị cạn; không xoay chỉ vì thông báo “Model unavailable”.
-
-Đóng rồi mở lại Hub để nạp giao diện mới. Các kiểm tra quota, tác vụ đang chạy, bản nháp và xác minh danh tính của engine vẫn áp dụng khi chuyển.
-
-Xem thử bằng dữ liệu minh họa, không đọc credential hay khởi chạy daemon:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\AntigravityHub.ps1 -Preview
-```
-
-Chế độ preview khóa các thao tác thêm/lưu/chuyển/xóa tài khoản. `tests/Preview-Dashboard.ps1` xuất ảnh giao diện minh họa vào `work/ui-preview/` để kiểm tra bố cục.
-
-> **Cài trên máy mới:** cài Antigravity Desktop và đăng nhập Google một lần trong ứng dụng chính thức, sau đó clone repo và chạy `Setup-Install.bat`. Setup tự tìm và xác minh cấu hình OAuth từ bản Antigravity trên máy rồi lưu bằng Windows DPAPI; thông thường không cần nhập client ID/secret. Repo không chứa tài khoản, token hoặc client secret dùng sẵn.
-
-## Mục lục
-
-1. [Chuẩn bị](#chuẩn-bị)
-2. [Cài đặt lần đầu](#cài-đặt-lần-đầu)
-3. [Thêm tài khoản](#thêm-tài-khoản)
-4. [Sử dụng hằng ngày](#sử-dụng-hằng-ngày)
-5. [Xoay tự động](#xoay-tự-động)
-6. [Xử lý sự cố](#xử-lý-sự-cố)
-7. [Cập nhật và tắt chạy nền](#cập-nhật-và-tắt-chạy-nền)
-8. [Kết nối MCP](#kết-nối-mcp)
-9. [Dữ liệu và bảo mật](#dữ-liệu-và-bảo-mật)
-10. [Dành cho người phát triển](#dành-cho-người-phát-triển)
-
-Hướng dẫn mới: [Quét quota Gemini và Argon](#quét-quota-gemini-và-argon), bao gồm cách đọc trạng thái và tự cập nhật khi tài khoản được cấp Argon.
-
-## Chuẩn bị
+## Yêu cầu hệ thống
 
 | Thành phần | Yêu cầu |
 | --- | --- |
-| Máy tính | Windows, dùng cùng người dùng Windows đang chạy Antigravity |
-| PowerShell | Windows PowerShell 5.1, lệnh `powershell.exe` |
-| Antigravity Desktop | Bản 2.x từ 2.12 trở lên, vượt qua kiểm tra tương thích của Hub; đã kiểm tra bản cài 2.19.1 |
-| Tài khoản | Một tài khoản để theo dõi; ít nhất hai tài khoản hợp lệ để xoay |
-| OAuth | Setup tự cấu hình từ Antigravity đã cài và phiên đăng nhập trên máy; hỗ trợ nhập thủ công khi cần |
-| Mạng | Truy cập được dịch vụ đăng nhập và quota Google |
-| Git | Chỉ cần nếu tải/cập nhật bằng lệnh Git |
+| Hệ điều hành | Windows (chạy cùng user Windows đang dùng Antigravity) |
+| PowerShell | Windows PowerShell 5.1 (`powershell.exe`) |
+| Antigravity Desktop | Bản 2.12 trở lên, cài ở đường dẫn mặc định (`%LOCALAPPDATA%\Programs\Antigravity`) |
+| Mạng | Truy cập được dịch vụ đăng nhập và API quota Google |
+| Node.js | *Không cần để chạy Hub*; chỉ cần khi chạy bộ kiểm thử (`Validate.ps1`) |
 
-Không cần Node.js, Python hoặc MCP để **sử dụng Hub**. Node.js chỉ cần khi chạy bộ kiểm thử. Bộ cài dùng Windows Script Host (`wscript.exe`) để mở ứng dụng không kèm console.
-
-Nút **Thêm Tài Khoản Mới** hiện tìm helper ở đường dẫn cài mặc định:
-
-```text
-%LOCALAPPDATA%\Programs\Antigravity\resources\bin\language_server.exe
-```
-
-Hub cần một runtime Antigravity Desktop cục bộ và kết nối được API nội bộ/CDP của ứng dụng. Kiểm tra tương thích là bước sàng lọc, không bảo đảm mọi bản cập nhật tương lai đều hoạt động.
+---
 
 ## Cài đặt lần đầu
 
-### Bước 1 — Tải repo
+### 1. Tải mã nguồn về vị trí cố định
 
-**Có Git:** mở PowerShell ở thư mục muốn lưu dự án, chạy:
+> Giữ nguyên thư mục repo sau khi cài vì shortcut Desktop và Startup sẽ trỏ cố định vào đường dẫn này.
 
 ```powershell
 git clone https://github.com/datdtpl-maker/Antigravity-Auto-Hub.git
 cd Antigravity-Auto-Hub
 ```
 
-**Không có Git:** mở [trang GitHub](https://github.com/datdtpl-maker/Antigravity-Auto-Hub), chọn **Code → Download ZIP**, rồi giải nén vào thư mục riêng. Không chạy trực tiếp bên trong ZIP.
+### 2. Đăng nhập Antigravity Desktop
+1. Mở **Antigravity Desktop** và đăng nhập tài khoản Google đầu tiên.
+2. Hoàn tất các bước xác minh/điều khoản (nếu có) trong ứng dụng.
 
-Các lệnh tiếp theo chạy **trong thư mục có `Setup-Install.bat`**. Bạn có thể mở thư mục bằng File Explorer, nhập `powershell` vào thanh địa chỉ rồi nhấn Enter.
-
-Giữ repo ở vị trí cố định sau khi cài vì shortcut trỏ tới đường dẫn đó. Ưu tiên thư mục riêng trên máy, tránh đồng bộ dữ liệu tài khoản lên nơi dùng chung.
-
-### Bước 2 — Đăng nhập Antigravity trên máy mới
-
-1. Cài và mở **Antigravity Desktop** ở đường dẫn mặc định.
-2. Đăng nhập Google và hoàn tất các bước xác minh/điều khoản trong ứng dụng chính thức.
-3. Dùng cùng người dùng Windows để chạy Hub. Không cần chép tài khoản hoặc file cấu hình từ máy cũ.
-
-### Bước 3 — Chạy Setup
-
-Nhấp đúp **`Setup-Install.bat`**, hoặc chạy:
+### 3. Chạy bộ cài đặt
+Nhấp đúp **`Setup-Install.bat`** hoặc chạy trong PowerShell tại thư mục repo:
 
 ```powershell
 .\Setup-Install.bat
 ```
 
-Setup thực hiện theo thứ tự:
-
-1. Kiểm tra bản Antigravity cài trên máy và khả năng tương thích.
-2. Xác minh OAuth bằng phiên đăng nhập cục bộ. Ưu tiên cặp biến môi trường đầy đủ, tiếp đến cấu hình trong repo; nếu thiếu, không giải mã được hoặc không tương thích thì dò các client trong helper Antigravity đã cài. Chỉ lưu bộ cấu hình nhận được access token hợp lệ từ Google, không đoán dựa trên thứ tự chuỗi trong file.
-3. Lưu `oauth.local.clixml` bằng DPAPI cho máy/người dùng Windows hiện tại. Cấu hình hợp lệ đã có được giữ nguyên. Không ghi token tài khoản vào repo hoặc thay đổi tài khoản đang dùng trong Antigravity.
-4. Tạo shortcut **Antigravity Auto-Hub** trên Desktop, shortcut **AntigravityAutoRotator** trong Windows Startup, rồi mở Hub và daemon.
-
-Nếu chưa đăng nhập, mất mạng, có biến môi trường ghi đè sai hoặc chưa nhận diện được bản Antigravity mới, Setup báo hướng xử lý và trả mã lỗi khác 0 **trước khi tạo shortcut/chạy daemon**. Cấu hình cũ không bị thay bằng bộ chưa xác minh. Việc tự dò phụ thuộc cấu trúc helper; không bảo đảm mọi bản cập nhật Antigravity tương lai đều được hỗ trợ. Setup không cài Antigravity và không tự đăng nhập Google thay bạn.
-
-Sau khi mở Hub, bấm **Lưu acc hiện tại → Quét quota**. Xác minh OAuth thành công không đồng nghĩa mọi tài khoản đã đủ quyền Antigravity hoặc đọc được quota. Daemon là tiến trình người dùng, không phải Windows Service.
-
-**Máy đã clone trước đây và đang báo lỗi token:** chạy `git pull --ff-only`, đăng nhập Antigravity chính thức rồi chạy lại `Setup-Install.bat`. Không sao chép `oauth.local.clixml` từ máy/người dùng Windows khác. Nếu Hub/daemon đã chạy trước khi thay cấu hình, lưu công việc và khởi động lại Windows để cả hai nạp lại cấu hình.
-
-Nếu Google báo đăng nhập thành công nhưng Hub vẫn báo **“Đăng nhập chưa trả về token hợp lệ”** sau khi Setup xác minh thành công, lỗi còn có thể do không lấy được token mới, lỗi mạng hoặc email không khớp. Thử **Lưu acc hiện tại → Quét quota**, rồi kiểm tra các dòng `Account login` trong `rotator.log`; không chia sẻ token/secret.
-
-**Nếu Setup dừng ở bước `[2/5]`:** cài đặt chưa thành công. Chạy riêng `AntigravityHub.ps1` chỉ mở giao diện, không hoàn tất cấu hình OAuth. Bản đầu của bộ cài tự động có thể báo nhầm lỗi OAuth thành lỗi mạng khi Windows PowerShell 5.1 không điền `ErrorDetails`. Bản sửa đọc thêm phản hồi HTTP và tiếp tục dò khi Google từ chối một client. Nếu vẫn lỗi, dòng **`Ma chan doan`** phân biệt `SetupOAuthDns`, `SetupOAuthTls`, `SetupOAuthProxy`, `SetupOAuthTimeout`, giới hạn HTTP 429 và lỗi máy chủ; gửi mã này để chẩn đoán, không gửi token/secret. Quota `N/A` và nút Chuyển bị khóa nghĩa là tài khoản chưa sẵn sàng xoay.
+Script cài đặt sẽ tự động:
+1. Kiểm tra phiên bản Antigravity Desktop tương thích.
+2. Tự dò và xác minh cấu hình OAuth từ Antigravity cục bộ, mã hóa bằng **Windows DPAPI** vào `oauth.local.clixml`.
+3. Tạo shortcut **Antigravity Auto-Hub** trên Desktop và **AntigravityAutoRotator** trong Windows Startup.
+4. Khởi chạy daemon chạy nền (quét mỗi 25 giây) và mở giao diện Hub.
 
 <details>
-<summary>Nâng cao: nhập OAuth thủ công, biến môi trường và kiểm tra riêng</summary>
+<summary>Tùy chọn nâng cao (ConfigureOnly / nhập OAuth thủ công)</summary>
 
-Khi đã có cặp client ID/secret tương thích, có thể nhập thủ công:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Configure-OAuth.ps1
-```
-
-Script hỏi client ID và client secret (secret được che), rồi lưu `oauth.local.clixml`. Đây là thông tin ứng dụng OAuth, **không phải email/mật khẩu Google hoặc Gemini API key**. Refresh token cần được dùng với client đã cấp nó; xem [tài liệu OAuth cho ứng dụng desktop của Google](https://developers.google.com/identity/protocols/oauth2/native-app#offline).
-
-Có thể cung cấp `ANTIGRAVITY_GOOGLE_CLIENT_ID` và `ANTIGRAVITY_GOOGLE_CLIENT_SECRET` trong môi trường của tiến trình Hub/daemon/MCP. Khi đủ cả hai biến, engine ưu tiên chúng; nếu thiếu, engine thử nạp file cấu hình cục bộ.
-
-Chỉ tự cấu hình/xác minh OAuth, không tạo shortcut hoặc chạy Hub/daemon:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Setup.ps1 -ConfigureOnly
-```
-
-Secret được DPAPI bảo vệ theo máy/người dùng Windows. Tham số `-ExecutionPolicy Bypass` chỉ áp dụng cho tiến trình đang chạy. Không đưa secret vào mã nguồn hoặc lệnh được chia sẻ. Sau khi thay cấu hình, nạp lại Hub/daemon; khởi động lại Windows là cách đơn giản để nạp lại cả daemon đã cài Startup.
+- Chỉ cấu hình & xác minh OAuth (không tạo shortcut, không chạy daemon):
+  ```powershell
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Setup.ps1 -ConfigureOnly
+  ```
+- Nhập Client ID / Client Secret OAuth thủ công:
+  ```powershell
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Configure-OAuth.ps1
+  ```
 
 </details>
 
-## Thêm tài khoản
-
-### Cách 1 — Lưu tài khoản đang dùng
-
-Khuyến nghị khi bắt đầu; cách này đã được người dùng xác nhận hoạt động.
-
-1. Mở Antigravity chính thức và đăng nhập tài khoản muốn lưu.
-2. Mở Hub, bấm **Lưu Acc Này**.
-3. Kiểm tra email trên thẻ, rồi bấm **Quét Quota**.
-4. Muốn lưu tài khoản tiếp theo, hoàn tất tác vụ, đổi tài khoản trong Antigravity chính thức và lặp lại bước 2–3.
-
-**Lưu thành công không đồng nghĩa đọc quota thành công.** Tài khoản có thể đã được lưu nhưng vẫn hiện `N/A` do OAuth, mạng hoặc yêu cầu xác minh Google.
-
-Lưu lại cùng tên file sẽ cập nhật bản cũ. Tên file lấy từ phần email trước `@`; các email khác miền nhưng trùng phần tên có thể ghi đè nhau, nên chưa dùng chúng chung trong pool.
-
-### Cách 2 — Đăng nhập từ Hub
-
-1. Bấm **+ Thêm Tài Khoản Mới**.
-2. Chọn đúng tài khoản trong trình duyệt Google và hoàn tất đăng nhập.
-3. Hoàn tất trang xác minh Google nếu được mở.
-4. Chờ Hub thông báo đã thêm và xuất hiện thẻ tài khoản, rồi bấm **Quét Quota**.
-
-Hub chạy helper riêng và cố khôi phục credential trước đó khi kết thúc. Có thể bấm **Hủy đăng nhập** hoặc **Hủy xác minh** để dừng. Giới hạn chờ: 30 giây lấy URL, 5 phút đăng nhập và tối đa 5 phút cho bước xác minh.
-
-Google báo thành công chỉ xác nhận bước OAuth. Hub vẫn cần Antigravity xác nhận hợp lệ và token khớp email trước khi lưu. **Luồng này đã có kiểm thử tự động, nhưng chưa được xác nhận hoàn tất toàn bộ đăng nhập/xác minh/lưu tài khoản thật trong lần kiểm chứng gần nhất.** Nếu vướng lỗi, dùng Cách 1 và xem phần xử lý sự cố.
-
-### Kiểm tra đã sẵn sàng xoay
-
-- Có ít nhất **hai tài khoản khác nhau** trong danh sách.
-- Tài khoản hiện tại có nhãn **ĐANG KẾT NỐI**.
-- Quota tài khoản hiện tại và dự phòng đọc được thành phần trăm.
-- Tài khoản dự phòng có đúng model/biến thể đang chọn và quota hiệu dụng còn **trên 20%**.
-- Daemon đang chạy, không có trạng thái yêu cầu kiểm tra.
-
-Để thử thủ công lần đầu: chờ mọi tác vụ hoàn tất, gửi hoặc lưu bản nháp, chuyển sang cửa sổ Hub rồi bấm **Chuyển Thủ Công** trên tài khoản đích. Đợi kết quả trước khi bấm tiếp. Kiểm tra email trong Antigravity và thử một yêu cầu ngắn sau chuyển.
+---
 
 ## Sử dụng hằng ngày
 
-Mở shortcut Desktop hoặc nhấp đúp `Chuyen-Doi-Tai-Khoan.bat`.
+1. Mở shortcut **Antigravity Auto-Hub** ngoài Desktop (hoặc chạy `Chuyen-Doi-Tai-Khoan.bat`).
+2. **Thêm tài khoản vào pool xoay:**
+   - **Cách khuyến nghị:** Đăng nhập tài khoản muốn lưu trong Antigravity Desktop → mở Hub bấm **Lưu acc hiện tại** → bấm **Quét quota**. Lặp lại cho các tài khoản khác.
+   - **Hoặc:** Bấm **+ Thêm tài khoản** ngay trên Hub để đăng nhập qua trình duyệt.
+3. **Sẵn sàng xoay:** Cần ít nhất **2 tài khoản** hợp lệ, tài khoản dự phòng có đúng model đang chọn với quota **> 20%**. Đóng cửa sổ Hub không làm tắt daemon chạy nền.
 
-| Nút / trạng thái | Ý nghĩa |
+| Thao tác / Trạng thái | Ý nghĩa |
 | --- | --- |
-| **Quét Quota** | Đọc lại quota và thử đối chiếu trạng thái chuyển cần kiểm tra |
-| **Lưu Acc Này** | Lưu credential Antigravity hiện tại |
-| **+ Thêm Tài Khoản Mới** | Mở luồng đăng nhập qua helper riêng |
-| **Chuyển Thủ Công** | Yêu cầu chuyển; vẫn áp dụng điều kiện quota, tác vụ, bản nháp và thời gian chờ |
-| **Xác minh Google** | Mở liên kết xác minh; xong thì bấm Quét Quota |
-| **ĐANG KẾT NỐI** | Email runtime hiện tại khớp tài khoản này |
-| **Đã hoãn chuyển — xem lý do** | Đọc thông báo Windows hoặc rê chuột lên trạng thái để xem lý do |
-| **Xóa** | Xóa file tài khoản khỏi pool sau xác nhận; không xóa tài khoản Google hoặc thu hồi quyền OAuth |
-| **Mở thư mục** | Mở thư mục repo và log |
+| **Quét quota** | Cập nhật ngay quota và gói cho toàn bộ tài khoản (mặc định tự quét mỗi 30s khi mở Hub) |
+| **Chuyển** | Chuyển thủ công sang tài khoản đích (vẫn tuân thủ kiểm tra rảnh, bản nháp và cooldown 120s) |
+| **ⓘ (Chi tiết)** | Xem toàn bộ model API trả về, nhóm quota 5h / tuần và giờ reset theo giờ máy |
+| **Xác minh** | Mở link xác minh Google khi tài khoản bị yêu cầu `VALIDATION_REQUIRED` |
 
-**Đóng Hub không tắt xoay tự động.** Daemon tiếp tục chạy và được Startup mở lại khi đăng nhập Windows. Quét quota gọi API theo từng tài khoản nên có thể mất thời gian; chờ lượt quét hoàn tất trước khi bấm lại.
+---
 
-### Quét quota Gemini và Argon
+## Xử lý sự cố nhanh
 
-Cột **Gói** hiển thị **Free / Pro / Ultra / Chưa xác định** theo phản hồi `loadCodeAssist` của từng tài khoản, cập nhật cùng mỗi lượt quét quota và không cần chuyển acc trong IDE. Hub ưu tiên `paidTier` hơn `currentTier`: `currentTier=free-tier` cùng `paidTier=g1-pro-tier` sẽ hiển thị **Pro**. Chỉ nhận các mã gói đã hỗ trợ (`free-tier`, `g1-pro-tier`, `g1-ultra-tier`); gói trả phí thiếu thông tin hoặc có mã lạ giữ **Chưa xác định**, không tự hạ xuống Free. Không suy đoán từ tên gói quảng cáo, quota, `allowedTiers` hoặc quyền Argon.
-
-Rê chuột vào tên gói để xem nguồn dữ liệu, hoặc bấm tiêu đề cột để sắp xếp. Đây là gói API báo cho ứng dụng, không phải xác nhận hóa đơn, ngày hết hạn hay phân biệt gói dùng thử với trả tiền. Gói đọc thành công vẫn có thể hiển thị nếu bước đọc quota sau đó lỗi; nếu lượt quét mới không đọc được gói, hiển thị **Chưa xác định**. Quyền Argon được kiểm tra riêng, không suy ra từ nhãn Pro/Ultra.
-
-Sau khi tài khoản đã được lưu trong Hub, mỗi lượt quét dùng token của **từng tài khoản** để đọc quota 5 giờ, quota tuần và quota Argon. Không cần chuyển tài khoản đang dùng trong Antigravity hoặc đăng nhập lại lần lượt để quét.
-
-| Cột Argon hiển thị | Ý nghĩa |
+| Hiện tượng | Cách khắc phục |
 | --- | --- |
-| **Phần trăm**, kể cả **0%** | Google trả quota Argon hợp lệ; 0% nghĩa là đã hết quota được báo cáo |
-| **Vòng rỗng “—”, tooltip Chưa được cấp / bị tắt** | Trong lượt quét này, Google đánh dấu tất cả biến thể Argon tìm thấy là bị tắt (`disabled: true`); không đồng nghĩa quota bằng 0% |
-| **Vòng rỗng “—”, tooltip Chưa rõ / chưa có dữ liệu** | Thiếu dữ liệu, lỗi truy vấn hoặc phản hồi chưa được hỗ trợ; không đủ căn cứ kết luận tài khoản không có Argon |
+| **Báo `Chưa rõ quota` & khóa nút Chuyển** | Model đang chọn trên IDE chưa được cấp hoặc bị tắt (`disabled`) trên tài khoản đó. Bấm **ⓘ** để kiểm tra hoặc đổi model khác trong IDE |
+| **Quota hiện `N/A`** | Chưa đọc được dữ liệu (lỗi mạng, hết hạn OAuth hoặc cần xác minh). Kiểm tra trạng thái trên thẻ và bấm **Quét quota** |
+| **Quota thấp nhưng chưa tự xoay** | Kiểm tra xem IDE còn tác vụ đang chạy, còn bản nháp chưa gửi, đang trong cooldown 120s hay không có acc dự phòng > 20% |
+| **Trạng thái `NeedsAttention` / `Switching` kéo dài** | Xem `rotator.log`, đóng/mở lại Antigravity nếu cần rồi bấm **Quét quota** hoặc chạy `.\AutoRotator.ps1 -Reconcile` |
 
-Rê chuột lên ô Argon để xem nguồn và giải thích. Vòng tròn ưu tiên dữ liệu model để thể hiện trạng thái từng biến thể; nếu không có mục model nhưng có quota Argon tổng hợp hợp lệ, hiển thị quota tổng hợp và ghi nguồn trong tooltip. Engine xoay vẫn ưu tiên quota Argon tổng hợp như trước. Nếu hai nguồn cập nhật lệch thời điểm, xem nút ⓘ để đối chiếu. Quota theo model không mặc định là quota tuần và không được thay bằng quota Gemini thông thường.
+---
 
-**Nếu tài khoản được cấp Argon sau này:** Hub kiểm tra lại quyền và quota ở mỗi lượt quét, không lưu cố định trạng thái “Chưa được cấp”. Khi API Google trả quota Argon hợp lệ, ô này tự đổi sang phần trăm. Với token còn hợp lệ, không cần thêm lại tài khoản, đăng nhập từng acc hay cài lại Hub.
+## Kiểm thử & Cấu trúc mã nguồn
 
-- Khi Hub đang mở, giao diện mặc định tự quét lại sau **30 giây kể từ khi lượt quét trước hoàn tất**; có thể chọn 15 / 30 / 60 giây hoặc Thủ công. Có thể mất thêm thời gian để quét hết danh sách. Đóng Hub không tắt daemon: daemon vẫn tự đọc model đang chọn và quét quota các acc để xoay khi cần. Chọn Thủ công chỉ tắt tự làm mới giao diện, không tắt daemon.
-- Bấm **Quét quota** để yêu cầu cập nhật; nếu đang quét, yêu cầu được xếp chờ. Trong lúc thêm tài khoản/xác minh, Hub có thể tạm hoãn quét.
-- Daemon quét độc lập, nghỉ **25 giây sau mỗi lượt hoàn tất**. Đóng giao diện không dừng daemon.
-
-Việc cập nhật phụ thuộc Google đã phản ánh quyền mới qua API và token còn sử dụng được. Nếu token bị thu hồi hoặc tài khoản cần xác minh, xử lý thông báo tương ứng rồi quét lại. Nếu Google đổi tên model hoặc cấu trúc API ngoài dạng đang hỗ trợ, Hub có thể cần bản cập nhật.
-
-## Xoay tự động
-
-Sau Setup không cần bật thêm: daemon đã được khởi chạy. Chuyển chỉ diễn ra khi đủ điều kiện.
-
-| Điều kiện mặc định | Giá trị |
-| --- | --- |
-| Tìm tài khoản thay thế | Quota hiệu dụng của **model đang chọn < 20%**; đúng 20% chưa xoay |
-| Tài khoản đích cho xoay tự động | Đúng model và biến thể đang chọn, API xác nhận có quyền dùng, quota hiệu dụng **> 20%** |
-| Ưu tiên | Quota hiệu dụng model đang chọn cao nhất; bằng nhau thì thứ tự tên tài khoản |
-| Khoảng nghỉ giữa lượt quét | **25 giây sau khi lượt trước hoàn tất** |
-| Khoảng chờ giữa lần chuyển | **120 giây** |
-
-Model đang chọn được xác minh qua `model-selector-trigger` và nhãn truy cập của IDE. Nếu không có bộ chọn, tên không khớp catalog, CDP lỗi hoặc nhiều cửa sổ chọn model khác nhau, **hoãn tự động**, không dùng quota Gemini thay thế. Trang `data:`/`about:blank` không thuộc phiên IDE được bỏ qua; origin mạng lạ vẫn chặn. Cửa sổ IDE phải thuộc runtime và debugger đã xác minh.
-
-Với Flash, kiểm tra thêm nhóm Gemini 5 giờ/tuần; với Claude/GPT, kiểm tra nhóm dùng chung Claude/GPT; với Argon/Carbon, kiểm tra nhóm tương ứng nếu API trả về. Phần trăm hiển thị trong vòng model có thể cao hơn quota hiệu dụng nếu nhóm tuần thấp. Không suy ra quyền từ nhãn Pro/Ultra, không lấy quota biến thể khác thay thế. Không có acc phù hợp thì giữ nguyên, không xoay qua lại.
-
-**Chuyển tay vẫn hoạt động:** nút Chuyển áp dụng cùng tiêu chí > 20% cho model đọc được, cùng bảo vệ tác vụ, bản nháp và cooldown. Nếu không xác định model, chuyển tay dùng kiểm tra Gemini/Argon cũ (5 giờ > 20%, tuần > 8%, Argon > 8% khi có); không tự suy đoán model. Thao tác tay không tắt daemon; daemon tiếp tục theo dõi sau cooldown.
-
-Google quyết định quyền dùng Argon theo tài khoản/gói; đăng nhập lại không được coi là cách tự cấp quyền. Tham khảo [bảng model chính thức](https://www.antigravity.google/docs/models/). Tên gói Pro từ API chưa đủ để tự suy ra quota Argon. Trong lần kiểm tra thực tế ngày 23/10/2026, cả 10 acc được truy vấn mà không đổi phiên IDE: 1 acc có quota Argon, 9 acc được Google trả model Argon với `disabled: true`. Hub không thể tạo phần trăm quota cho các acc này.
-
-Ví dụ: đang chọn Sonnet Medium, A còn 19% quota hiệu dụng, B còn 80%. Daemon chuyển A → B khi IDE rảnh, không có bản nháp và hết cooldown. Argon của A bằng 0% không ảnh hưởng nếu Sonnet còn tốt. Nếu đang chạy tác vụ, Hub chờ lượt quét sau chứ không cưỡng ép dừng.
-
-Quota được kiểm tra theo lượt quét, không theo từng request. Khoảng chờ 120 giây được tính theo UTC để không bị kéo dài do múi giờ Windows.
-
-Engine kiểm tra lại model và danh tính đang dùng để hủy ý định xoay cũ nếu người dùng vừa đổi model/acc; quét lại quota acc đích trong khóa chuyển. Sau đó kiểm tra trạng thái rảnh/bản nháp, ghi credential đích, khởi động lại đúng `language_server`, xác minh email mới, khôi phục đường dẫn cửa sổ và xác minh model vẫn giữ nguyên. Không xác minh được thì đưa về trạng thái cần kiểm tra thay vì báo xoay thành công.
-
-Các trường hợp hoãn:
-
-- Có tác vụ chạy hoặc không xác định được trạng thái.
-- Có bản nháp hoặc ô nhập đang được chọn trong cửa sổ Antigravity có focus. **Ô nhập trống ở cửa sổ nền không chặn chuyển.**
-- Công tắc/checkbox, radio, nút bấm, thanh trượt, bộ chọn màu và input ẩn không được tính là bản nháp. Ô nhập văn bản, nội dung soạn thảo và tệp đính kèm đã chọn vẫn được bảo vệ; mở Settings không tự động đồng nghĩa với có bản nháp.
-- Quota chưa đọc được, tài khoản đích chưa đủ quota hoặc còn thời gian chờ 120 giây.
-- Có phiên đăng nhập/chuyển khác, nhiều runtime, thiếu CDP hoặc bản Antigravity không qua kiểm tra tương thích.
-
-Đây là chuyển tài khoản Desktop giữa các lượt làm việc, **không phải proxy load balancer từng request**. Có khoảng nối lại; Hub không tự gửi lại prompt bị lỗi. Kiểm tra rảnh và restart không phải thao tác nguyên tử: vẫn có khoảng đua nếu bạn bắt đầu tác vụ ngay lúc chuyển. Khôi phục URL không khôi phục toàn bộ trạng thái trong RAM.
-
-## Xử lý sự cố
-
-| Hiện tượng | Cách xử lý |
-| --- | --- |
-| **Quota `N/A`** | Nghĩa là chưa đọc được dữ liệu, không phải 0%. Kiểm tra dòng trạng thái trên thẻ, OAuth và mạng |
-| **Argon vẫn “Chưa được cấp” sau khi đổi gói** | Bấm Quét quota và chờ hoàn tất. Nhãn phản ánh kết quả Google trả ở lượt quét; tên gói không tự xác nhận quyền model. Khi API trả quota hợp lệ, Hub tự cập nhật, không cần thêm lại acc |
-| **Cần xác minh Google để đọc quota** | Bấm Xác minh Google, hoàn tất bằng đúng tài khoản, rồi Quét Quota. API có thể trả 403 `VALIDATION_REQUIRED` dù tài khoản đã được lưu |
-| **Google thành công nhưng Hub báo `ineligible`** | Hoàn tất trang xác minh nếu Hub mở; nếu không có liên kết hỗ trợ, kiểm tra trong Antigravity chính thức. Mã này hoặc việc có AI Pro chưa đủ để kết luận nguyên nhân |
-| **Thêm tài khoản không mở trình duyệt** | Chờ thông báo tối đa 30 giây; kiểm tra ứng dụng mở HTTPS mặc định, mạng và đường dẫn helper |
-| **Lưu Acc Này không tìm thấy token** | Đăng nhập Antigravity chính thức bằng cùng người dùng Windows, chờ ứng dụng nhận tài khoản rồi thử lại |
-| **Daemon chưa chạy** | Mở lại Hub hoặc chạy Setup; kiểm tra Windows có chặn PowerShell/`wscript.exe` không |
-| **Quota thấp nhưng chưa xoay** | Chờ tác vụ, gửi/lưu bản nháp, chuyển focus sang Hub; kiểm tra quota dự phòng và thời gian chờ 120 giây |
-| **Chuyển thủ công bị hoãn** | Đọc thông báo hoặc tooltip; chuyển thủ công không bỏ qua điều kiện bảo vệ |
-| **IDE chưa hỗ trợ / chưa nhận diện** | Chờ Antigravity khởi động; dùng một runtime Desktop cục bộ. Nếu lỗi sau cập nhật, gửi phiên bản và log; không xóa kiểm tra tương thích |
-| **Đổi OAuth nhưng vẫn lỗi** | Tiến trình cũ giữ cấu hình trong bộ nhớ. Lưu công việc rồi khởi động lại Windows để nạp lại |
-
-### Trạng thái cần kiểm tra
-
-| Trạng thái | Ý nghĩa |
-| --- | --- |
-| `Prepared` | Đã chuẩn bị credential khi IDE đóng; chưa xác minh runtime mới |
-| `Switching` | Giao dịch chuyển chưa hoàn tất |
-| `Verified` | Email runtime đã được xác minh hoặc đối chiếu thành công |
-| `NeedsAttention` | Chuyển chưa được xác minh; tự động xoay tạm dừng |
-
-Nếu `Switching` kéo dài hoặc `NeedsAttention`:
-
-1. Đọc các dòng cuối `rotator.log` trong thư mục repo.
-2. Hoàn tất/lưu công việc. Nếu runtime còn dùng tài khoản khác credential đã khôi phục, đóng và mở lại Antigravity.
-3. Bấm **Quét Quota**, hoặc chạy:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AutoRotator.ps1 -Reconcile
-```
-
-Lệnh chỉ đối chiếu danh tính và cập nhật trạng thái khi khớp; không ép chuyển hay restart IDE. Không xóa `rotation-state.json` để bỏ qua xác minh. Không dùng `-RunOnce` chỉ để xem trạng thái: lệnh có thể chuyển tài khoản thật.
-
-Khi [báo lỗi](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/issues), gửi phiên bản Antigravity, thao tác, thời điểm và đoạn log liên quan. Che email nếu cần; không gửi token, secret, URL xác minh có query hoặc thư mục tài khoản.
-
-## Cập nhật và tắt chạy nền
-
-### Cập nhật bản clone bằng Git
-
-1. Chờ đăng nhập/chuyển tài khoản kết thúc, lưu công việc và đóng Hub.
-2. Sao lưu dữ liệu riêng tư vào nơi chỉ bạn truy cập được nếu cần.
-3. Trong thư mục repo, chạy:
-
-```powershell
-git status --short
-git pull --ff-only
-```
-
-Nếu Git báo sửa đổi cục bộ hoặc không thể fast-forward, giữ nguyên dữ liệu và xử lý thay đổi trước; không dùng `reset --hard` để ép cập nhật.
-
-4. Khởi động lại Windows sau khi lưu công việc để daemon nạp code mới, rồi mở Hub. Chỉ đóng/mở Hub không cập nhật daemon đang chạy.
-
-Với ZIP: giải nén bản mới vào thư mục khác, giữ bản cũ làm sao lưu. Khi tiến trình cũ đã dừng, chuyển `accounts/` và cấu hình OAuth sang thư mục mới **trên cùng máy/người dùng Windows**, rồi chạy Setup ở đó. Không dùng cách này để bỏ qua trạng thái `NeedsAttention`; cần đối chiếu trạng thái trước. Không chạy hai bản Hub/daemon đồng thời.
-
-### Tắt Startup hoặc gỡ Hub
-
-1. Nhấn **Win + R**, nhập `shell:startup`, Enter.
-2. Xóa shortcut **AntigravityAutoRotator** để ngừng tự chạy cùng Windows.
-3. Chờ đăng nhập/chuyển hoàn tất, lưu công việc rồi đăng xuất Windows hoặc khởi động lại máy để dừng daemon hiện tại.
-
-Mở Hub sẽ tự khởi chạy daemon dù đã xóa shortcut Startup. Muốn gỡ hẳn, sau khi dừng tiến trình hãy xóa shortcut Desktop và thư mục repo nếu không cần dữ liệu. Thao tác này không gỡ Antigravity hoặc đăng xuất Google trong ứng dụng chính thức.
-
-## Kết nối MCP
-
-Phần này **tùy chọn**. Bỏ qua nếu chỉ dùng giao diện Hub.
-
-```powershell
-# Chỉ đọc trạng thái và quota
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Configure-Mcp.ps1
-
-# Cho phép thao tác chuyển tài khoản
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Configure-Mcp.ps1 -AllowSwitch
-```
-
-Script in JSON theo đường dẫn clone thực tế. Ghép riêng mục `antigravity-auto-hub` vào cấu hình client, giữ các server khác rồi khởi động lại kết nối. Script không tự sửa cấu hình ứng dụng khác.
-
-| Tool | Quyền |
-| --- | --- |
-| `antigravity_status`, `antigravity_accounts` | Đọc trạng thái và quota |
-| `antigravity_rotate_if_needed`, `antigravity_switch_account`, `antigravity_reconcile` | Cần `-AllowSwitch` |
-
-Server dùng **stdio**, không có URL HTTP/SSE hoặc API model. Nó điều khiển Desktop của cùng người dùng Windows, không đổi token của MCP/proxy từ xa có kho riêng. **OmniLogin thực tế chưa được kiểm chứng.** Xem [MCP.md](MCP.md) để cấu hình và xử lý timeout.
-
-## Dữ liệu và bảo mật
-
-| Vị trí | Nội dung |
-| --- | --- |
-| `accounts/*.json` | Token tài khoản; file **không được Hub mã hóa DPAPI** |
-| `oauth.local.clixml` | Cấu hình OAuth; secret được DPAPI bảo vệ |
-| Windows Credential Manager | Credential Antigravity dùng chung |
-| `%USERPROFILE%\.gemini\jetski-standalone-oauth-token` | Token dự phòng engine có thể ghi/khôi phục |
-| `rotation-state.json`, `current_active.txt` | Trạng thái chuyển và nhãn tài khoản |
-| `rotator.log` | Log vận hành, có thể chứa tên tài khoản/email |
-
-`.gitignore` loại dữ liệu riêng tư và `work/` khỏi Git, nhưng **không ngăn phần mềm đồng bộ khác sao chép chúng**. Bảo vệ thư mục repo và bản sao lưu. DPAPI không mang sang máy/người dùng khác được; cần cấu hình lại tại đó.
-
-Hub không chủ động sửa source, `.env` hoặc biến môi trường dự án. Tuy nhiên, credential dùng chung và restart language server ảnh hưởng phiên Antigravity. MCP chỉ trả trường được chọn, không trả token/CSRF. Source hiện tại không có client secret dùng sẵn; điều này không xóa dữ liệu có thể từng tồn tại trong lịch sử Git.
-
-## Dành cho người phát triển
-
-### Kiểm thử
-
-Bản quét Argon [`0bc7761`](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/commit/0bc7761), ngày **23/10/2026**: **293 mục PASS** trên máy phát triển; [Windows CI thành công](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/runs/39902541677). Kiểm thử bao gồm fallback theo model, phân biệt bị tắt/0%/chưa rõ, lỗi mạng và tránh xoay do cạn Argon sang tài khoản không có quota Argon đã xác nhận.
-
-Kiểm tra chỉ đọc trên máy thật cùng ngày: đọc quota Gemini của **10/10 tài khoản**, trong đó **1 tài khoản có quota Argon** và **9 tài khoản được API đánh dấu Argon bị tắt**. Đây là kết quả tại thời điểm kiểm tra, không phải danh sách quyền cố định; không chuyển tài khoản trong IDE để thực hiện phép kiểm tra này. Các mốc kiểm thử cũ được giữ bên dưới để tham khảo lịch sử.
-
-Cần Windows PowerShell 5.1, WPF và Node.js:
+Chạy toàn bộ bộ kiểm thử tự động trên Windows:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\tests\Validate.ps1
 ```
 
-Ngày **05/10/2026**, local đạt **156 mục PASS**, gồm kiểm tra bản Antigravity đã cài. Runner không cài Antigravity bỏ qua kiểm tra bản cài, còn **155 mục PASS**. Kiểm thử giao dịch dùng mock, không đổi tài khoản thật; có kiểm thử ngưỡng 20% và thời gian chờ khi đọc timestamp UTC từ file.
-
-Ngày **12/10/2026**, local đạt **162 mục PASS**, gồm kiểm tra tương thích bản cài **2.22.0.0** và 6 kiểm tra nạp cấu hình OAuth: thư mục clone có dấu cách, thiếu/hỏng cấu hình, thứ tự ưu tiên biến môi trường và cấu hình đã nạp. Kiểm tra OAuth dùng credential giả và mock mạng; chưa xác minh lại luồng đăng nhập thật trên máy khác. Runner không cài Antigravity có **161 mục PASS**.
-
-Dashboard có thêm **23 kiểm thử WPF** cho số lượng, tìm kiếm/lọc/sắp xếp, nút thao tác theo dòng, điều hướng, trạng thái rỗng, nhật ký và quét bất đồng bộ. Tổng cộng **185 mục PASS** local, **184 mục** trên runner không cài Antigravity. Ngày **13/10/2026**, pipeline đọc dashboard thực tế nhận đủ **8 tài khoản có quota**, runtime và daemon được nhận diện; không thực hiện chuyển tài khoản thật trong lần kiểm tra giao diện này.
-
-Ngày **21/10/2026**, bổ sung kiểm thử tự cấu hình OAuth và chạy script Setup thực tế trong thư mục clone giả lập có dấu cách: cài mới, cấu hình cũ/hỏng, ưu tiên biến môi trường, mã hóa DPAPI, mất mạng, token bị từ chối, chưa đăng nhập và thiếu Antigravity. Mạng và credential trong các kiểm thử này đều được giả lập. Bộ đọc helper đã tìm thấy bộ cấu hình đang dùng trong bản Antigravity cài trên máy phát triển; chưa xác minh trọn luồng OAuth thật trên máy mới. `Setup.ps1 -ConfigureOnly` cho phép kiểm tra trên máy đích mà không tạo shortcut/chạy daemon.
-
-Workflow [Windows validation](.github/workflows/validate.yml) chạy khi push/PR. [CI bản sửa focus `6c99e18`](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/runs/36971936784) đã thành công.
-
-### Mức độ kiểm chứng
-
-| Hạng mục | Bằng chứng |
+| File / Thư mục | Vai trò |
 | --- | --- |
-| Lưu Acc Này | Người dùng xác nhận hoạt động; file token đã kiểm tra hợp lệ |
-| Quota, email runtime, trạng thái rảnh và ô nhập | Đã truy vấn trên máy thật |
-| Chuyển tự động | Log 02/10/2026 12:56:17 xác nhận thành công; runtime, credential và state khớp. Chưa kiểm chứng lượt chat mới sau chuyển hoặc ép chuyển lại sau bản sửa focus |
-| Thêm Tài Khoản Mới qua helper | Mở được Google và có bước chờ xác minh; test đạt. Chưa xác nhận toàn bộ luồng lưu tài khoản thật sau sửa |
-| MCP stdio | Đã kiểm thử giao thức và đọc trạng thái thật; chưa kiểm chứng chuyển thật qua MCP/OmniLogin |
+| `MainWindow.xaml`, `AntigravityHub.ps1` | Giao diện WPF và khởi chạy ứng dụng |
+| `Dashboard.ps1`, `DashboardText.vi.json` | Dữ liệu dashboard, quét nền, lọc/sắp xếp, nhật ký và chuỗi tiếng Việt |
+| `ModelQuota.ps1` | Chuẩn hóa họ model (`Flash`, `Argon`, `Hydrogen`, `Carbon`, `Opus`, `Sonnet`, `GptOss`) và nhóm quota |
+| `AutoRotator.ps1`, `RotationCore.ps1` | Engine daemon, đọc quota, chọn tài khoản đích và chuyển đổi an toàn |
+| `RuntimeBridge.ps1`, `AccountLogin.ps1` | Giao tiếp runtime/CDP, kiểm tra rảnh/bản nháp và hỗ trợ đăng nhập |
+| `Setup.ps1`, `OAuthSetup.ps1`, `Setup-Install.bat` | Cài đặt, tự dò/xác minh OAuth và tạo shortcut |
+| `AntigravityMcp.ps1`, `MCP.md` | Máy chủ MCP stdio đọc trạng thái và điều phối |
+| `tests/` | Bộ kiểm thử giao diện, layout, model, xoay tài khoản và MCP |
 
-### Cấu trúc mã nguồn
-
-| File / thư mục | Vai trò |
-| --- | --- |
-| `AntigravityHub.ps1`, `MainWindow.xaml` | Giao diện |
-| `Dashboard.ps1`, `DashboardText.vi.json` | Dữ liệu dashboard, quét nền, bộ lọc và nhật ký; nhãn tiếng Việt UTF-8 |
-| `AccountLogin.ps1` | Helper đăng nhập và xác minh Google |
-| `AutoRotator.ps1` | Cấu hình, Credential Manager, thông báo, daemon |
-| `RotationCore.ps1` | Quota, chọn tài khoản, chuyển và khôi phục |
-| `ModelQuota.ps1` | Chuẩn hóa quota từng model, nhóm quota và giờ reset; không ghi token hoặc thay đổi chính sách xoay |
-| `WindowBounds.ps1` | Giới hạn phóng to theo vùng làm việc của màn hình hiện tại, tránh taskbar che footer |
-| `RuntimeBridge.ps1` | Runtime/CDP, kiểm tra rảnh và bản nháp |
-| `AntigravityMcp.ps1` | MCP stdio |
-| `OAuthSetup.ps1`, `Configure-OAuth.ps1`, `Configure-Mcp.ps1` | Tự dò/xác minh OAuth, cấu hình OAuth thủ công và MCP |
-| `Setup-Install.bat`, `Setup.ps1`, `launch-*.vbs` | Kiểm tra điều kiện cài, tự cấu hình OAuth, cài shortcut và khởi chạy |
-| `tests/` | Kiểm thử engine, đăng nhập, quota, cửa sổ và MCP |
-
-PowerShell giữ ASCII; chuỗi tiếng Việt dùng mã Unicode hoặc resource `DashboardText.vi.json`. XAML, JSON và Markdown dùng UTF-8. Khi đóng góp, giữ điều kiện bảo vệ tác vụ/bản nháp, không commit credential và nêu rõ phần đã kiểm thử thực tế.
+> **Bảo mật:** Credential tài khoản (`accounts/*.json`) và cấu hình OAuth (`oauth.local.clixml`) được lưu cục bộ trên máy và tự động loại trừ khỏi Git qua `.gitignore`. Không chia sẻ token, secret hay thư mục `accounts/` khi báo lỗi.
