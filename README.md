@@ -3,6 +3,7 @@
 **Quản lý đa tài khoản, theo dõi quota theo từng model và tự động xoay tài khoản Antigravity Desktop trên Windows.**
 
 [![Windows validation](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/workflows/validate.yml/badge.svg)](https://github.com/datdtpl-maker/Antigravity-Auto-Hub/actions/workflows/validate.yml)
+[![Author](https://img.shields.io/badge/Author-Danny%20DT-0F766E)](https://github.com/datdtpl-maker)
 
 ---
 
@@ -128,3 +129,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\tests\Validate.ps
 | `tests/` | Bộ kiểm thử giao diện, layout, model, xoay tài khoản và MCP |
 
 > **Bảo mật:** Credential tài khoản (`accounts/*.json`) và cấu hình OAuth (`oauth.local.clixml`) được lưu cục bộ trên máy và tự động loại trừ khỏi Git qua `.gitignore`. Không chia sẻ token, secret hay thư mục `accounts/` khi báo lỗi.
+
+---
+
+## Tác giả
+
+Phát triển và duy trì bởi **Danny DT** — [github.com/datdtpl-maker](https://github.com/datdtpl-maker)
+
+<sub>© 2026 Danny DT · Antigravity Auto-Hub</sub>
