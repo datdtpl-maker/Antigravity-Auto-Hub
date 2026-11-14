@@ -248,6 +248,7 @@ Các trường hợp hoãn:
 
 - Có tác vụ chạy hoặc không xác định được trạng thái.
 - Có bản nháp hoặc ô nhập đang được chọn trong cửa sổ Antigravity có focus. **Ô nhập trống ở cửa sổ nền không chặn chuyển.**
+- Công tắc/checkbox, radio, nút bấm, thanh trượt, bộ chọn màu và input ẩn không được tính là bản nháp. Ô nhập văn bản, nội dung soạn thảo và tệp đính kèm đã chọn vẫn được bảo vệ; mở Settings không tự động đồng nghĩa với có bản nháp.
 - Quota chưa đọc được, tài khoản đích chưa đủ quota hoặc còn thời gian chờ 120 giây.
 - Có phiên đăng nhập/chuyển khác, nhiều runtime, thiếu CDP hoặc bản Antigravity không qua kiểm tra tương thích.
 

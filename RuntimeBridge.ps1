@@ -261,11 +261,17 @@ function Get-RuntimeWindows {
         # Do not capture draft content. Only a boolean leaves the renderer.
         $expression = @'
 (() => {
-  const a = document.activeElement;
-  // activeElement survives window blur; an empty background composer is safe.
-  if (document.hasFocus() && a && (a.matches('input,textarea,[contenteditable="true"]') || a.closest('[contenteditable="true"]'))) return false;
-  return !Array.from(document.querySelectorAll('textarea,input:not([type="hidden"]),[contenteditable="true"]'))
-    .some(e => (e.value || e.textContent || '').trim().length > 0);
+  const nonDraftTypes = new Set(['hidden', 'checkbox', 'radio', 'button', 'submit', 'reset', 'image', 'range', 'color']);
+  const isDraftControl = element => !!element && (
+    element.matches('textarea,input')
+      ? !(element.matches('input') && nonDraftTypes.has(element.type))
+      : element.isContentEditable === true);
+  const activeElement = document.activeElement;
+  if (document.hasFocus() && activeElement && (isDraftControl(activeElement) ||
+    isDraftControl(activeElement.closest('[contenteditable]')))) return false;
+  return !Array.from(document.querySelectorAll('textarea,input,[contenteditable]'))
+    .filter(isDraftControl)
+    .some(element => (element.value || element.textContent || '').trim().length > 0);
 })()
 '@
         $response = [AntigravityLocalRpc]::Cdp($ws.AbsoluteUri, (@{id=1;method='Runtime.evaluate';params=@{expression=$expression;returnByValue=$true}} | ConvertTo-Json -Depth 5 -Compress)) | ConvertFrom-Json
