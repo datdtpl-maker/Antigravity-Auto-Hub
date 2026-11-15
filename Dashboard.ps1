@@ -240,15 +240,70 @@ function Update-HubHistory {
     }
 }
 
+function Set-HubTheme {
+    param([string]$Theme = 'Light')
+    $isAmoled = ($Theme -eq 'Amoled')
+    $script:HubCurrentTheme = if ($isAmoled) { 'Amoled' } else { 'Light' }
+    $palette = if ($isAmoled) {
+        @{
+            BgWindow='#000000'; BgSurface='#0A0A0A'; BgSurfaceAlt='#121212'; BgSurfaceHover='#1A1A1A'
+            BgActiveRow='#052E2B'; BgSelectedRow='#0F172A'; BgFocusCell='#08332E'
+            BgPillBar='#141414'; BgPillActive='#262626'; BgInput='#0A0A0A'
+            BgNavActive='#08332E'; FgNavActive='#2DD4BF'
+            BorderLine='#1F1F1F'; BorderControl='#2E2E2E'; BorderOuter='#262626'; GridDivider='#171717'
+            RingTrack='#222222'; ScrollThumb='#333333'
+            FgPrimary='#F8FAFC'; FgSecondary='#CBD5E1'; FgHeader='#94A3B8'; FgMuted='#94A3B8'; FgSubtle='#64748B'
+            Accent='#14B8A6'; AccentHover='#0D9488'
+            BgStatusActive='#042420'; BorderStatusActive='#065F46'; FgStatusPrimary='#6EE7B7'; FgStatusSecondary='#34D399'
+            BgPlanDefault='#1A1A1A'; BorderPlanDefault='#2E2E2E'; FgPlanDefault='#CBD5E1'
+            BgPlanPro='#0C2D48'; BorderPlanPro='#0369A1'; FgPlanPro='#38BDF8'
+            BgPlanUltra='#2A1B02'; BorderPlanUltra='#B45309'; FgPlanUltra='#FBBF24'
+        }
+    } else {
+        @{
+            BgWindow='#F1F5F9'; BgSurface='#FFFFFF'; BgSurfaceAlt='#F8FAFC'; BgSurfaceHover='#F8FAFC'
+            BgActiveRow='#F0FDFA'; BgSelectedRow='#EFF6FF'; BgFocusCell='#CCFBF1'
+            BgPillBar='#F1F5F9'; BgPillActive='#FFFFFF'; BgInput='#FFFFFF'
+            BgNavActive='#F0FDFA'; FgNavActive='#0F766E'
+            BorderLine='#E2E8F0'; BorderControl='#CBD5E1'; BorderOuter='#CBD5E1'; GridDivider='#F1F5F9'
+            RingTrack='#E2E8F0'; ScrollThumb='#CBD5E1'
+            FgPrimary='#0F172A'; FgSecondary='#334155'; FgHeader='#475569'; FgMuted='#64748B'; FgSubtle='#94A3B8'
+            Accent='#0F766E'; AccentHover='#0D9488'
+            BgStatusActive='#ECFDF5'; BorderStatusActive='#A7F3D0'; FgStatusPrimary='#065F46'; FgStatusSecondary='#047857'
+            BgPlanDefault='#F1F5F9'; BorderPlanDefault='#CBD5E1'; FgPlanDefault='#334155'
+            BgPlanPro='#EFF6FF'; BorderPlanPro='#93C5FD'; FgPlanPro='#1D4ED8'
+            BgPlanUltra='#FEF3C7'; BorderPlanUltra='#F59E0B'; FgPlanUltra='#B45309'
+        }
+    }
+    foreach ($k in $palette.Keys) {
+        if ($window.Resources.Contains($k)) {
+            $window.Resources[$k] = [Windows.Media.SolidColorBrush]::new([Windows.Media.ColorConverter]::ConvertFromString($palette[$k]))
+        }
+    }
+    $btnTheme = $window.FindName('BtnToggleTheme')
+    if ($btnTheme) {
+        $btnTheme.Content = if ($isAmoled) { [string][char]0xE706 } else { [string][char]0xE708 }
+    }
+}
+
 function Update-HubSettingsUi {
-    $cfg=if(Get-Command Get-HubConfig -ErrorAction SilentlyContinue){Get-HubConfig}else{[pscustomobject]@{AutoRotationEnabled=$true;MinQuotaPercent=20;CooldownSeconds=120;EnableNotifications=$true}}
+    $cfg=if(Get-Command Get-HubConfig -ErrorAction SilentlyContinue){Get-HubConfig}else{[pscustomobject]@{AutoRotationEnabled=$true;MinQuotaPercent=20;CooldownSeconds=120;EnableNotifications=$true;Theme='Light'}}
+    $theme = if ($cfg.PSObject.Properties['Theme'] -and $cfg.Theme -eq 'Amoled') { 'Amoled' } else { 'Light' }
+    Set-HubTheme $theme
     $enabled=[bool]$cfg.AutoRotationEnabled
     $btnToggle=$window.FindName('BtnToggleRotation')
     if($btnToggle){$btnToggle.Content=if($enabled){Get-HubText BtnPauseRotation}else{Get-HubText BtnResumeRotation}}
     $area=$window.FindName('StatusArea');$dot=$window.FindName('StatusDot')
     if($area -and $dot){
-        if($enabled){$area.Background='#ECFDF5';$area.BorderBrush='#A7F3D0';$dot.Fill='#10B981'}
-        else{$area.Background='#FFFBEB';$area.BorderBrush='#FDE68A';$dot.Fill='#D97706'}
+        if($enabled){
+            $area.Background = if($theme -eq 'Amoled'){'#042420'}else{'#ECFDF5'}
+            $area.BorderBrush = if($theme -eq 'Amoled'){'#065F46'}else{'#A7F3D0'}
+            $dot.Fill='#10B981'
+        } else {
+            $area.Background = if($theme -eq 'Amoled'){'#2A1B02'}else{'#FFFBEB'}
+            $area.BorderBrush = if($theme -eq 'Amoled'){'#92400E'}else{'#FDE68A'}
+            $dot.Fill='#D97706'
+        }
     }
     $pt=$window.FindName('TxtPolicyThreshold');if($pt){$pt.Text="Model < $($cfg.MinQuotaPercent)%"}
     $pg=$window.FindName('TxtPolicyTarget');if($pg){$pg.Text="Acc > $($cfg.MinQuotaPercent)%"}
@@ -258,31 +313,41 @@ function Update-HubSettingsUi {
     if($cboThresh){foreach($item in $cboThresh.Items){if([int]$item.Tag -eq [int]$cfg.MinQuotaPercent){$cboThresh.SelectedItem=$item;break}}}
     $cboCool=$window.FindName('CboCooldown')
     if($cboCool){foreach($item in $cboCool.Items){if([int]$item.Tag -eq [int]$cfg.CooldownSeconds){$cboCool.SelectedItem=$item;break}}}
+    $cboTheme=$window.FindName('CboTheme')
+    if($cboTheme){foreach($item in $cboTheme.Items){if([string]$item.Tag -eq $theme){$cboTheme.SelectedItem=$item;break}}}
     if($script:HubTrayToggleItem){$script:HubTrayToggleItem.Text=if($enabled){Get-HubText BtnPauseRotation}else{Get-HubText BtnResumeRotation}}
 }
 
 function Show-HubDetailsDialog {
     param($Account)
+    $isDark=($script:HubCurrentTheme -eq 'Amoled')
+    $bgWin=if($isDark){'#000000'}else{'#F1F5F9'}
+    $bgCard=if($isDark){'#0A0A0A'}else{'#FFFFFF'}
+    $bdrCard=if($isDark){'#1F1F1F'}else{'#E2E8F0'}
+    $fgPri=if($isDark){'#F8FAFC'}else{'#0F172A'}
+    $fgMut=if($isDark){'#94A3B8'}else{'#64748B'}
+    $fgAcc=if($isDark){'#2DD4BF'}else{'#0F766E'}
+    $fgWarn=if($isDark){'#FBBF24'}else{'#B45309'}
     $dialog=[Windows.Window]::new()
     $dialog.Title=Get-HubText DetailsTitle;$dialog.Width=740;$dialog.Height=620
-    $dialog.Owner=$window;$dialog.WindowStartupLocation='CenterOwner';$dialog.Background='#F1F5F9'
+    $dialog.Owner=$window;$dialog.WindowStartupLocation='CenterOwner';$dialog.Background=$bgWin
     $scroll=[Windows.Controls.ScrollViewer]::new();$scroll.VerticalScrollBarVisibility='Auto';$scroll.Padding=[Windows.Thickness]::new(20)
     $root=[Windows.Controls.StackPanel]::new()
-    $hdr=[Windows.Controls.Border]::new();$hdr.Background='#FFFFFF';$hdr.BorderBrush='#E2E8F0';$hdr.BorderThickness=[Windows.Thickness]::new(1);$hdr.CornerRadius=[Windows.CornerRadius]::new(10);$hdr.Padding=[Windows.Thickness]::new(16,14,16,14);$hdr.Margin=[Windows.Thickness]::new(0,0,0,14)
+    $hdr=[Windows.Controls.Border]::new();$hdr.Background=$bgCard;$hdr.BorderBrush=$bdrCard;$hdr.BorderThickness=[Windows.Thickness]::new(1);$hdr.CornerRadius=[Windows.CornerRadius]::new(10);$hdr.Padding=[Windows.Thickness]::new(16,14,16,14);$hdr.Margin=[Windows.Thickness]::new(0,0,0,14)
     $hdrStack=[Windows.Controls.StackPanel]::new()
-    $title=[Windows.Controls.TextBlock]::new();$title.Text="$($Account.AccountName)  [$($Account.PlanText)]";$title.FontSize=18;$title.FontWeight='Bold';$title.Foreground='#0F172A'
-    $emailTxt=[Windows.Controls.TextBlock]::new();$emailTxt.Text=$Account.Email;$emailTxt.FontSize=12.5;$emailTxt.Foreground='#64748B';$emailTxt.Margin=[Windows.Thickness]::new(0,2,0,4)
-    $hintTxt=[Windows.Controls.TextBlock]::new();$hintTxt.Text=Get-HubText DetailsHint;$hintTxt.FontSize=11.5;$hintTxt.Foreground='#64748B';$hintTxt.TextWrapping='Wrap'
+    $title=[Windows.Controls.TextBlock]::new();$title.Text="$($Account.AccountName)  [$($Account.PlanText)]";$title.FontSize=18;$title.FontWeight='Bold';$title.Foreground=$fgPri
+    $emailTxt=[Windows.Controls.TextBlock]::new();$emailTxt.Text=$Account.Email;$emailTxt.FontSize=12.5;$emailTxt.Foreground=$fgMut;$emailTxt.Margin=[Windows.Thickness]::new(0,2,0,4)
+    $hintTxt=[Windows.Controls.TextBlock]::new();$hintTxt.Text=Get-HubText DetailsHint;$hintTxt.FontSize=11.5;$hintTxt.Foreground=$fgMut;$hintTxt.TextWrapping='Wrap'
     $null=$hdrStack.Children.Add($title);$null=$hdrStack.Children.Add($emailTxt);$null=$hdrStack.Children.Add($hintTxt)
     $hdr.Child=$hdrStack;$null=$root.Children.Add($hdr)
 
-    $grpCard=[Windows.Controls.Border]::new();$grpCard.Background='#FFFFFF';$grpCard.BorderBrush='#E2E8F0';$grpCard.BorderThickness=[Windows.Thickness]::new(1);$grpCard.CornerRadius=[Windows.CornerRadius]::new(10);$grpCard.Padding=[Windows.Thickness]::new(16,14,16,14);$grpCard.Margin=[Windows.Thickness]::new(0,0,0,14)
+    $grpCard=[Windows.Controls.Border]::new();$grpCard.Background=$bgCard;$grpCard.BorderBrush=$bdrCard;$grpCard.BorderThickness=[Windows.Thickness]::new(1);$grpCard.CornerRadius=[Windows.CornerRadius]::new(10);$grpCard.Padding=[Windows.Thickness]::new(16,14,16,14);$grpCard.Margin=[Windows.Thickness]::new(0,0,0,14)
     $grpStack=[Windows.Controls.StackPanel]::new()
-    $grpHdr=[Windows.Controls.TextBlock]::new();$grpHdr.Text=Get-HubText GroupQuotas;$grpHdr.FontSize=11;$grpHdr.FontWeight='Bold';$grpHdr.Foreground='#0F766E';$grpHdr.Margin=[Windows.Thickness]::new(0,0,0,10)
+    $grpHdr=[Windows.Controls.TextBlock]::new();$grpHdr.Text=Get-HubText GroupQuotas;$grpHdr.FontSize=11;$grpHdr.FontWeight='Bold';$grpHdr.Foreground=$fgAcc;$grpHdr.Margin=[Windows.Thickness]::new(0,0,0,10)
     $null=$grpStack.Children.Add($grpHdr)
     $groups=@($Account.QuotaGroups)
     if(-not $groups.Count){
-        $emptyG=[Windows.Controls.TextBlock]::new();$emptyG.Text=Get-HubText DetailsNoGroups;$emptyG.Foreground='#64748B';$null=$grpStack.Children.Add($emptyG)
+        $emptyG=[Windows.Controls.TextBlock]::new();$emptyG.Text=Get-HubText DetailsNoGroups;$emptyG.Foreground=$fgMut;$null=$grpStack.Children.Add($emptyG)
     } else {
         foreach($g in $groups){
             $pct=if($g.Remaining -ge 0){[math]::Round($g.Remaining*100,1)}else{-1}
@@ -291,23 +356,23 @@ function Show-HubDetailsDialog {
             $c2=[Windows.Controls.ColumnDefinition]::new();$c2.Width='Auto'
             $null=$row.ColumnDefinitions.Add($c1);$null=$row.ColumnDefinitions.Add($c2)
             $left=[Windows.Controls.StackPanel]::new()
-            $nm=[Windows.Controls.TextBlock]::new();$nm.Text="$($g.Name) ($($g.Window))";$nm.FontWeight='SemiBold';$nm.Foreground='#0F172A'
-            $rs=[Windows.Controls.TextBlock]::new();$rs.Text=(Format-HubQuotaReset $g.ResetAt);$rs.FontSize=11.5;$rs.Foreground='#64748B'
+            $nm=[Windows.Controls.TextBlock]::new();$nm.Text="$($g.Name) ($($g.Window))";$nm.FontWeight='SemiBold';$nm.Foreground=$fgPri
+            $rs=[Windows.Controls.TextBlock]::new();$rs.Text=(Format-HubQuotaReset $g.ResetAt);$rs.FontSize=11.5;$rs.Foreground=$fgMut
             $null=$left.Children.Add($nm);$null=$left.Children.Add($rs)
-            $val=[Windows.Controls.TextBlock]::new();$val.Text=if($pct -ge 0){"$pct%"}else{Get-HubText ModelUnknown};$val.FontWeight='Bold';$val.FontSize=14;$val.Foreground=if($pct -gt 20){'#0F766E'}elseif($pct -ge 0){'#B45309'}else{'#64748B'};$val.VerticalAlignment='Center'
+            $val=[Windows.Controls.TextBlock]::new();$val.Text=if($pct -ge 0){"$pct%"}else{Get-HubText ModelUnknown};$val.FontWeight='Bold';$val.FontSize=14;$val.Foreground=if($pct -gt 20){$fgAcc}elseif($pct -ge 0){$fgWarn}else{$fgMut};$val.VerticalAlignment='Center'
             [Windows.Controls.Grid]::SetColumn($val,1);$null=$row.Children.Add($left);$null=$row.Children.Add($val)
             $null=$grpStack.Children.Add($row)
         }
     }
     $grpCard.Child=$grpStack;$null=$root.Children.Add($grpCard)
 
-    $mdlCard=[Windows.Controls.Border]::new();$mdlCard.Background='#FFFFFF';$mdlCard.BorderBrush='#E2E8F0';$mdlCard.BorderThickness=[Windows.Thickness]::new(1);$mdlCard.CornerRadius=[Windows.CornerRadius]::new(10);$mdlCard.Padding=[Windows.Thickness]::new(16,14,16,14)
+    $mdlCard=[Windows.Controls.Border]::new();$mdlCard.Background=$bgCard;$mdlCard.BorderBrush=$bdrCard;$mdlCard.BorderThickness=[Windows.Thickness]::new(1);$mdlCard.CornerRadius=[Windows.CornerRadius]::new(10);$mdlCard.Padding=[Windows.Thickness]::new(16,14,16,14)
     $mdlStack=[Windows.Controls.StackPanel]::new()
-    $mdlHdr=[Windows.Controls.TextBlock]::new();$mdlHdr.Text=Get-HubText AllModels;$mdlHdr.FontSize=11;$mdlHdr.FontWeight='Bold';$mdlHdr.Foreground='#0F766E';$mdlHdr.Margin=[Windows.Thickness]::new(0,0,0,10)
+    $mdlHdr=[Windows.Controls.TextBlock]::new();$mdlHdr.Text=Get-HubText AllModels;$mdlHdr.FontSize=11;$mdlHdr.FontWeight='Bold';$mdlHdr.Foreground=$fgAcc;$mdlHdr.Margin=[Windows.Thickness]::new(0,0,0,10)
     $null=$mdlStack.Children.Add($mdlHdr)
     $models=@($Account.ModelQuotas | Sort-Object Name)
     if(-not $models.Count){
-        $emptyM=[Windows.Controls.TextBlock]::new();$emptyM.Text=Get-HubText DetailsNoModels;$emptyM.Foreground='#64748B';$null=$mdlStack.Children.Add($emptyM)
+        $emptyM=[Windows.Controls.TextBlock]::new();$emptyM.Text=Get-HubText DetailsNoModels;$emptyM.Foreground=$fgMut;$null=$mdlStack.Children.Add($emptyM)
     } else {
         foreach($m in $models){
             $pct=if($m.Status -eq 'Available'){[math]::Round($m.Remaining*100,1)}else{-1}
@@ -316,11 +381,11 @@ function Show-HubDetailsDialog {
             $c2=[Windows.Controls.ColumnDefinition]::new();$c2.Width='Auto'
             $null=$row.ColumnDefinitions.Add($c1);$null=$row.ColumnDefinitions.Add($c2)
             $left=[Windows.Controls.StackPanel]::new()
-            $nm=[Windows.Controls.TextBlock]::new();$nm.Text=$m.Name;$nm.FontWeight='Medium';$nm.Foreground='#0F172A'
-            $rs=[Windows.Controls.TextBlock]::new();$rs.Text=(Format-HubQuotaReset $m.ResetAt);$rs.FontSize=11;$rs.Foreground='#64748B'
+            $nm=[Windows.Controls.TextBlock]::new();$nm.Text=$m.Name;$nm.FontWeight='Medium';$nm.Foreground=$fgPri
+            $rs=[Windows.Controls.TextBlock]::new();$rs.Text=(Format-HubQuotaReset $m.ResetAt);$rs.FontSize=11;$rs.Foreground=$fgMut
             $null=$left.Children.Add($nm);$null=$left.Children.Add($rs)
             $valTxt=if($m.Status -eq 'Available'){"$pct%"}elseif($m.Status -eq 'Disabled'){Get-HubText ModelDisabled}else{Get-HubText ModelUnknown}
-            $val=[Windows.Controls.TextBlock]::new();$val.Text=$valTxt;$val.FontWeight='SemiBold';$val.FontSize=12.5;$val.Foreground=if($pct -gt 20){'#0F766E'}elseif($pct -ge 0){'#B45309'}else{'#64748B'};$val.VerticalAlignment='Center'
+            $val=[Windows.Controls.TextBlock]::new();$val.Text=$valTxt;$val.FontWeight='SemiBold';$val.FontSize=12.5;$val.Foreground=if($pct -gt 20){$fgAcc}elseif($pct -ge 0){$fgWarn}else{$fgMut};$val.VerticalAlignment='Center'
             [Windows.Controls.Grid]::SetColumn($val,1);$null=$row.Children.Add($left);$null=$row.Children.Add($val)
             $null=$mdlStack.Children.Add($row)
         }
@@ -457,10 +522,26 @@ function Initialize-HubDashboard {
             $cfg.EnableNotifications=[bool]$window.FindName('ChkNotifications').IsChecked
             $th=$window.FindName('CboThreshold').SelectedItem;if($th){$cfg.MinQuotaPercent=[int]$th.Tag}
             $cd=$window.FindName('CboCooldown').SelectedItem;if($cd){$cfg.CooldownSeconds=[int]$cd.Tag}
+            $tm=$window.FindName('CboTheme').SelectedItem;if($tm){$cfg.Theme=[string]$tm.Tag}
             Save-HubConfig $cfg
             Update-HubSettingsUi
             $ts=$window.FindName('TxtSettingsSaved');if($ts){$ts.Text=Get-HubText SettingsSaved}
             Load-Accounts-UI
+        })
+    }
+    $btnTheme=$window.FindName('BtnToggleTheme')
+    if($btnTheme){
+        $btnTheme.Add_Click({
+            if($Preview){
+                $next = if($script:HubCurrentTheme -eq 'Amoled'){'Light'}else{'Amoled'}
+                Set-HubTheme $next
+                return
+            }
+            $cfg=Get-HubConfig
+            $cur = if($cfg.PSObject.Properties['Theme'] -and $cfg.Theme -eq 'Amoled'){'Amoled'}else{'Light'}
+            $cfg.Theme = if($cur -eq 'Amoled'){'Light'}else{'Amoled'}
+            Save-HubConfig $cfg
+            Update-HubSettingsUi
         })
     }
     $btnChkUpd=$window.FindName('BtnCheckUpdate');$btnAppUpd=$window.FindName('BtnApplyUpdate');$txtUpd=$window.FindName('TxtUpdateStatus')

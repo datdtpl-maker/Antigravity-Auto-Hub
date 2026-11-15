@@ -115,6 +115,7 @@ function Get-HubConfig {
         MinQuotaPercent = 20
         CooldownSeconds = 120
         EnableNotifications = $true
+        Theme = 'Light'
     }
     $path = Join-Path $baseDir 'hub-config.json'
     if (Test-Path -LiteralPath $path) {
@@ -124,6 +125,7 @@ function Get-HubConfig {
             if ($null -ne $raw.MinQuotaPercent -and [int]$raw.MinQuotaPercent -ge 5 -and [int]$raw.MinQuotaPercent -le 50) { $cfg.MinQuotaPercent = [int]$raw.MinQuotaPercent }
             if ($null -ne $raw.CooldownSeconds -and [int]$raw.CooldownSeconds -ge 30 -and [int]$raw.CooldownSeconds -le 600) { $cfg.CooldownSeconds = [int]$raw.CooldownSeconds }
             if ($null -ne $raw.EnableNotifications) { $cfg.EnableNotifications = [bool]$raw.EnableNotifications }
+            if ($raw.Theme -in @('Light','Amoled')) { $cfg.Theme = [string]$raw.Theme }
         } catch {}
     }
     return $cfg
