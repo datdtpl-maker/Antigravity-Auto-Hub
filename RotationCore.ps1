@@ -401,8 +401,62 @@ function Switch-ActiveAccount {
     }
 }
 
+function Get-StoredActiveAccountName {
+    try {
+        $credRaw = Get-StoredCredential
+        if (-not $credRaw -and (Test-Path -LiteralPath $geminiTokenPath)) {
+            $credRaw = [IO.File]::ReadAllText($geminiTokenPath)
+        }
+        if (-not $credRaw) { return '' }
+        $credObj = $credRaw | ConvertFrom-Json
+        $refresh = Get-RefreshToken $credObj
+        if ($refresh -and (Test-Path -LiteralPath $accDir)) {
+            foreach ($file in (Get-ChildItem -LiteralPath $accDir -Filter '*.json')) {
+                try {
+                    $saved = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+                    if ((Get-RefreshToken $saved) -eq $refresh) { return $file.BaseName }
+                } catch {}
+            }
+        }
+        $email = Get-CredentialEmail $credRaw
+        if ($email) {
+            foreach ($account in (Get-AllAccountsQuota)) {
+                if ($account.Email -eq $email) { return $account.AccountName }
+            }
+        }
+    } catch {}
+    return ''
+}
+
+function Invoke-CliAutoRotationCheck {
+    param($Config, [double]$Threshold)
+    $activeName = Get-StoredActiveAccountName
+    if (-not $activeName) { Write-RotatorLog 'CLI mode: active credential not matched to account pool; monitoring only.'; return }
+    $accounts = @(Get-AllAccountsQuota -IncludeModels)
+    $current = $accounts | Where-Object { $_.AccountName -eq $activeName } | Select-Object -First 1
+    if (-not $current -or -not $current.Success) { Write-RotatorLog 'CLI mode: active account quota unknown; no rotation.'; return }
+    $g5 = if ($current.Gemini5H -ge 0) { "$([math]::Round($current.Gemini5H*100,1))%" } else { 'N/A' }
+    $gw = if ($current.GeminiWeekly -ge 0) { "$([math]::Round($current.GeminiWeekly*100,1))%" } else { 'N/A' }
+    Write-RotatorLog "CLI active [$($current.AccountName)]: Gemini5H=$g5 Weekly=$gw."
+    $low5h = ($current.Gemini5H -ge 0 -and $current.Gemini5H -lt $Threshold)
+    $lowWeekly = ($current.GeminiWeekly -ge 0 -and $current.GeminiWeekly -lt $Threshold)
+    $lowArgon = ($null -ne $current.ArgonWeekly -and $current.ArgonWeekly -ge 0 -and $current.ArgonWeekly -lt $Threshold)
+    if (-not ($low5h -or $lowWeekly -or $lowArgon)) { return }
+    $best = $accounts | Where-Object {
+        $_.AccountName -ne $current.AccountName -and $_.Success -and
+        $_.Gemini5H -gt $Threshold -and $_.GeminiWeekly -gt $Threshold -and
+        ($null -eq $_.ArgonWeekly -or $_.ArgonWeekly -lt 0 -or $_.ArgonWeekly -gt $Threshold)
+    } | ForEach-Object {
+        $score = [math]::Min($_.Gemini5H, $_.GeminiWeekly)
+        if ($null -ne $_.ArgonWeekly -and $_.ArgonWeekly -ge 0) { $score = [math]::Min($score, $_.ArgonWeekly) }
+        [pscustomobject]@{ AccountName = $_.AccountName; Score = $score }
+    } | Sort-Object @{Expression='Score';Descending=$true}, AccountName | Select-Object -First 1
+    if (-not $best) { Write-RotatorLog 'CLI mode: no healthy account available; waiting for quota reset.'; return }
+    Switch-ActiveAccount $best.AccountName -Reason "CLI quota below $($Config.MinQuotaPercent) percent" -Notify | Out-Null
+}
+
 function Invoke-AutoRotationCheck {
-    $cfg = if (Get-Command Get-HubConfig -ErrorAction SilentlyContinue) { Get-HubConfig } else { [pscustomobject]@{AutoRotationEnabled=$true;MinQuotaPercent=20;CooldownSeconds=120} }
+    $cfg = if (Get-Command Get-HubConfig -ErrorAction SilentlyContinue) { Get-HubConfig } else { [pscustomobject]@{AutoRotationEnabled=$true;CliRotationEnabled=$true;MinQuotaPercent=20;CooldownSeconds=120} }
     if (-not $cfg.AutoRotationEnabled) {
         Write-RotatorLog 'Auto-rotation is paused by user.'
         return
@@ -418,7 +472,12 @@ function Invoke-AutoRotationCheck {
     }
     if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt $cfg.CooldownSeconds) { return }
     try { $runtime=Get-RuntimeIdentity } catch { Write-RotatorLog (Get-RuntimeFailureMessage $_); return }
-    if (-not $runtime) { Write-RotatorLog 'IDE is closed; monitoring only.'; return }
+    if (-not $runtime) {
+        $cliEnabled = if ($cfg.PSObject.Properties['CliRotationEnabled']) { [bool]$cfg.CliRotationEnabled } else { $true }
+        if (-not $cliEnabled) { Write-RotatorLog 'IDE is closed; monitoring only.'; return }
+        Invoke-CliAutoRotationCheck -Config $cfg -Threshold $threshold
+        return
+    }
     try{$selectedModel=Get-RuntimeSelectedModel $runtime.Runtimes[0]}catch{$selectedModel=''}
     if(-not $selectedModel){Write-RotatorLog 'Selected model unknown or ambiguous; no rotation.';return}
     $accounts = @(Get-AllAccountsQuota -IncludeModels)

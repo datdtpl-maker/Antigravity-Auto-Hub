@@ -112,6 +112,7 @@ function Write-RotatorLog {
 function Get-HubConfig {
     $cfg = [pscustomobject]@{
         AutoRotationEnabled = $true
+        CliRotationEnabled = $true
         MinQuotaPercent = 20
         CooldownSeconds = 120
         EnableNotifications = $true
@@ -122,6 +123,7 @@ function Get-HubConfig {
         try {
             $raw = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
             if ($null -ne $raw.AutoRotationEnabled) { $cfg.AutoRotationEnabled = [bool]$raw.AutoRotationEnabled }
+            if ($null -ne $raw.CliRotationEnabled) { $cfg.CliRotationEnabled = [bool]$raw.CliRotationEnabled }
             if ($null -ne $raw.MinQuotaPercent -and [int]$raw.MinQuotaPercent -ge 5 -and [int]$raw.MinQuotaPercent -le 50) { $cfg.MinQuotaPercent = [int]$raw.MinQuotaPercent }
             if ($null -ne $raw.CooldownSeconds -and [int]$raw.CooldownSeconds -ge 30 -and [int]$raw.CooldownSeconds -le 600) { $cfg.CooldownSeconds = [int]$raw.CooldownSeconds }
             if ($null -ne $raw.EnableNotifications) { $cfg.EnableNotifications = [bool]$raw.EnableNotifications }

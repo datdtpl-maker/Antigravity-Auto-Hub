@@ -54,3 +54,15 @@ $script:FixtureConfig.AutoRotationEnabled=$false
 $script:Switched='';$script:FixtureAccounts=@((Account current .1),(Account other .8))
 Invoke-AutoRotationCheck
 Assert ($script:Switched -eq '') 'Paused auto-rotation skips switching'
+
+# CLI mode tests (IDE closed)
+$script:FixtureConfig=[pscustomobject]@{AutoRotationEnabled=$true;CliRotationEnabled=$true;MinQuotaPercent=20;CooldownSeconds=120;EnableNotifications=$true}
+function Get-RuntimeIdentity { $null }
+function Get-StoredActiveAccountName { 'current' }
+function CliAccount($Name,[double]$G5H,[double]$GW,[double]$Argon=-1){
+    [pscustomobject]@{AccountName=$Name;Email="$Name@example.test";Success=$true;ModelsStatus='Available';Gemini5H=$G5H;GeminiWeekly=$GW;ArgonWeekly=$Argon;ModelQuotas=@();QuotaGroups=@()}
+}
+Check @((CliAccount current .1 .8),(CliAccount other .85 .9)) 'other' 'CLI mode rotates when IDE is closed and active quota is low'
+Check @((CliAccount current .75 .8),(CliAccount other .9 .95)) '' 'CLI mode skips rotation when active quota is healthy'
+$script:FixtureConfig.CliRotationEnabled=$false
+Check @((CliAccount current .1 .8),(CliAccount other .85 .9)) '' 'CLI mode respects disabled CliRotationEnabled setting'

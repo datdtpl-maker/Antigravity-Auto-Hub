@@ -441,7 +441,8 @@
                 <Border Style="{StaticResource Panel}" Padding="20,18" Margin="0,0,0,16">
                   <StackPanel>
                     <TextBlock Text="CHÍNH SÁCH XOAY TỰ ĐỘNG" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Accent}" Margin="0,0,0,12"/>
-                    <CheckBox x:Name="ChkAutoRotate" Content="Bật tự động xoay tài khoản khi quota xuống thấp" IsChecked="True" FontWeight="SemiBold" FontSize="13.5" Margin="0,0,0,14"/>
+                    <CheckBox x:Name="ChkAutoRotate" Content="Bật tự động xoay tài khoản khi quota xuống thấp" IsChecked="True" FontWeight="SemiBold" FontSize="13.5" Margin="0,0,0,10"/>
+                    <CheckBox x:Name="ChkCliRotate" Content="Tự xoay cho CLI khi IDE đang đóng (Credential Manager &amp; standalone token)" IsChecked="True" FontWeight="Medium" Margin="0,0,0,14"/>
                     <Grid Margin="0,0,0,12">
                       <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
                       <StackPanel VerticalAlignment="Center"><TextBlock Text="Ngưỡng kích hoạt xoay (%)" FontWeight="Medium"/><TextBlock Text="Xoay khi model đang dùng giảm dưới mức này" Style="{StaticResource MutedText}" Margin="0,2,0,0"/></StackPanel>

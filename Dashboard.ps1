@@ -308,6 +308,8 @@ function Update-HubSettingsUi {
     $pt=$window.FindName('TxtPolicyThreshold');if($pt){$pt.Text="Model < $($cfg.MinQuotaPercent)%"}
     $pg=$window.FindName('TxtPolicyTarget');if($pg){$pg.Text="Acc > $($cfg.MinQuotaPercent)%"}
     $chkAuto=$window.FindName('ChkAutoRotate');if($chkAuto){$chkAuto.IsChecked=$enabled}
+    $cliEnabled=if($cfg.PSObject.Properties['CliRotationEnabled']){[bool]$cfg.CliRotationEnabled}else{$true}
+    $chkCli=$window.FindName('ChkCliRotate');if($chkCli){$chkCli.IsChecked=$cliEnabled}
     $chkNotif=$window.FindName('ChkNotifications');if($chkNotif){$chkNotif.IsChecked=[bool]$cfg.EnableNotifications}
     $cboThresh=$window.FindName('CboThreshold')
     if($cboThresh){foreach($item in $cboThresh.Items){if([int]$item.Tag -eq [int]$cfg.MinQuotaPercent){$cboThresh.SelectedItem=$item;break}}}
@@ -519,6 +521,7 @@ function Initialize-HubDashboard {
             if($Preview){return}
             $cfg=Get-HubConfig
             $cfg.AutoRotationEnabled=[bool]$window.FindName('ChkAutoRotate').IsChecked
+            $chkCli=$window.FindName('ChkCliRotate');if($chkCli){$cfg.CliRotationEnabled=[bool]$chkCli.IsChecked}
             $cfg.EnableNotifications=[bool]$window.FindName('ChkNotifications').IsChecked
             $th=$window.FindName('CboThreshold').SelectedItem;if($th){$cfg.MinQuotaPercent=[int]$th.Tag}
             $cd=$window.FindName('CboCooldown').SelectedItem;if($cd){$cfg.CooldownSeconds=[int]$cd.Tag}
