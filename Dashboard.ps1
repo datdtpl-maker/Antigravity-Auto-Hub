@@ -79,11 +79,12 @@ function ConvertTo-HubAccount {
     $hasArgon=$known -and $null -ne $Account.ArgonWeekly -and [double]$Account.ArgonWeekly -ge 0
     $argonOk=(-not $hasArgon) -or ([double]$Account.ArgonWeekly -gt .10)
     $argonSwitchOk=(-not $hasArgon) -or ([double]$Account.ArgonWeekly -gt .08)
-    $ready=$known -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .10 -and $argonOk
+    $threshold=if(Get-Command Get-HubConfig -ErrorAction SilentlyContinue){[double](Get-HubConfig).MinQuotaPercent / 100.0}else{.20}
+    $ready=$known -and $Account.Gemini5H -gt $threshold -and $Account.GeminiWeekly -gt .10 -and $argonOk
     $modelQuota=$null
     if($SelectedModel){
         $modelQuota=Get-SelectedModelQuota $Account $SelectedModel
-        $ready=$modelQuota.Known -and $modelQuota.Remaining -gt .20
+        $ready=$known -and $Account.Gemini5H -gt $threshold -and $modelQuota.Known -and $modelQuota.Remaining -gt $threshold
     }
     $key=if(($SelectedModel -and -not $modelQuota.Known) -or -not $known){'Unknown'}elseif($ready){'Ready'}else{'Low'}
     $verify=[bool]($Account.VerificationUrl -and $Account.ErrorCode -eq 'AccountVerificationRequired')
@@ -215,8 +216,8 @@ function Set-HubSnapshot {
         elseif(-not $Snapshot.Daemon){Get-HubText NoDaemon}
         elseif(-not $Snapshot.SelectedModel -and -not $Preview){Get-HubText ModelRotationUnknown}
         elseif(-not $Snapshot.Idle){Get-HubText Busy}else{Get-HubText Monitoring}
-    $window.FindName('PageSubtitle').Text=if($Snapshot.SelectedModel){(Get-HubText RotationModel) -f $Snapshot.SelectedModel}else{Get-HubText AccountsSubtitle}
-    $window.FindName('HintReady').Text=if($Snapshot.SelectedModel){Get-HubText SelectedModelReady}else{Get-HubText LegacyReady}
+    $window.FindName('PageSubtitle').Text=if($Snapshot.SelectedModel){((Get-HubText RotationModel) -f $Snapshot.SelectedModel) -replace '20%',"$($cfg.MinQuotaPercent)%"}else{Get-HubText AccountsSubtitle}
+    $window.FindName('HintReady').Text=if($Snapshot.SelectedModel){(Get-HubText SelectedModelReady) -replace '20%',"$($cfg.MinQuotaPercent)%"}else{Get-HubText LegacyReady}
     $window.FindName('TxtDaemonStatus').Text=$status
     $window.FindName('TxtActiveAccount').Text=if($Snapshot.Email){(Get-HubText ActiveAccount) -f $Snapshot.Email}else{Get-HubText Unverified}
     $window.FindName('TxtUpdated').Text=(Get-HubText Updated) -f $Snapshot.At.ToString('HH:mm:ss')

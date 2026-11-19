@@ -326,11 +326,14 @@ function Switch-ActiveAccount {
         $quota = Get-AccountQuotaInfo $source -IncludeModels:([bool]$selectedModel)
         $argonLimit = if ($null -ne $MinArgonThreshold) { [double]$MinArgonThreshold } else { [double]$MinWeeklyThreshold }
         $argonExhausted = $null -ne $quota.ArgonWeekly -and $quota.ArgonWeekly -ge 0 -and $quota.ArgonWeekly -le $argonLimit
+        $cfgThreshold = if (Get-Command Get-HubConfig -ErrorAction SilentlyContinue) { [double](Get-HubConfig).MinQuotaPercent / 100.0 } else { [double]$MinQuotaThreshold }
         if (-not $Manual) {
-            if($selectedModel){
-                $modelQuota=Get-SelectedModelQuota $quota $selectedModel
-                if(-not $modelQuota.Known -or $modelQuota.Remaining -le .20){throw 'Target quota unavailable or exhausted.'}
-            } elseif (-not $quota.Success -or $quota.Gemini5H -le $MinQuotaThreshold -or $quota.GeminiWeekly -le $MinWeeklyThreshold -or $argonExhausted) { throw 'Target quota unavailable or exhausted.' }
+            if ($ExpectedModel) {
+                $modelQuota = Get-SelectedModelQuota $quota $ExpectedModel
+                if (-not $modelQuota.Known -or $modelQuota.Remaining -le $cfgThreshold -or -not $quota.Success -or $quota.Gemini5H -le $cfgThreshold) { throw 'Target quota unavailable or exhausted.' }
+            } elseif (-not $quota.Success -or $quota.Gemini5H -le $cfgThreshold) {
+                throw 'Target quota unavailable or exhausted.'
+            }
         } elseif (-not $quota.Success) {
             throw 'Target quota unavailable or exhausted.'
         }
@@ -364,12 +367,12 @@ function Switch-ActiveAccount {
             if ($savedWindows.Count) {
                 try { Restore-RuntimeWindows $savedWindows } catch { }
             }
-            if(-not $Manual -and $selectedModel){
+            if(-not $Manual -and $ExpectedModel){
                 $confirmed=$false
                 for($attempt=0;$attempt -lt 5;$attempt++){
                     $newRuntime=Get-RuntimeIdentity
                     $newModel=Get-RuntimeSelectedModel $newRuntime.Runtimes[0]
-                    if((Get-ModelSelectionKey $newModel) -eq (Get-ModelSelectionKey $selectedModel)){$confirmed=$true;break}
+                    if((Get-ModelSelectionKey $newModel) -eq (Get-ModelSelectionKey $ExpectedModel)){$confirmed=$true;break}
                     if($newModel){break}
                     Start-Sleep -Milliseconds 500
                 }
@@ -491,21 +494,36 @@ function Invoke-AutoRotationCheck {
         return
     }
     try{$selectedModel=Get-RuntimeSelectedModel $runtime.Runtimes[0]}catch{$selectedModel=''}
-    if(-not $selectedModel){Write-RotatorLog 'Selected model unknown or ambiguous; no rotation.';return}
     $accounts = @(Get-AllAccountsQuota -IncludeModels)
     $current = $accounts | Where-Object { $_.Email -eq $runtime.Email } | Select-Object -First 1
     if (-not $current -or -not $current.Success) { Write-RotatorLog 'Active quota unknown; no rotation.'; return }
-    $currentQuota=Get-SelectedModelQuota $current $selectedModel
-    if(-not $currentQuota.Known){Write-RotatorLog 'Selected model quota unavailable; no rotation.';return}
-    Write-RotatorLog "Active [$($current.AccountName)]: selected model quota=$([math]::Round($currentQuota.Remaining*100,1))%."
-    if($currentQuota.Remaining -ge $threshold){return}
+    $currentQuota = if ($selectedModel) { Get-SelectedModelQuota $current $selectedModel } else { [pscustomobject]@{Known=$false;Remaining=-1.0;Model=''} }
+    $g5Text = if ($current.Gemini5H -ge 0) { "$([math]::Round($current.Gemini5H*100,1))%" } else { 'N/A' }
+    $mText = if ($currentQuota.Known) { "$([math]::Round($currentQuota.Remaining*100,1))%" } else { 'N/A' }
+    Write-RotatorLog "Active [$($current.AccountName)]: Gemini5H=$g5Text, model=$mText (threshold=$($cfg.MinQuotaPercent)%)."
+    $low5h = ($current.Gemini5H -ge 0 -and $current.Gemini5H -lt $threshold)
+    $lowModel = ($currentQuota.Known -and $currentQuota.Remaining -lt $threshold)
+    if (-not ($low5h -or $lowModel)) { return }
     if (-not $runtime.Idle) { Write-RotatorLog 'Low quota; waiting for running agents to finish.'; return }
-    $best = $accounts | Where-Object {$_.Email -ne $runtime.Email} | ForEach-Object {
-        $candidateQuota=Get-SelectedModelQuota $_ $selectedModel
-        if($candidateQuota.Known -and $candidateQuota.Remaining -gt $threshold){[pscustomobject]@{AccountName=$_.AccountName;Remaining=$candidateQuota.Remaining}}
-    } | Sort-Object @{Expression='Remaining';Descending=$true},AccountName | Select-Object -First 1
+    $best = $null
+    $useExpectedModel = ''
+    if ($selectedModel) {
+        $best = $accounts | Where-Object { $_.Email -ne $runtime.Email -and $_.Success -and $_.Gemini5H -gt $threshold } | ForEach-Object {
+            $candidateQuota = Get-SelectedModelQuota $_ $selectedModel
+            if ($candidateQuota.Known -and $candidateQuota.Remaining -gt $threshold) {
+                [pscustomobject]@{ AccountName = $_.AccountName; Remaining = [math]::Min($candidateQuota.Remaining, $_.Gemini5H) }
+            }
+        } | Sort-Object @{Expression='Remaining';Descending=$true}, AccountName | Select-Object -First 1
+        if ($best) { $useExpectedModel = $selectedModel }
+    }
+    if (-not $best -and $low5h) {
+        $best = $accounts | Where-Object { $_.Email -ne $runtime.Email -and $_.Success -and $_.Gemini5H -gt $threshold } | ForEach-Object {
+            [pscustomobject]@{ AccountName = $_.AccountName; Remaining = $_.Gemini5H }
+        } | Sort-Object @{Expression='Remaining';Descending=$true}, AccountName | Select-Object -First 1
+    }
     if (-not $best) { Write-RotatorLog 'No healthy account available; waiting for quota reset.'; return }
-    Switch-ActiveAccount $best.AccountName -Reason "Selected model below $($cfg.MinQuotaPercent) percent" -ExpectedModel $selectedModel -ExpectedEmail $runtime.Email -Notify | Out-Null
+    $reason = if ($low5h) { "Gemini 5h quota below $($cfg.MinQuotaPercent) percent" } else { "Selected model below $($cfg.MinQuotaPercent) percent" }
+    Switch-ActiveAccount $best.AccountName -Reason $reason -ExpectedModel $useExpectedModel -ExpectedEmail $runtime.Email -Notify | Out-Null
 }
 
 function Repair-RotationState {

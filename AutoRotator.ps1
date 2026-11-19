@@ -209,8 +209,9 @@ if ($Reconcile) {
         try { $daemonLocked = $daemonMutex.WaitOne(0) }
         catch [Threading.AbandonedMutexException] { $daemonLocked = $true }
         if (-not $daemonLocked) { return }
+        $bootCfg = Get-HubConfig
         Write-RotatorLog "Daemon started; interval ${IntervalSeconds}s after each completed scan."
-        Write-RotatorLog 'Automatic rotation: selected model below 20%; target above 20%; idle only; cooldown 120s. Unknown model defers.'
+        Write-RotatorLog "Automatic rotation: Gemini 5h or selected model below $($bootCfg.MinQuotaPercent)%; target above $($bootCfg.MinQuotaPercent)%; idle only; cooldown $($bootCfg.CooldownSeconds)s."
         while ($true) {
             try { Invoke-AutoRotationCheck }
             catch { Write-RotatorLog 'Scan failed; retrying on next interval.' }
