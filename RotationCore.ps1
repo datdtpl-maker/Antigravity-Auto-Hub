@@ -327,11 +327,14 @@ function Switch-ActiveAccount {
         $argonLimit = if ($null -ne $MinArgonThreshold) { [double]$MinArgonThreshold } else { [double]$MinWeeklyThreshold }
         $argonExhausted = $null -ne $quota.ArgonWeekly -and $quota.ArgonWeekly -ge 0 -and $quota.ArgonWeekly -le $argonLimit
         $cfgThreshold = if (Get-Command Get-HubConfig -ErrorAction SilentlyContinue) { [double](Get-HubConfig).MinQuotaPercent / 100.0 } else { [double]$MinQuotaThreshold }
+        $is5hRotation = ($Reason -like 'Gemini 5h*')
         if (-not $Manual) {
-            if ($ExpectedModel) {
-                $modelQuota = Get-SelectedModelQuota $quota $ExpectedModel
-                if (-not $modelQuota.Known -or $modelQuota.Remaining -le $cfgThreshold -or -not $quota.Success -or $quota.Gemini5H -le $cfgThreshold) { throw 'Target quota unavailable or exhausted.' }
-            } elseif (-not $quota.Success -or $quota.Gemini5H -le $cfgThreshold) {
+            if ($is5hRotation -and -not $ExpectedModel) {
+                if (-not $quota.Success -or $quota.Gemini5H -le $cfgThreshold) { throw 'Target quota unavailable or exhausted.' }
+            } elseif ($selectedModel) {
+                $modelQuota = Get-SelectedModelQuota $quota $selectedModel
+                if (-not $modelQuota.Known -or $modelQuota.Remaining -le $cfgThreshold) { throw 'Target quota unavailable or exhausted.' }
+            } elseif (-not $quota.Success -or $quota.Gemini5H -le $cfgThreshold -or $quota.GeminiWeekly -le $MinWeeklyThreshold -or $argonExhausted) {
                 throw 'Target quota unavailable or exhausted.'
             }
         } elseif (-not $quota.Success) {
@@ -367,12 +370,12 @@ function Switch-ActiveAccount {
             if ($savedWindows.Count) {
                 try { Restore-RuntimeWindows $savedWindows } catch { }
             }
-            if(-not $Manual -and $ExpectedModel){
+            if(-not $Manual -and $selectedModel -and (-not $is5hRotation -or $ExpectedModel)){
                 $confirmed=$false
                 for($attempt=0;$attempt -lt 5;$attempt++){
                     $newRuntime=Get-RuntimeIdentity
                     $newModel=Get-RuntimeSelectedModel $newRuntime.Runtimes[0]
-                    if((Get-ModelSelectionKey $newModel) -eq (Get-ModelSelectionKey $ExpectedModel)){$confirmed=$true;break}
+                    if((Get-ModelSelectionKey $newModel) -eq (Get-ModelSelectionKey $selectedModel)){$confirmed=$true;break}
                     if($newModel){break}
                     Start-Sleep -Milliseconds 500
                 }

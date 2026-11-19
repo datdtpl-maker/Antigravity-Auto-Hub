@@ -25,7 +25,7 @@ Assert ($argonQuota.Gemini5H -eq .95 -and $argonQuota.GeminiWeekly -eq .80 -and 
 # Transaction tests use isolated files and mocked native boundaries. No live credentials/processes.
 $testDir=Join-Path $baseDir ('work\test-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $testDir -Force | Out-Null
-$accDir=$testDir; $geminiTokenPath=Join-Path $testDir 'fallback.txt'; $activeFile=Join-Path $testDir 'active.txt'; $stateFile=Join-Path $testDir 'state.json'
+$baseDir=$testDir; $accDir=$testDir; $geminiTokenPath=Join-Path $testDir 'fallback.txt'; $activeFile=Join-Path $testDir 'active.txt'; $stateFile=Join-Path $testDir 'state.json'
 Write-AtomicText (Join-Path $testDir 'target.json') '{"token":{"refresh_token":"fixture"}}'
 function Write-RotatorLog { param($msg) }
 function Send-ToastNotification { param($Message) }

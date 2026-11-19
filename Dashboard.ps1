@@ -84,7 +84,7 @@ function ConvertTo-HubAccount {
     $modelQuota=$null
     if($SelectedModel){
         $modelQuota=Get-SelectedModelQuota $Account $SelectedModel
-        $ready=$known -and $Account.Gemini5H -gt $threshold -and $modelQuota.Known -and $modelQuota.Remaining -gt $threshold
+        $ready=$modelQuota.Known -and $modelQuota.Remaining -gt $threshold
     }
     $key=if(($SelectedModel -and -not $modelQuota.Known) -or -not $known){'Unknown'}elseif($ready){'Ready'}else{'Low'}
     $verify=[bool]($Account.VerificationUrl -and $Account.ErrorCode -eq 'AccountVerificationRequired')
