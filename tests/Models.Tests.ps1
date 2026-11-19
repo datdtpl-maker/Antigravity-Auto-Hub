@@ -13,6 +13,14 @@ $catalog=[pscustomobject]@{models=[pscustomobject]@{
     'internal-model'=[pscustomobject]@{quotaInfo=@{remainingFraction=1};access_token='PRIVATE_SENTINEL'}
 }}
 $models=@(Convert-ModelQuotaCatalog $catalog)
+$neonCatalog=[pscustomobject]@{models=[pscustomobject]@{
+    'gemini-4-neon-xhigh'=@{displayName='Gemini 4 Neon (XHigh)';quotaInfo=@{remainingFraction=.7}}
+    'orchestrator-neon'=@{displayName='Orchestrator (Neon)';quotaInfo=@{remainingFraction=.4}}
+    'orchestrator-argon'=@{displayName='Orchestrator (Argon)';quotaInfo=@{remainingFraction=.1}}
+}}
+$neonModels=@(Convert-ModelQuotaCatalog $neonCatalog)
+Assert (@($neonModels|Where-Object Family -eq 'Neon').Count -eq 1 -and @($neonModels|Where-Object Family -eq 'Orchestrator').Count -eq 2) 'Neon and Orchestrator catalog entries are kept separate'
+Assert ((Convert-ArgonModelQuota $neonCatalog).Status -eq 'Unknown') 'Orchestrator does not supply standalone Argon quota'
 Assert ($models.Count -eq 8 -and @($models | Where-Object Family -eq 'Other').Count -eq 1) 'Catalog preserves named models and excludes internal unnamed models'
 foreach($family in @('Opus','Sonnet','GptOss','Carbon','Hydrogen','Flash','Argon')){Assert (@($models|Where-Object Family -eq $family).Count -eq 1) "Recognizes model family $family"}
 Assert (($models|Where-Object Family -eq Carbon).Status -eq 'Disabled' -and ($models|Where-Object Family -eq Carbon).Remaining -eq -1) 'Explicit disabled wins over quota and never becomes 100 percent'

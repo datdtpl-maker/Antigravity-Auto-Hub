@@ -52,7 +52,7 @@ function Convert-QuotaSummary {
     $five = @(); $weekly = @(); $argon = @()
     foreach ($group in $Response.groups) {
         $groupText = "$($group.displayName) $($group.description)"
-        if ($groupText -notmatch 'gemini|argon') { continue }
+        if ($groupText -notmatch 'gemini|argon' -or $group.displayName -match 'orchestrator') { continue }
         $groupIsArgon = $groupText -match 'argon'
         foreach ($bucket in $group.buckets) {
             if ($null -eq $bucket.remainingFraction) { continue }
@@ -79,7 +79,8 @@ function Convert-QuotaSummary {
 function Convert-ArgonModelQuota {
     param($Response)
     $entries=@($Response.models.PSObject.Properties | Where-Object {
-        $_.Name -match '(^|[-_])argon([-_]|$)' -or $_.Value.displayName -match '\bargon\b'
+        ($_.Name -match '(^|[-_])argon([-_]|$)' -or $_.Value.displayName -match '\bargon\b') -and
+            "$($_.Name) $($_.Value.displayName)" -notmatch 'orchestrator'
     })
     $disabled=0; $fractions=@(); $incomplete=$false
     foreach ($entry in $entries) {

@@ -12,13 +12,14 @@
 - **Dashboard trực quan (WPF, không cần cài thêm thư viện):** Hiển thị toàn bộ pool tài khoản với gói (**Free / Pro / Ultra**), tìm kiếm, bộ lọc trạng thái, sắp xếp theo cột và nhật ký xoay.
 - **Theo dõi đầy đủ từng dòng model:**
   - **Hạn mức chung:** `Gemini 5 giờ`, `Gemini Tuần`
-  - **Nhóm Gemini:** `Gemini Flash`, `Gemini Argon`, `Gemini Hydrogen`, `Gemini Carbon`
+  - **Nhóm Gemini:** `Gemini Flash`, `Gemini Neon`, `Gemini Argon`, `Gemini Hydrogen`, `Gemini Carbon`
   - **Nhóm Claude & GPT:** `Claude Opus`, `Claude Sonnet`, `GPT-OSS 120B`
 - **Phân biệt rõ trạng thái quota:**
   - **Phần trăm (`0%` – `100%`):** Quota thực tế do Google trả về (`0%` là hết quota thật).
   - **Vòng nét đứt (`—`):** Model chưa được cấp quyền / bị tắt (`disabled: true`, ví dụ *Carbon Unavailable*) hoặc chưa có dữ liệu. Rê chuột vào vòng tròn hoặc bấm **ⓘ** để xem chi tiết từng biến thể và thời điểm reset.
 - **Xoay tài khoản tự động & an toàn:**
-  - Đọc trực tiếp model đang chọn trong Antigravity IDE (bao gồm `Gemini`, `Claude`, `GPT-OSS`, `Orchestrator (Argon)`).
+  - Đọc trực tiếp model đang chọn trong Antigravity IDE, gồm `Gemini 4 Neon` và `Orchestrator (Neon/Argon/Carbon)`. Mức `Extra` của Neon và Hydrogen khớp với `XHigh` trong API.
+  - Xem Orchestrator trong **ⓘ Chi tiết**. Nếu API không trả dữ liệu riêng cho biến thể đang chọn, Hub không lấy quota của model lập kế hoạch thay thế và sẽ không tự xoay theo Orchestrator.
   - Khi quota hiệu dụng của model đang chọn **< 20%**, tự động chuyển sang tài khoản có cùng model còn **> 20%** cao nhất.
   - **Bảo vệ tác vụ:** Chỉ chuyển khi IDE rảnh, không có bản nháp/ô nhập đang soạn dở và đã qua thời gian chờ (cooldown) **120 giây**.
 - **Quản lý & xác minh tài khoản:** Hỗ trợ **Lưu acc hiện tại**, **+ Thêm tài khoản** qua helper riêng và mở liên kết **Xác minh Google** khi cần.
@@ -121,7 +122,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\tests\Validate.ps
 | --- | --- |
 | `MainWindow.xaml`, `AntigravityHub.ps1` | Giao diện WPF và khởi chạy ứng dụng |
 | `Dashboard.ps1`, `DashboardText.vi.json` | Dữ liệu dashboard, quét nền, lọc/sắp xếp, nhật ký và chuỗi tiếng Việt |
-| `ModelQuota.ps1` | Chuẩn hóa họ model (`Flash`, `Argon`, `Hydrogen`, `Carbon`, `Opus`, `Sonnet`, `GptOss`) và nhóm quota |
+| `ModelQuota.ps1` | Chuẩn hóa họ model, mức suy luận và nhóm quota |
 | `AutoRotator.ps1`, `RotationCore.ps1` | Engine daemon, đọc quota, chọn tài khoản đích và chuyển đổi an toàn |
 | `RuntimeBridge.ps1`, `AccountLogin.ps1` | Giao tiếp runtime/CDP, kiểm tra rảnh/bản nháp và hỗ trợ đăng nhập |
 | `Setup.ps1`, `OAuthSetup.ps1`, `Setup-Install.bat` | Cài đặt, tự dò/xác minh OAuth và tạo shortcut |

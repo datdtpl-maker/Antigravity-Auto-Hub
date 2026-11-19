@@ -1,6 +1,7 @@
 function Get-ModelSelectionKey {
     param([string]$Name)
-    return (($Name -replace '[()]','' -replace '\s+',' ').Trim().ToLowerInvariant())
+    $key=($Name -replace '[()]','' -replace '\s+',' ').Trim().ToLowerInvariant()
+    return ($key -replace '^(gemini 4 (?:neon|hydrogen)) extra(?: high)?$','$1 xhigh')
 }
 
 function Get-SelectedModelQuota {
@@ -9,16 +10,16 @@ function Get-SelectedModelQuota {
     if(-not $SelectedModel -or $Account.ModelsStatus -ne 'Available' -or -not $Account.Email){return $unknown}
     $key=Get-ModelSelectionKey $SelectedModel
     $models=@($Account.ModelQuotas|Where-Object {(Get-ModelSelectionKey $_.Name) -eq $key})
-    if(-not $models.Count -and $key -match '(?i)orchestrator.*argon'){
-        $models=@($Account.ModelQuotas|Where-Object {$_.Family -eq 'Argon'})
-    }
     if(-not $models.Count -or @($models|Where-Object {$_.Status -ne 'Available' -or (ConvertTo-QuotaFraction $_.Remaining) -lt 0}).Count){return $unknown}
     $values=@($models|ForEach-Object {ConvertTo-QuotaFraction $_.Remaining})
     $family=$models[0].Family
     $groups=@($Account.QuotaGroups|Where-Object {
-        if($family -in @('Opus','Sonnet','GptOss')){$_.Name -match '(?i)claude|gpt'}
+        if($family -eq 'Orchestrator'){(Get-ModelSelectionKey $_.Name) -eq $key}
+        elseif($_.Name -match '(?i)orchestrator'){$false}
+        elseif($family -in @('Opus','Sonnet','GptOss')){$_.Name -match '(?i)claude|gpt'}
         elseif($family -eq 'Argon'){$_.Name -match '(?i)argon'}
         elseif($family -eq 'Carbon'){$_.Name -match '(?i)carbon'}
+        elseif($_.Name -match '(?i)\b(neon|hydrogen)\b'){$family -eq $Matches[1]}
         else{$_.Name -match '(?i)gemini' -and $_.Name -notmatch '(?i)argon|carbon'}
     })
     if(-not $Account.Success){return $unknown}
@@ -29,6 +30,8 @@ function Get-SelectedModelQuota {
 function Get-ModelQuotaFamily {
     param([string]$Id,[string]$Name)
     $label="$Id $Name"
+    if($label -match '(?i)\borchestrator\b|[-_]orchestrator[-_]'){return 'Orchestrator'}
+    if($label -match '(?i)\bneon\b|[-_]neon[-_]'){return 'Neon'}
     if($label -match '(?i)\bargon\b|[-_]argon[-_]'){return 'Argon'}
     if($label -match '(?i)\bcarbon\b|[-_]carbon[-_]'){return 'Carbon'}
     if($label -match '(?i)\bhydrogen\b|[-_]hydrogen[-_]'){return 'Hydrogen'}

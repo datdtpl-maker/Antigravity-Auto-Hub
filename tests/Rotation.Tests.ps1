@@ -45,10 +45,26 @@ $script:FixtureState=@{Status='Verified';UpdatedAt=[datetime]::UtcNow.AddSeconds
 Check @((Account current .1),(Account other .9)) '' 'Persistent cooldown protects manual and automatic switches'
 $script:FixtureState=@{Status='Verified';UpdatedAt=[datetime]::UtcNow.AddMinutes(-3).ToString('o')}
 Check @((Account current .1),(Account other .9)) 'other' 'Expired cooldown permits automatic rotation'
-foreach($name in @('Gemini 3.8 Flash High','Gemini 4 Argon Medium','Gemini 4 Hydrogen Medium','Gemini 4 Carbon High','Claude Opus 5.5 Medium','GPT-OSS 120B Medium')){
+foreach($name in @('Gemini 3.8 Flash High','Gemini 4 Neon Medium','Gemini 4 Argon Medium','Gemini 4 Hydrogen Medium','Gemini 4 Carbon High','Claude Opus 5.5 Medium','GPT-OSS 120B Medium','Orchestrator (Neon)','Orchestrator (Argon)','Orchestrator (Carbon)')){
     $script:Selected=$name;$current=Account current .1;$target=Account other .8
     foreach($account in @($current,$target)){$account.ModelQuotas[0].Name=$name;$account.ModelQuotas[0].Family=Get-ModelQuotaFamily '' $name;$account.QuotaGroups=@()}
     Check @($current,$target) 'other' "Selected model supported: $name"
+}
+foreach($family in @('Neon','Hydrogen')){
+    $script:Selected="Gemini 4 $family Extra";$current=Account current .1;$target=Account other .8
+    foreach($account in @($current,$target)){
+        $account.ModelQuotas[0].Name="Gemini 4 $family (XHigh)";$account.ModelQuotas[0].Family=$family
+        $account.QuotaGroups=@(@{Name='Gemini Models';Remaining=.9},@{Name='Gemini 4 Argon';Remaining=0},@{Name='Orchestrator (Neon)';Remaining=0})
+    }
+    Check @($current,$target) 'other' "$family Extra matches reported XHigh, ignoring unrelated groups"
+    $target.QuotaGroups+=@{Name="Gemini 4 $family";Remaining=.1}
+    Check @($current,$target) '' "$family quota respects the model's own group"
+}
+foreach($planner in @('Neon','Argon','Carbon')){
+    $script:Selected="Orchestrator ($planner)";$current=Account current .1;$target=Account other .8
+    $current.ModelQuotas[0].Name=$script:Selected;$current.ModelQuotas[0].Family='Orchestrator'
+    $target.ModelQuotas[0].Name="Gemini 4 $planner Medium";$target.ModelQuotas[0].Family=$planner
+    Check @($current,$target) '' "Standalone $planner quota does not establish Orchestrator access"
 }
 $script:FixtureConfig.AutoRotationEnabled=$false
 $script:Switched='';$script:FixtureAccounts=@((Account current .1),(Account other .8))

@@ -17,7 +17,7 @@ if (-not (Test-Path $accDir)) {
     New-Item -ItemType Directory -Path $accDir -Force | Out-Null
 }
 
-if (-not $Preview) { . $rotatorScript }
+if ($Preview) { . (Join-Path $baseDir 'ModelQuota.ps1') } else { . $rotatorScript }
 . (Join-Path $baseDir 'Dashboard.ps1')
 . (Join-Path $baseDir 'AccountLogin.ps1')
 

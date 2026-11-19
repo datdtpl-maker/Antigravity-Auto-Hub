@@ -53,6 +53,8 @@ function trigger(text, label = 'Select model, current: ' + text, visible = true)
 }
 modelCheck('Read only the selected model trigger', [trigger('Gemini 3.8 Flash High')], 'Gemini 3.8 Flash High');
 modelCheck('Read orchestrator model trigger', [trigger('Orchestrator (Argon)')], 'Orchestrator (Argon)');
+modelCheck('Read Neon model trigger', [trigger('Gemini 4 Neon Extra')], 'Gemini 4 Neon Extra');
+modelCheck('Read Orchestrator Neon model trigger', [trigger('Orchestrator (Neon)')], 'Orchestrator (Neon)');
 modelCheck('Multiple visible selectors are ambiguous', [trigger('Claude Opus Medium'), trigger('Gemini Flash High')], '');
 modelCheck('Hidden selectors are ignored', [trigger('Claude Opus Medium'), trigger('Gemini Flash High', '', false)], 'Claude Opus Medium');
 modelCheck('Missing selector does not infer from conversation text', [], '');
