@@ -119,7 +119,7 @@ function ConvertTo-HubAccount {
         FiveAccessible=((Get-HubText FiveAccessible) -f $fiveText)
         WeekAccessible=((Get-HubText WeekAccessible) -f $weekText)
         ArgonAccessible=((Get-HubText ArgonAccessible) -f $argonText)
-        CanSwitch=$(if($SelectedModel){$ready -and -not $active}else{$known -and -not $active -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .08 -and $argonSwitchOk})
+        CanSwitch=(-not $active -and -not $verify)
         VerificationUrl=$Account.VerificationUrl
         VerifyVisibility=$(if($verify){'Visible'}else{'Collapsed'})
         SwitchVisibility=$(if($verify){'Collapsed'}else{'Visible'})
@@ -460,9 +460,8 @@ function Invoke-HubAccountAction {
         }
         'Switch' {
             if(-not $Account.CanSwitch){return}
-            # The existing engine rechecks quota, drafts, running tasks and identity.
             $window.FindName('TxtDaemonStatus').Text=Get-HubText Switching
-            $switched=Switch-ActiveAccount -targetAccountName $Account.AccountName -Notify
+            $switched=Switch-ActiveAccount -targetAccountName $Account.AccountName -Manual -Notify
             $window.FindName('TxtDaemonStatus').Text=if($switched){Get-HubText SwitchSuccess}else{$script:LastSwitchMessage}
             $window.FindName('TxtDaemonStatus').ToolTip=$window.FindName('TxtDaemonStatus').Text
             Load-Accounts-UI

@@ -187,16 +187,19 @@ function Get-RuntimeIdentity {
 }
 
 function Restart-AntigravityRuntime {
-    param($Runtime)
+    param($Runtime,[switch]$Force)
     # Revalidate PID identity and activity immediately before the scoped restart.
     $current = Get-CimInstance Win32_Process -Filter "ProcessId = $($Runtime.ProcessId)" -ErrorAction Stop
     if (-not $current -or $current.CreationDate -ne $Runtime.CreationDate -or
         $current.ParentProcessId -ne $Runtime.ParentProcessId -or $current.ExecutablePath -ne $Runtime.ExecutablePath) {
         throw 'Runtime changed during switch.'
     }
-    if (-not (Test-RuntimeIdle $Runtime)) { throw 'An agent became active; switch deferred.' }
-    $windows = @(Get-RuntimeWindows $Runtime)
-    if (@($windows | Where-Object { -not $_.Safe }).Count) { throw 'An editor is active; switch deferred.' }
+    if (-not $Force) {
+        if (-not (Test-RuntimeIdle $Runtime)) { throw 'An agent became active; switch deferred.' }
+        $windows = @()
+        try { $windows = @(Get-RuntimeWindows $Runtime) } catch { $windows = @() }
+        if (@($windows | Where-Object { -not $_.Safe }).Count) { throw 'An editor is active; switch deferred.' }
+    }
     # Validated desktop versions supervise this child and reconnect their windows.
     Stop-Process -Id $Runtime.ProcessId -ErrorAction Stop
 }
@@ -226,10 +229,11 @@ function Get-RuntimePages {
 
 function Get-RuntimeSelectedModel {
     param($Runtime)
-    $pages=@(Get-RuntimePages $Runtime)
-    if(-not $pages.Count){return ''}
-    $names=@()
-    $modelExpression = @'
+    $pages=@()
+    try { $pages=@(Get-RuntimePages $Runtime) } catch { $pages=@() }
+    if($pages.Count){
+        $names=@()
+        $modelExpression = @'
 (() => {
   const triggers = Array.from(document.querySelectorAll('[data-testid="model-selector-trigger"]'))
     .filter(element => element.getClientRects().length > 0);
@@ -241,14 +245,28 @@ function Get-RuntimeSelectedModel {
   return label;
 })()
 '@
-    foreach($page in $pages){
-        $response=[AntigravityLocalRpc]::Cdp($page.webSocketDebuggerUrl,(@{id=1;method='Runtime.evaluate';params=@{expression=$modelExpression;returnByValue=$true}}|ConvertTo-Json -Depth 5 -Compress))|ConvertFrom-Json
-        $name=[string]$response.result.result.value
-        if($response.error -or $response.result.exceptionDetails -or -not $name -or $name.Length -gt 100){return ''}
-        $names+=$name
+        foreach($page in $pages){
+            try {
+                $response=[AntigravityLocalRpc]::Cdp($page.webSocketDebuggerUrl,(@{id=1;method='Runtime.evaluate';params=@{expression=$modelExpression;returnByValue=$true}}|ConvertTo-Json -Depth 5 -Compress))|ConvertFrom-Json
+                $name=[string]$response.result.result.value
+                if($response.error -or $response.result.exceptionDetails -or -not $name -or $name.Length -gt 100){ $names=@(); break }
+                $names+=$name
+            } catch { $names=@(); break }
+        }
+        $unique=@($names|Select-Object -Unique)
+        if($unique.Count -eq 1){return $unique[0]}
     }
-    $unique=@($names|Select-Object -Unique)
-    if($unique.Count -eq 1){return $unique[0]}
+    try {
+        $status = [AntigravityLocalRpc]::Post($Runtime.Port, $Runtime.Csrf, 'GetUserStatus') | ConvertFrom-Json
+        $defId = [string]$status.userStatus.cascadeModelConfigData.defaultOverrideModelConfig.modelOrAlias.model
+        if ($defId) {
+            foreach ($cfg in $status.userStatus.cascadeModelConfigData.clientModelConfigs) {
+                if ([string]$cfg.modelOrAlias.model -eq $defId -and $cfg.label) {
+                    return ([string]$cfg.label).Trim()
+                }
+            }
+        }
+    } catch { }
     return ''
 }
 

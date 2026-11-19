@@ -300,7 +300,7 @@ function Get-SwitchFailureMessage {
 }
 
 function Switch-ActiveAccount {
-    param([string]$targetAccountName, [string]$Reason='', [switch]$Notify,[string]$ExpectedModel='',[string]$ExpectedEmail='')
+    param([string]$targetAccountName, [string]$Reason='', [switch]$Notify,[string]$ExpectedModel='',[string]$ExpectedEmail='',[switch]$Manual)
     $ErrorActionPreference='Stop'
     $script:LastSwitchMessage=''
     $mutex = [Threading.Mutex]::new($false, 'Local\AntigravityAutoHub.Switch')
@@ -310,51 +310,60 @@ function Switch-ActiveAccount {
         if (-not $locked) { throw 'SwitchBusy' }
         $state = Read-RotationState
         if ($state.Status -in @('Switching','NeedsAttention')) {
-            if (-not (Repair-RotationState)) { throw 'Previous switch requires reconciliation.' }
+            if (-not (Repair-RotationState) -and -not $Manual) { throw 'Previous switch requires reconciliation.' }
             $state = Read-RotationState
         }
         $cooldownSec = if (Get-Command Get-HubConfig -ErrorAction SilentlyContinue) { (Get-HubConfig).CooldownSeconds } else { 120 }
-        if ($state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt $cooldownSec) { throw 'SwitchCooldown' }
+        if (-not $Manual -and $state -and $state.UpdatedAt -and ([datetime]::UtcNow - ([datetime]$state.UpdatedAt).ToUniversalTime()).TotalSeconds -lt $cooldownSec) { throw 'SwitchCooldown' }
         if ($targetAccountName -notmatch '^[a-zA-Z0-9_.@-]+$' -or $targetAccountName -in @('.','..')) { throw 'Invalid account name.' }
         $source = Join-Path $accDir "$targetAccountName.json"
         $runtime = Get-RuntimeIdentity
-        if($ExpectedEmail -and $runtime.Email -ne $ExpectedEmail){throw 'Selected model changed or unavailable.'}
+        if(-not $Manual -and $ExpectedEmail -and $runtime.Email -ne $ExpectedEmail){throw 'Selected model changed or unavailable.'}
         $selectedModel=''
         if($runtime -and $runtime.Runtimes){try{$selectedModel=Get-RuntimeSelectedModel $runtime.Runtimes[0]}catch{}}
-        if($ExpectedModel -and (Get-ModelSelectionKey $selectedModel) -ne (Get-ModelSelectionKey $ExpectedModel)){throw 'Selected model changed or unavailable.'}
+        if(-not $Manual -and $ExpectedModel -and (Get-ModelSelectionKey $selectedModel) -ne (Get-ModelSelectionKey $ExpectedModel)){throw 'Selected model changed or unavailable.'}
         $quota = Get-AccountQuotaInfo $source -IncludeModels:([bool]$selectedModel)
         $argonLimit = if ($null -ne $MinArgonThreshold) { [double]$MinArgonThreshold } else { [double]$MinWeeklyThreshold }
         $argonExhausted = $null -ne $quota.ArgonWeekly -and $quota.ArgonWeekly -ge 0 -and $quota.ArgonWeekly -le $argonLimit
-        if($selectedModel){
-            $modelQuota=Get-SelectedModelQuota $quota $selectedModel
-            if(-not $modelQuota.Known -or $modelQuota.Remaining -le .20){throw 'Target quota unavailable or exhausted.'}
-        } elseif (-not $quota.Success -or $quota.Gemini5H -le $MinQuotaThreshold -or $quota.GeminiWeekly -le $MinWeeklyThreshold -or $argonExhausted) { throw 'Target quota unavailable or exhausted.' }
+        if (-not $Manual) {
+            if($selectedModel){
+                $modelQuota=Get-SelectedModelQuota $quota $selectedModel
+                if(-not $modelQuota.Known -or $modelQuota.Remaining -le .20){throw 'Target quota unavailable or exhausted.'}
+            } elseif (-not $quota.Success -or $quota.Gemini5H -le $MinQuotaThreshold -or $quota.GeminiWeekly -le $MinWeeklyThreshold -or $argonExhausted) { throw 'Target quota unavailable or exhausted.' }
+        } elseif (-not $quota.Success) {
+            throw 'Target quota unavailable or exhausted.'
+        }
         $fresh = Get-FreshToken (Get-Content -LiteralPath $source -Raw -Encoding UTF8 | ConvertFrom-Json)
         $runtime = Get-RuntimeIdentity
-        if($ExpectedEmail -and $runtime.Email -ne $ExpectedEmail){throw 'Selected model changed or unavailable.'}
-        if ($runtime -and (-not $runtime.Idle)) {
+        if(-not $Manual -and $ExpectedEmail -and $runtime.Email -ne $ExpectedEmail){throw 'Selected model changed or unavailable.'}
+        if (-not $Manual -and $runtime -and (-not $runtime.Idle)) {
             throw 'SwitchAgentRunning'
         }
         if ($runtime -and $runtime.Email -eq $quota.Email) { return $true }
         $savedWindows = @()
         if ($runtime) {
-            $savedWindows = @(Get-RuntimeWindows $runtime.Runtimes[0])
-            if (@($savedWindows | Where-Object { -not $_.Safe }).Count) { throw 'Unsaved draft or focused editor; rotation deferred.' }
+            try { $savedWindows = @(Get-RuntimeWindows $runtime.Runtimes[0]) } catch { $savedWindows = @() }
+            if (-not $Manual -and @($savedWindows | Where-Object { -not $_.Safe }).Count) { throw 'Unsaved draft or focused editor; rotation deferred.' }
         }
         if ($runtime) { $oldEmail=$runtime.Email }
         $oldCredential=Get-StoredCredential
-        if (-not $oldCredential) { throw 'Missing rollback credential.' }
-        if ($runtime -and (Get-CredentialEmail $oldCredential) -ne $oldEmail) { throw 'Stored credential does not match the runtime; reconcile before switching.' }
-        if($selectedModel -and (Get-ModelSelectionKey (Get-RuntimeSelectedModel $runtime.Runtimes[0])) -ne (Get-ModelSelectionKey $selectedModel)){throw 'Selected model changed or unavailable.'}
+        if (-not $oldCredential -and (Test-Path -LiteralPath $geminiTokenPath)) {
+            $oldCredential=[IO.File]::ReadAllText($geminiTokenPath)
+        }
+        if (-not $Manual -and -not $oldCredential) { throw 'Missing rollback credential.' }
+        if (-not $Manual -and $runtime -and $oldCredential -and (Get-CredentialEmail $oldCredential) -ne $oldEmail) { throw 'Stored credential does not match the runtime; reconcile before switching.' }
+        if(-not $Manual -and $selectedModel -and (Get-ModelSelectionKey (Get-RuntimeSelectedModel $runtime.Runtimes[0])) -ne (Get-ModelSelectionKey $selectedModel)){throw 'Selected model changed or unavailable.'}
         if (Test-Path -LiteralPath $geminiTokenPath) { $oldFile=[IO.File]::ReadAllText($geminiTokenPath) }
         Set-RotationState 'Switching' $targetAccountName $quota.Email
         $written=$true
         Set-StoredCredential ($fresh | ConvertTo-Json -Depth 10 -Compress)
         if ($runtime) {
-            foreach ($server in $runtime.Runtimes) { Restart-AntigravityRuntime $server }
+            foreach ($server in $runtime.Runtimes) { Restart-AntigravityRuntime $server -Force:$Manual }
             if (-not (Wait-AntigravityIdentity $quota.Email)) { throw 'New runtime identity not confirmed.' }
-            Restore-RuntimeWindows $savedWindows
-            if($selectedModel){
+            if ($savedWindows.Count) {
+                try { Restore-RuntimeWindows $savedWindows } catch { }
+            }
+            if(-not $Manual -and $selectedModel){
                 $confirmed=$false
                 for($attempt=0;$attempt -lt 5;$attempt++){
                     $newRuntime=Get-RuntimeIdentity
@@ -370,6 +379,7 @@ function Switch-ActiveAccount {
             Write-RotatorLog "Verified IDE account: [$targetAccountName]."
         } else {
             Set-RotationState 'Prepared' $targetAccountName $quota.Email
+            Write-AtomicText $activeFile $targetAccountName
             Write-RotatorLog "Account [$targetAccountName] prepared for next IDE launch (not yet verified)."
         }
         $script:LastSwitchTime=Get-Date
