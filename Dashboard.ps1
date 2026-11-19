@@ -119,7 +119,7 @@ function ConvertTo-HubAccount {
         FiveAccessible=((Get-HubText FiveAccessible) -f $fiveText)
         WeekAccessible=((Get-HubText WeekAccessible) -f $weekText)
         ArgonAccessible=((Get-HubText ArgonAccessible) -f $argonText)
-        CanSwitch=(-not $active -and -not $verify)
+        CanSwitch=$(if($SelectedModel){$ready -and -not $active -and -not $verify}else{$known -and -not $active -and -not $verify -and $Account.Gemini5H -gt .20 -and $Account.GeminiWeekly -gt .08 -and $argonSwitchOk})
         VerificationUrl=$Account.VerificationUrl
         VerifyVisibility=$(if($verify){'Visible'}else{'Collapsed'})
         SwitchVisibility=$(if($verify){'Collapsed'}else{'Visible'})

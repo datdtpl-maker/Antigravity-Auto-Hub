@@ -379,7 +379,7 @@ function Switch-ActiveAccount {
             Write-RotatorLog "Verified IDE account: [$targetAccountName]."
         } else {
             Set-RotationState 'Prepared' $targetAccountName $quota.Email
-            Write-AtomicText $activeFile $targetAccountName
+            if ($Manual) { Write-AtomicText $activeFile $targetAccountName }
             Write-RotatorLog "Account [$targetAccountName] prepared for next IDE launch (not yet verified)."
         }
         $script:LastSwitchTime=Get-Date
