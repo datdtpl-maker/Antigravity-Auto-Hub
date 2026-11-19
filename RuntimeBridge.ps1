@@ -257,6 +257,56 @@ function Get-RuntimeSelectedModel {
         if($unique.Count -eq 1){return $unique[0]}
     }
     try {
+        $brainPath = Join-Path $env:USERPROFILE ".gemini\antigravity\brain"
+        if (Test-Path $brainPath) {
+            $statusResp = [AntigravityLocalRpc]::Post($Runtime.Port, $Runtime.Csrf, 'GetUserStatus') | ConvertFrom-Json
+            $modelMap = @{}
+            if ($statusResp.userStatus.cascadeModelConfigData.clientModelConfigs) {
+                foreach ($cfg in $statusResp.userStatus.cascadeModelConfigData.clientModelConfigs) {
+                    if ($cfg.modelId -and $cfg.label) {
+                        $modelMap[[string]$cfg.modelId] = ([string]$cfg.label).Trim()
+                    }
+                }
+            }
+            $trajResp = [AntigravityLocalRpc]::Post($Runtime.Port, $Runtime.Csrf, 'GetAllCascadeTrajectories') | ConvertFrom-Json
+            $activeConvId = $null
+            if ($trajResp.trajectorySummaries) {
+                $candidates = @()
+                foreach ($prop in $trajResp.trajectorySummaries.PSObject.Properties) {
+                    $summary = $prop.Value
+                    $candidates += [pscustomobject]@{
+                        Id = $prop.Name
+                        Status = [string]$summary.status
+                        LastModified = [string]$summary.lastModifiedTime
+                        LastInput = [string]$summary.lastUserInputTime
+                    }
+                }
+                $sorted = $candidates | Sort-Object @{Expression={if($_.Status -eq 'CASCADE_RUN_STATUS_RUNNING'){1}else{0}}}, LastInput, LastModified -Descending
+                if ($sorted.Count -gt 0) {
+                    $activeConvId = $sorted[0].Id
+                }
+            }
+            if ($activeConvId) {
+                $tPath = Join-Path $brainPath "$activeConvId\.system_generated\logs\transcript.jsonl"
+                if (Test-Path $tPath) {
+                    $tail = Get-Content $tPath -Tail 20 -ErrorAction SilentlyContinue
+                    for ($i = $tail.Count - 1; $i -ge 0; $i--) {
+                        try {
+                            $item = ConvertFrom-Json $tail[$i]
+                            if ($item.model) {
+                                $rawModel = [string]$item.model
+                                if ($modelMap.ContainsKey($rawModel)) {
+                                    return $modelMap[$rawModel]
+                                }
+                                return $rawModel
+                            }
+                        } catch {}
+                    }
+                }
+            }
+        }
+    } catch { }
+    try {
         $status = [AntigravityLocalRpc]::Post($Runtime.Port, $Runtime.Csrf, 'GetUserStatus') | ConvertFrom-Json
         $defId = [string]$status.userStatus.cascadeModelConfigData.defaultOverrideModelConfig.modelOrAlias.model
         if ($defId) {

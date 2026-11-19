@@ -210,7 +210,8 @@ function Get-AccountQuotaInfo {
 
 function Get-AllAccountsQuota {
     param([switch]$IncludeModels)
-    foreach ($file in (Get-ChildItem -LiteralPath $accDir -Filter '*.json')) {
+    $dir=if($accDir){$accDir}elseif($script:accDir){$script:accDir}else{Join-Path (Split-Path $PSCommandPath) 'accounts'}
+    foreach ($file in (Get-ChildItem -LiteralPath $dir -Filter '*.json')) {
         Get-AccountQuotaInfo $file.FullName -IncludeModels:$IncludeModels
     }
 }
