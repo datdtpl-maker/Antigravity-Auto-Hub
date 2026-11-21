@@ -6,6 +6,7 @@ work/
 oauth.local.clixml
 rotation-state.json
 hub-config.json
+.hub-version
 *.tmp
 current_active.txt
 rotator.log
