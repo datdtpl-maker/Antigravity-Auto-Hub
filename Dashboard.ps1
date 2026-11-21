@@ -560,86 +560,98 @@ function Initialize-HubDashboard {
         $script:HubRepoZip='https://github.com/datdtpl-maker/Antigravity-Auto-Hub/archive/refs/heads/main.zip'
         $script:PendingUpdateSha=''
         $btnChkUpd.Add_Click({
-            $txtUpd.Text=Get-HubText UpdateChecking;$btnAppUpd.Visibility='Collapsed';$script:PendingUpdateSha=''
+            $txtU=$window.FindName('TxtUpdateStatus');$btnA=$window.FindName('BtnApplyUpdate')
             try {
-                $hasGit=(Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath (Join-Path $baseDir '.git'))
-                if($hasGit){
-                    $env:GIT_TERMINAL_PROMPT='0';$env:GCM_INTERACTIVE='never'
-                    $curRemote=(git -C $baseDir remote get-url origin 2>$null)
-                    if(-not $curRemote){$null=git -C $baseDir remote add origin $script:HubRepoUrl 2>&1}
-                    elseif($curRemote.Trim() -ne $script:HubRepoUrl){$null=git -C $baseDir remote set-url origin $script:HubRepoUrl 2>&1}
-                    $null=git -C $baseDir fetch origin main 2>&1
-                    if($LASTEXITCODE -ne 0){throw 'fetch failed'}
-                    $behind=[int](git -C $baseDir rev-list --count 'HEAD..origin/main' 2>$null)
-                    if($behind -gt 0){
-                        $msg=(Get-HubText UpdateAvailable) -f $behind
-                        $txtUpd.Text=$msg;$btnAppUpd.Visibility='Visible'
-                        if(Get-Command Send-ToastNotification -ErrorAction SilentlyContinue){Send-ToastNotification -Message $msg}
+                if($txtU){$txtU.Text=Get-HubText UpdateChecking}
+                if($btnA){$btnA.Visibility='Collapsed'}
+                $script:PendingUpdateSha=''
+                $prevEap=$ErrorActionPreference;$ErrorActionPreference='Continue'
+                try {
+                    $hasGit=(Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath (Join-Path $baseDir '.git'))
+                    if($hasGit){
+                        $env:GIT_TERMINAL_PROMPT='0';$env:GCM_INTERACTIVE='never'
+                        $curRemote=(git -C $baseDir remote get-url origin 2>$null)
+                        if(-not $curRemote){$null=git -C $baseDir remote add origin $script:HubRepoUrl 2>&1}
+                        elseif($curRemote.Trim() -ne $script:HubRepoUrl){$null=git -C $baseDir remote set-url origin $script:HubRepoUrl 2>&1}
+                        $null=git -C $baseDir fetch origin main 2>&1
+                        if($LASTEXITCODE -ne 0){throw 'fetch failed'}
+                        $behind=[int](git -C $baseDir rev-list --count 'HEAD..origin/main' 2>$null)
+                        if($behind -gt 0){
+                            $msg=(Get-HubText UpdateAvailable) -f $behind
+                            if($txtU){$txtU.Text=$msg}
+                            if($btnA){$btnA.Visibility='Visible'}
+                            if(Get-Command Send-ToastNotification -ErrorAction SilentlyContinue){Send-ToastNotification -Message $msg}
+                        } else {
+                            if($txtU){$txtU.Text=Get-HubText UpdateLatest}
+                        }
                     } else {
-                        $txtUpd.Text=Get-HubText UpdateLatest
+                        [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
+                        $resp=Invoke-RestMethod -Uri $script:HubRepoApi -Headers @{'User-Agent'='Antigravity-Auto-Hub'} -TimeoutSec 10 -ErrorAction Stop
+                        $remoteSha=[string]$resp.sha
+                        if(-not $remoteSha){throw 'no sha'}
+                        $verFile=Join-Path $baseDir '.hub-version'
+                        $localSha=if(Test-Path -LiteralPath $verFile){(Get-Content -LiteralPath $verFile -Raw -ErrorAction SilentlyContinue).Trim()}else{''}
+                        if($localSha -ne $remoteSha){
+                            $script:PendingUpdateSha=$remoteSha
+                            $msg=(Get-HubText UpdateAvailable) -f 1
+                            if($txtU){$txtU.Text=$msg}
+                            if($btnA){$btnA.Visibility='Visible'}
+                            if(Get-Command Send-ToastNotification -ErrorAction SilentlyContinue){Send-ToastNotification -Message $msg}
+                        } else {
+                            if($txtU){$txtU.Text=Get-HubText UpdateLatest}
+                        }
                     }
-                } else {
-                    [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
-                    $resp=Invoke-RestMethod -Uri $script:HubRepoApi -Headers @{'User-Agent'='Antigravity-Auto-Hub'} -TimeoutSec 10 -ErrorAction Stop
-                    $remoteSha=[string]$resp.sha
-                    if(-not $remoteSha){throw 'no sha'}
-                    $verFile=Join-Path $baseDir '.hub-version'
-                    $localSha=if(Test-Path -LiteralPath $verFile){(Get-Content -LiteralPath $verFile -Raw -ErrorAction SilentlyContinue).Trim()}else{''}
-                    if($localSha -ne $remoteSha){
-                        $script:PendingUpdateSha=$remoteSha
-                        $msg=(Get-HubText UpdateAvailable) -f 1
-                        $txtUpd.Text=$msg;$btnAppUpd.Visibility='Visible'
-                        if(Get-Command Send-ToastNotification -ErrorAction SilentlyContinue){Send-ToastNotification -Message $msg}
-                    } else {
-                        $txtUpd.Text=Get-HubText UpdateLatest
-                    }
-                }
-            } catch { $txtUpd.Text=Get-HubText UpdateError }
+                } finally { $ErrorActionPreference=$prevEap }
+            } catch { if($txtU){$txtU.Text=Get-HubText UpdateError} }
         })
         $btnAppUpd.Add_Click({
+            $txtU=$window.FindName('TxtUpdateStatus');$btnA=$window.FindName('BtnApplyUpdate')
             try {
-                $hasGit=(Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath (Join-Path $baseDir '.git'))
-                if($hasGit){
-                    $env:GIT_TERMINAL_PROMPT='0';$env:GCM_INTERACTIVE='never'
-                    $curRemote=(git -C $baseDir remote get-url origin 2>$null)
-                    if(-not $curRemote){$null=git -C $baseDir remote add origin $script:HubRepoUrl 2>&1}
-                    elseif($curRemote.Trim() -ne $script:HubRepoUrl){$null=git -C $baseDir remote set-url origin $script:HubRepoUrl 2>&1}
-                    $null=git -C $baseDir fetch origin main 2>&1
-                    if($LASTEXITCODE -ne 0){throw 'fetch failed'}
-                    $null=git -C $baseDir pull --ff-only origin main 2>&1
-                    if($LASTEXITCODE -ne 0){
-                        $null=git -C $baseDir reset --hard origin/main 2>&1
-                        if($LASTEXITCODE -ne 0){throw 'reset failed'}
-                    }
-                    $headSha=(git -C $baseDir rev-parse HEAD 2>$null)
-                    if($headSha){Set-Content -LiteralPath (Join-Path $baseDir '.hub-version') -Value $headSha.Trim() -Encoding ASCII -ErrorAction SilentlyContinue}
-                } else {
-                    Add-Type -AssemblyName System.IO.Compression.FileSystem
-                    [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
-                    $tmpRoot=Join-Path ([IO.Path]::GetTempPath()) ('agh-upd-' + [guid]::NewGuid().ToString('N'))
-                    $zipPath=Join-Path $tmpRoot 'main.zip'
-                    $extDir=Join-Path $tmpRoot 'extract'
-                    New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
-                    try {
-                        Invoke-WebRequest -Uri $script:HubRepoZip -OutFile $zipPath -UseBasicParsing -TimeoutSec 30 -ErrorAction Stop
-                        [IO.Compression.ZipFile]::ExtractToDirectory($zipPath,$extDir)
-                        $srcDir=Get-ChildItem -LiteralPath $extDir -Directory | Select-Object -First 1
-                        if(-not $srcDir){throw 'empty archive'}
-                        $skip=@('accounts','work','backups','.git','hub-config.json','oauth.local.clixml','rotation-state.json','current_active.txt','rotator.log','.hub-version')
-                        foreach($entry in (Get-ChildItem -LiteralPath $srcDir.FullName -Force)){
-                            if($entry.Name -in $skip){continue}
-                            $dest=Join-Path $baseDir $entry.Name
-                            if($entry.PSIsContainer){Copy-Item -LiteralPath $entry.FullName -Destination $baseDir -Recurse -Force}
-                            else{Copy-Item -LiteralPath $entry.FullName -Destination $dest -Force}
+                $prevEap=$ErrorActionPreference;$ErrorActionPreference='Continue'
+                try {
+                    $hasGit=(Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath (Join-Path $baseDir '.git'))
+                    if($hasGit){
+                        $env:GIT_TERMINAL_PROMPT='0';$env:GCM_INTERACTIVE='never'
+                        $curRemote=(git -C $baseDir remote get-url origin 2>$null)
+                        if(-not $curRemote){$null=git -C $baseDir remote add origin $script:HubRepoUrl 2>&1}
+                        elseif($curRemote.Trim() -ne $script:HubRepoUrl){$null=git -C $baseDir remote set-url origin $script:HubRepoUrl 2>&1}
+                        $null=git -C $baseDir fetch origin main 2>&1
+                        if($LASTEXITCODE -ne 0){throw 'fetch failed'}
+                        $null=git -C $baseDir pull --ff-only origin main 2>&1
+                        if($LASTEXITCODE -ne 0){
+                            $null=git -C $baseDir reset --hard origin/main 2>&1
+                            if($LASTEXITCODE -ne 0){throw 'reset failed'}
                         }
-                        if($script:PendingUpdateSha){Set-Content -LiteralPath (Join-Path $baseDir '.hub-version') -Value $script:PendingUpdateSha -Encoding ASCII -ErrorAction SilentlyContinue}
-                    } finally {
-                        Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
+                        $headSha=(git -C $baseDir rev-parse HEAD 2>$null)
+                        if($headSha){Set-Content -LiteralPath (Join-Path $baseDir '.hub-version') -Value $headSha.Trim() -Encoding ASCII -ErrorAction SilentlyContinue}
+                    } else {
+                        Add-Type -AssemblyName System.IO.Compression.FileSystem
+                        [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
+                        $tmpRoot=Join-Path ([IO.Path]::GetTempPath()) ('agh-upd-' + [guid]::NewGuid().ToString('N'))
+                        $zipPath=Join-Path $tmpRoot 'main.zip'
+                        $extDir=Join-Path $tmpRoot 'extract'
+                        New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
+                        try {
+                            Invoke-WebRequest -Uri $script:HubRepoZip -OutFile $zipPath -UseBasicParsing -TimeoutSec 30 -ErrorAction Stop
+                            [IO.Compression.ZipFile]::ExtractToDirectory($zipPath,$extDir)
+                            $srcDir=Get-ChildItem -LiteralPath $extDir -Directory | Select-Object -First 1
+                            if(-not $srcDir){throw 'empty archive'}
+                            $skip=@('accounts','work','backups','.git','hub-config.json','oauth.local.clixml','rotation-state.json','current_active.txt','rotator.log','.hub-version')
+                            foreach($entry in (Get-ChildItem -LiteralPath $srcDir.FullName -Force)){
+                                if($entry.Name -in $skip){continue}
+                                $dest=Join-Path $baseDir $entry.Name
+                                if($entry.PSIsContainer){Copy-Item -LiteralPath $entry.FullName -Destination $baseDir -Recurse -Force}
+                                else{Copy-Item -LiteralPath $entry.FullName -Destination $dest -Force}
+                            }
+                            if($script:PendingUpdateSha){Set-Content -LiteralPath (Join-Path $baseDir '.hub-version') -Value $script:PendingUpdateSha -Encoding ASCII -ErrorAction SilentlyContinue}
+                        } finally {
+                            Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
+                        }
                     }
-                }
-                $txtUpd.Text=Get-HubText UpdateSuccess;$btnAppUpd.Visibility='Collapsed'
+                } finally { $ErrorActionPreference=$prevEap }
+                if($txtU){$txtU.Text=Get-HubText UpdateSuccess}
+                if($btnA){$btnA.Visibility='Collapsed'}
                 if(Get-Command Send-ToastNotification -ErrorAction SilentlyContinue){Send-ToastNotification -Message (Get-HubText UpdateSuccess)}
-                # Restart daemon and relaunch Hub cleanly to apply the updated code immediately.
                 try {
                     Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
                         Where-Object { $_.CommandLine -match 'AutoRotator\.ps1' } |
@@ -653,7 +665,7 @@ function Initialize-HubDashboard {
                         $window.Close()
                     }
                 } catch { }
-            } catch { $txtUpd.Text=Get-HubText UpdateError }
+            } catch { if($txtU){$txtU.Text=Get-HubText UpdateError} }
         })
     }
     Update-HubSettingsUi
