@@ -365,8 +365,11 @@ function Switch-ActiveAccount {
         $written=$true
         Set-StoredCredential ($fresh | ConvertTo-Json -Depth 10 -Compress)
         if ($runtime) {
+            $script:PreviousRuntimePids = @($runtime.Runtimes | ForEach-Object { $_.ProcessId })
             foreach ($server in $runtime.Runtimes) { Restart-AntigravityRuntime $server -Force:$Manual }
-            if (-not (Wait-AntigravityIdentity $quota.Email)) { throw 'New runtime identity not confirmed.' }
+            $verified = Wait-AntigravityIdentity $quota.Email
+            $script:PreviousRuntimePids = @()
+            if (-not $verified) { throw 'New runtime identity not confirmed.' }
             if ($savedWindows.Count) {
                 try { Restore-RuntimeWindows $savedWindows } catch { }
             }

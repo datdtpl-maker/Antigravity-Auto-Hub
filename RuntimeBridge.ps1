@@ -128,6 +128,67 @@ function Get-RuntimeFailureMessage {
     return "Kh$([char]0x00F4)ng k$([char]0x1EBF)t n$([char]0x1ED1)i $([char]0x0111)$([char]0x01B0)$([char]0x1EE3)c IDE"
 }
 
+function Get-StoredRuntimeEmail {
+    $raw = $null
+    if (Get-Command Get-StoredCredential -ErrorAction SilentlyContinue) {
+        try { $raw = Get-StoredCredential } catch { }
+    }
+    if (-not $raw) {
+        $fallback = Join-Path $env:USERPROFILE '.gemini\jetski-standalone-oauth-token'
+        if (Test-Path -LiteralPath $fallback) {
+            try { $raw = [IO.File]::ReadAllText($fallback) } catch { }
+        }
+    }
+    if (-not $raw) { return '' }
+    $rt = ''
+    try {
+        $obj = $raw | ConvertFrom-Json
+        $rt = if ($obj.token.refresh_token) { [string]$obj.token.refresh_token } elseif ($obj.refresh_token) { [string]$obj.refresh_token } else { '' }
+    } catch { }
+    if ($rt -and $script:CachedStoredRt -eq $rt -and $script:CachedStoredEmail) {
+        return $script:CachedStoredEmail
+    }
+    $email = ''
+    if (Get-Command Get-CredentialEmail -ErrorAction SilentlyContinue) {
+        try { $email = Get-CredentialEmail $raw } catch { }
+    }
+    if ($email -and $rt) {
+        $script:CachedStoredRt = $rt
+        $script:CachedStoredEmail = $email
+    }
+    return $email
+}
+
+function ConvertTo-ModelDisplayName {
+    param([string]$ModelId)
+    if (-not $ModelId) { return '' }
+    $id = $ModelId.Trim()
+    if ($id -match '^(?i)gemini-4-(neon|argon|hydrogen)-(xhigh|high|medium|low)$') {
+        $fam = $Matches[1].Substring(0,1).ToUpperInvariant() + $Matches[1].Substring(1).ToLowerInvariant()
+        $eff = if ($Matches[2] -ieq 'xhigh') { 'XHigh' } else { $Matches[2].Substring(0,1).ToUpperInvariant() + $Matches[2].Substring(1).ToLowerInvariant() }
+        return "Gemini 4 $fam ($eff)"
+    }
+    if ($id -match '^(?i)gemini-4-carbon$') { return 'Gemini 4 Carbon' }
+    if ($id -match '^(?i)gemini-3\.8-flash-(high|medium|low)$') {
+        $eff = $Matches[1].Substring(0,1).ToUpperInvariant() + $Matches[1].Substring(1).ToLowerInvariant()
+        return "Gemini 3.8 Flash ($eff)"
+    }
+    if ($id -match '^(?i)gemini-3-flash$') { return 'Gemini 3 Flash' }
+    if ($id -match '^(?i)claude-opus-4-6') { return 'Claude Opus 4.6 (Thinking)' }
+    if ($id -match '^(?i)claude-sonnet-4-6') { return 'Claude Sonnet 4.6 (Thinking)' }
+    if ($id -match '^(?i)gpt-oss-120b-medium$') { return 'GPT-OSS 120B (Medium)' }
+    return $id
+}
+
+function Get-LatestBrainTranscript {
+    $brainPath = Join-Path $env:USERPROFILE '.gemini\antigravity\brain'
+    if (-not (Test-Path -LiteralPath $brainPath)) { return $null }
+    return Get-ChildItem -LiteralPath $brainPath -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+        $p = Join-Path $_.FullName '.system_generated\logs\transcript.jsonl'
+        if (Test-Path -LiteralPath $p) { Get-Item -LiteralPath $p -ErrorAction SilentlyContinue }
+    } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+}
+
 function Get-AntigravityRuntime {
     $parents = @(Get-CimInstance Win32_Process -Filter "Name = 'Antigravity.exe'" -ErrorAction Stop)
     $servers = @(Get-CimInstance Win32_Process -Filter "Name = 'language_server.exe'" -ErrorAction Stop)
@@ -139,7 +200,17 @@ function Get-AntigravityRuntime {
         if ($server.ExecutablePath -ne $expected -or $server.CommandLine -notmatch '--standalone') { continue }
         Assert-AntigravityVersion (Get-Item -LiteralPath $parent.ExecutablePath).VersionInfo.ProductVersion $parent.ExecutablePath
         $csrfMatch = [regex]::Match($server.CommandLine, '--csrf_token(?:=|\s+)"?([^\s"]+)')
-        if (-not $csrfMatch.Success) { throw 'Runtime CSRF unavailable; rotation deferred.' }
+        if (-not $csrfMatch.Success) {
+            # Antigravity 2.34+ uses stdin bridge token instead of CLI --csrf_token.
+            $storedEmail = Get-StoredRuntimeEmail
+            if (-not $storedEmail) { throw 'Runtime CSRF unavailable; rotation deferred.' }
+            $results += [pscustomobject]@{
+                ProcessId = $server.ProcessId; ParentProcessId = $parent.ProcessId
+                CreationDate = $server.CreationDate; ExecutablePath = $expected
+                Port = 0; Csrf = ''; Email = $storedEmail; NoCsrfBridge = $true
+            }
+            continue
+        }
         $ports = @(Get-NetTCPConnection -OwningProcess $server.ProcessId -State Listen -ErrorAction Stop |
             Where-Object { $_.LocalAddress -in @('127.0.0.1', '::1', '0.0.0.0', '::') } |
             Select-Object -ExpandProperty LocalPort -Unique)
@@ -165,6 +236,22 @@ function Get-AntigravityRuntime {
 
 function Test-RuntimeIdle {
     param($Runtime)
+    if ($Runtime.NoCsrfBridge) {
+        $latest = Get-LatestBrainTranscript
+        if (-not $latest) { return $true }
+        $age = ((Get-Date) - $latest.LastWriteTime).TotalSeconds
+        if ($age -ge 15) { return $true }
+        try {
+            $lastLine = Get-Content -LiteralPath $latest.FullName -Tail 1 -ErrorAction SilentlyContinue
+            if ($lastLine) {
+                $item = $lastLine | ConvertFrom-Json
+                if ($item.type -eq 'PLANNER_RESPONSE' -and $item.status -eq 'DONE' -and (-not $item.tool_calls -or @($item.tool_calls).Count -eq 0)) {
+                    return $true
+                }
+            }
+        } catch { }
+        return $false
+    }
     $response = [AntigravityLocalRpc]::Post($Runtime.Port, $Runtime.Csrf, 'GetAllCascadeTrajectories') | ConvertFrom-Json
     # An empty proto map is omitted. An unexpected response must fail closed.
     if ($response.PSObject.Properties.Name -contains 'trajectorySummaries') {
@@ -306,6 +393,21 @@ function Get-RuntimeSelectedModel {
             }
         }
     } catch { }
+    if ($Runtime.NoCsrfBridge) {
+        try {
+            $latest = Get-LatestBrainTranscript
+            if ($latest) {
+                $tail = Get-Content -LiteralPath $latest.FullName -Tail 25 -ErrorAction SilentlyContinue
+                for ($i = $tail.Count - 1; $i -ge 0; $i--) {
+                    try {
+                        $item = ConvertFrom-Json $tail[$i]
+                        if ($item.model) { return (ConvertTo-ModelDisplayName ([string]$item.model)) }
+                    } catch { }
+                }
+            }
+        } catch { }
+        return ''
+    }
     try {
         $status = [AntigravityLocalRpc]::Post($Runtime.Port, $Runtime.Csrf, 'GetUserStatus') | ConvertFrom-Json
         $defId = [string]$status.userStatus.cascadeModelConfigData.defaultOverrideModelConfig.modelOrAlias.model
@@ -362,13 +464,18 @@ function Restore-RuntimeWindows {
 }
 
 function Wait-AntigravityIdentity {
-    param([string]$Email, [int]$TimeoutSeconds = 45)
+    param([string]$Email, [int]$TimeoutSeconds = 45, [int[]]$PreviousProcessIds = @())
+    $prevPids = if ($PreviousProcessIds.Count) { $PreviousProcessIds } elseif ($script:PreviousRuntimePids) { @($script:PreviousRuntimePids) } else { @() }
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
         Start-Sleep -Seconds 2
         try {
             $runtime = @(Get-AntigravityRuntime)
-            if ($runtime.Count -and @($runtime | Where-Object { $_.Email -ne $Email }).Count -eq 0) { return $true }
+            if ($runtime.Count -and @($runtime | Where-Object { $_.Email -ne $Email }).Count -eq 0) {
+                if (-not $prevPids.Count -or @($runtime | Where-Object { $_.ProcessId -in $prevPids }).Count -eq 0) {
+                    return $true
+                }
+            }
         } catch { }
     } while ((Get-Date) -lt $deadline)
     return $false
