@@ -53,7 +53,7 @@ function Convert-QuotaSummary {
     foreach ($group in $Response.groups) {
         $groupText = "$($group.displayName) $($group.description)"
         if ($groupText -notmatch 'gemini|argon' -or $group.displayName -match 'orchestrator') { continue }
-        $groupIsArgon = $groupText -match 'argon'
+        $groupIsArgon = ([string]$group.displayName -match 'argon')
         foreach ($bucket in $group.buckets) {
             if ($null -eq $bucket.remainingFraction) { continue }
             $fraction = 0.0
