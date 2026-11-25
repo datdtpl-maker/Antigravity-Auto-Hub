@@ -1,0 +1,67 @@
+name: Build macOS DMG Installer
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'macos/**'
+      - '.github/workflows/build-macos.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos-dmg:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: macos
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Generate icon & build macOS DMG (arm64 + x64)
+        run: npm run build:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: List built DMG artifacts
+        run: ls -lh dist/*.dmg
+
+      - name: Upload DMG artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Antigravity-Auto-Hub-macOS-DMG
+          path: macos/dist/*.dmg
+          retention-days: 30
+
+      - name: Create or update GitHub Release (v2.1.0-macos)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.1.0-macos
+          name: Antigravity Auto-Hub v2.1.0 (macOS DMG)
+          body: |
+            Bộ cài đặt chính thức **Antigravity Auto-Hub v2.1.0 cho macOS**:
+            - `arm64.dmg`: dành cho Mac chip **Apple Silicon (M1 / M2 / M3 / M4)**
+            - `x64.dmg`: dành cho Mac chip **Intel**
+
+            **Tính năng đầy đủ y hệt bản Windows:**
+            - Hỗ trợ Antigravity IDE `2.34+` (không cần `--csrf_token`), tự xoay tài khoản không cần tắt IDE.
+            - Tự động xoay theo **Quota 5 giờ** hoặc **Model đang chọn** dưới ngưỡng cài đặt + Cooldown + chỉ xoay khi IDE rảnh.
+            - Hỗ trợ đầy đủ gói **Free / Pro / Ultra** (đã fix sẵn nhóm chia sẻ Ultra).
+            - Chạy ngầm dưới **Menu Bar**, thông báo **macOS Notification**, tương thích 100% file `accounts/*.json` từ Windows.
+          files: macos/dist/*.dmg
+          draft: false
+          prerelease: false

@@ -28,3 +28,6 @@ handoff.md
 *.pfx
 *.bundle
 backups/
+macos/node_modules/
+macos/dist/
+dist-macos/

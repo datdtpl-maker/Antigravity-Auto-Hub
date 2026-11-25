@@ -1,0 +1,49 @@
+{
+  "name": "antigravity-auto-hub-macos",
+  "version": "2.1.0",
+  "description": "Antigravity Multi-Account Hub & Auto-Quota Rotator for macOS",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/core.test.js",
+    "gen-icon": "node scripts/generate-icon.js",
+    "build:mac": "npm run gen-icon && electron-builder --mac dmg --arm64 --x64"
+  },
+  "author": "datdtpl-maker",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.datdtpl.antigravity.autohub",
+    "productName": "Antigravity Auto-Hub",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": null
+    },
+    "dmg": {
+      "title": "Antigravity Auto-Hub ${version}",
+      "artifactName": "Antigravity-Auto-Hub-${version}-macOS-${arch}.dmg"
+    }
+  }
+}

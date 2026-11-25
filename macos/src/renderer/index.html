@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Antigravity Auto-Hub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="theme-light">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">A</div>
+        <div>
+          <div class="brand-name">Antigravity</div>
+          <div class="brand-sub">Account Hub · macOS</div>
+        </div>
+      </div>
+
+      <div class="nav-label">KHÔNG GIAN LÀM VIỆC</div>
+      <nav class="nav-list">
+        <button class="nav-item active" data-page="accounts">Tài khoản</button>
+        <button class="nav-item" data-page="history">Nhật ký xoay</button>
+        <button class="nav-item" data-page="settings">Cài đặt</button>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="policy-card">
+        <div class="policy-title">CHÍNH SÁCH XOAY</div>
+        <div class="policy-line"><span class="dot warn"></span><span id="sidebarPolicyLow">Quota 5h / Model &lt; 15%</span></div>
+        <div class="policy-line"><span class="dot ok"></span><span id="sidebarPolicyHigh">Acc đích &gt; 15%</span></div>
+        <div class="policy-note">Chỉ chuyển khi IDE rảnh</div>
+      </div>
+
+      <button id="btnOpenFolder" class="btn-outline full-width">Mở thư mục lưu</button>
+      <div class="sidebar-foot">LOCAL MACOS DESKTOP</div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div>
+          <h1 id="pageTitle">Tổng quan quota</h1>
+          <div id="pageSubtitle" class="page-subtitle">Mọi tài khoản. Mọi model. Một góc nhìn.</div>
+        </div>
+        <div class="header-actions">
+          <button id="btnThemeToggle" class="btn-outline" title="Đổi giao diện Sáng / Tối AMOLED">Đổi giao diện</button>
+          <button id="btnSaveCurrent" class="btn-outline">Lưu acc hiện tại</button>
+          <button id="btnAddAccount" class="btn-primary">+ Thêm tài khoản</button>
+        </div>
+      </header>
+
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">TỔNG TÀI KHOẢN</div>
+          <div class="stat-hint">Trong kho trên máy này</div>
+          <div id="statTotal" class="stat-value">0</div>
+        </div>
+        <div class="stat-card accent-ok">
+          <div class="stat-label">SẴN SÀNG XOAY</div>
+          <div id="hintReady" class="stat-hint">Model đang chọn &gt; 15%</div>
+          <div id="statReady" class="stat-value ok">0</div>
+        </div>
+        <div class="stat-card accent-warn">
+          <div class="stat-label">CẦN CHÚ Ý</div>
+          <div class="stat-hint">Quota thấp / Chưa rõ</div>
+          <div id="statAttention" class="stat-value warn">0</div>
+        </div>
+        <div class="stat-card accent-info">
+          <div class="stat-label">ĐÃ XOAY XÁC MINH</div>
+          <div class="stat-hint">Trong nhật ký gần đây</div>
+          <div id="statVerified" class="stat-value">0</div>
+        </div>
+      </section>
+
+      <section class="status-banner">
+        <div class="status-left">
+          <div class="status-title"><span id="statusDot" class="dot ok"></span><span id="txtDaemonStatus">Đang khởi tạo...</span></div>
+          <div id="txtActiveAccount" class="status-sub">Chưa xác minh tài khoản trong Antigravity</div>
+        </div>
+        <div class="status-right">
+          <div class="updated-meta">
+            <div id="txtUpdated">Chưa quét</div>
+            <div class="muted-small">Tự cập nhật sau mỗi lượt quét</div>
+          </div>
+          <button id="btnPauseToggle" class="btn-outline">Tạm dừng xoay</button>
+        </div>
+      </section>
+
+      <!-- PAGE: ACCOUNTS -->
+      <section id="page-accounts" class="page active">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input id="searchInput" type="text" class="search-box" placeholder="Tìm tài khoản hoặc email..." />
+            <div class="filter-group">
+              <button class="filter-btn active" data-filter="All">Tất cả</button>
+              <button class="filter-btn" data-filter="Ready">Đủ quota</button>
+              <button class="filter-btn" data-filter="Attention">Cần chú ý</button>
+            </div>
+          </div>
+          <div class="toolbar-right">
+            <button id="btnScan" class="btn-primary">Quét quota</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="accounts-table">
+            <thead>
+              <tr>
+                <th class="col-acc">TÀI KHOẢN / TRẠNG THÁI</th>
+                <th>GÓI</th>
+                <th>Gemini 5 giờ</th>
+                <th>Gemini Tuần</th>
+                <th>Gemini Flash</th>
+                <th>Gemini Neon</th>
+                <th>Gemini Argon</th>
+                <th>Gemini Hydrogen</th>
+                <th>Gemini Carbon</th>
+                <th>Claude Opus</th>
+                <th>Claude Sonnet</th>
+                <th>GPT-OSS 120B</th>
+                <th class="col-act">THAO TÁC</th>
+              </tr>
+            </thead>
+            <tbody id="accountsBody"></tbody>
+          </table>
+          <div id="emptyState" class="empty-state hidden">
+            Chưa có tài khoản nào. Bấm <b>Lưu acc hiện tại</b> hoặc <b>+ Thêm tài khoản</b> để bắt đầu.
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE: HISTORY -->
+      <section id="page-history" class="page">
+        <div class="table-wrap">
+          <table class="accounts-table">
+            <thead>
+              <tr>
+                <th style="width:170px">THỜI GIAN</th>
+                <th style="width:130px">TRẠNG THÁI</th>
+                <th>CHI TIẾT SỰ KIỆN</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PAGE: SETTINGS -->
+      <section id="page-settings" class="page">
+        <div class="settings-stack">
+          <div class="card">
+            <h3>GIAO DIỆN &amp; HIỂN THỊ</h3>
+            <div class="setting-row">
+              <div>
+                <div class="setting-name">Chủ đề màu sắc (Theme)</div>
+                <div class="setting-desc">Hỗ trợ chế độ Sáng và Tối AMOLED tiết kiệm pin</div>
+              </div>
+              <select id="selTheme" class="select-input">
+                <option value="Light">Giao diện Sáng (Light)</option>
+                <option value="Amoled">Giao diện Tối AMOLED</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>CHÍNH SÁCH XOAY TỰ ĐỘNG</h3>
+            <label class="checkbox-row">
+              <input id="chkAutoRotate" type="checkbox" />
+              <span>Bật tự động xoay tài khoản khi Quota 5 giờ hoặc Model xuống thấp</span>
+            </label>
+            <label class="checkbox-row">
+              <input id="chkCliRotate" type="checkbox" />
+              <span>Tự xoay cho CLI khi IDE đang đóng (Keychain &amp; standalone token)</span>
+            </label>
+            <label class="checkbox-row">
+              <input id="chkLaunchLogin" type="checkbox" />
+              <span>Tự động khởi chạy cùng macOS (chạy ẩn dưới Menu Bar)</span>
+            </label>
+            <div class="setting-row">
+              <div>
+                <div class="setting-name">Ngưỡng kích hoạt xoay (%)</div>
+                <div class="setting-desc">Xoay khi Quota 5 giờ hoặc Model đang dùng giảm dưới mức này</div>
+              </div>
+              <select id="selMinQuota" class="select-input">
+                <option value="5">5%</option>
+                <option value="10">10%</option>
+                <option value="15">15%</option>
+                <option value="20">20%</option>
+                <option value="25">25%</option>
+                <option value="30">30%</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <div>
+                <div class="setting-name">Thời gian nghỉ (Cooldown)</div>
+                <div class="setting-desc">Khoảng chờ tối thiểu giữa 2 lần chuyển tài khoản</div>
+              </div>
+              <select id="selCooldown" class="select-input">
+                <option value="30">30 giây</option>
+                <option value="60">60 giây</option>
+                <option value="120">120 giây</option>
+                <option value="180">180 giây</option>
+                <option value="300">300 giây</option>
+              </select>
+            </div>
+            <label class="checkbox-row">
+              <input id="chkNotify" type="checkbox" />
+              <span>Hiển thị thông báo macOS Notification khi xoay tài khoản</span>
+            </label>
+            <div class="setting-actions">
+              <button id="btnSaveSettings" class="btn-primary">Lưu cài đặt</button>
+              <span id="txtSettingsSaved" class="saved-msg"></span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>CẬP NHẬT TỪ GITHUB</h3>
+            <div class="setting-desc" style="margin-bottom:12px">Kiểm tra phiên bản mới từ kho lưu trữ <b>datdtpl-maker/Antigravity-Auto-Hub</b>.</div>
+            <div class="setting-actions">
+              <button id="btnCheckUpdate" class="btn-outline">Kiểm tra cập nhật</button>
+              <button id="btnDownloadUpdate" class="btn-primary hidden">Mở trang tải bản mới</button>
+              <span id="txtUpdateStatus" class="saved-msg"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span id="txtFooterPath">Thư mục lưu trữ: ~/AntigravityAccounts</span>
+        <span>Đóng cửa sổ vẫn giữ daemon chạy ngầm trên Menu Bar</span>
+      </footer>
+    </main>
+  </div>
+
+  <!-- MODAL: DETAILS -->
+  <div id="detailsModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="modalTitle">Chi tiết quota</h3>
+        <button id="btnCloseModal" class="btn-outline">Đóng</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
