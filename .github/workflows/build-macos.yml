@@ -32,8 +32,17 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Generate icon & build macOS DMG (arm64 + x64)
-        run: npm run build:mac
+      - name: Generate icon & build macOS .app + .dmg (arm64 + x64)
+        run: |
+          npm run gen-icon
+          npx electron-builder --mac dir --arm64 --x64
+          mkdir -p dist/dmg-arm64 dist/dmg-x64
+          cp -R "dist/mac-arm64/Antigravity Auto-Hub.app" dist/dmg-arm64/
+          ln -s /Applications dist/dmg-arm64/Applications
+          hdiutil create -volname "Antigravity Auto-Hub" -srcfolder dist/dmg-arm64 -ov -format UDZO "dist/Antigravity-Auto-Hub-2.1.0-macOS-arm64.dmg"
+          cp -R "dist/mac/Antigravity Auto-Hub.app" dist/dmg-x64/
+          ln -s /Applications dist/dmg-x64/Applications
+          hdiutil create -volname "Antigravity Auto-Hub" -srcfolder dist/dmg-x64 -ov -format UDZO "dist/Antigravity-Auto-Hub-2.1.0-macOS-x64.dmg"
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
