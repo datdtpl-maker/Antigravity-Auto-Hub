@@ -39,10 +39,10 @@ jobs:
           mkdir -p dist/dmg-arm64 dist/dmg-x64
           cp -R "dist/mac-arm64/Antigravity Auto-Hub.app" dist/dmg-arm64/
           ln -s /Applications dist/dmg-arm64/Applications
-          hdiutil create -volname "Antigravity Auto-Hub" -srcfolder dist/dmg-arm64 -ov -format UDZO "dist/Antigravity-Auto-Hub-2.1.0-macOS-arm64.dmg"
+          hdiutil create -volname "Antigravity Auto-Hub" -srcfolder dist/dmg-arm64 -ov -format UDZO "dist/Antigravity-Auto-Hub-2.2.0-macOS-arm64.dmg"
           cp -R "dist/mac/Antigravity Auto-Hub.app" dist/dmg-x64/
           ln -s /Applications dist/dmg-x64/Applications
-          hdiutil create -volname "Antigravity Auto-Hub" -srcfolder dist/dmg-x64 -ov -format UDZO "dist/Antigravity-Auto-Hub-2.1.0-macOS-x64.dmg"
+          hdiutil create -volname "Antigravity Auto-Hub" -srcfolder dist/dmg-x64 -ov -format UDZO "dist/Antigravity-Auto-Hub-2.2.0-macOS-x64.dmg"
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
@@ -56,21 +56,21 @@ jobs:
           path: macos/dist/*.dmg
           retention-days: 30
 
-      - name: Create or update GitHub Release (v2.1.0-macos)
+      - name: Create or update GitHub Release (v2.2.0-macos)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.1.0-macos
-          name: Antigravity Auto-Hub v2.1.0 (macOS DMG)
+          tag_name: v2.2.0-macos
+          name: Antigravity Auto-Hub v2.2.0 (macOS DMG)
           body: |
-            Bộ cài đặt chính thức **Antigravity Auto-Hub v2.1.0 cho macOS**:
+            Bộ cài đặt chính thức **Antigravity Auto-Hub v2.2.0 cho macOS**:
             - `arm64.dmg`: dành cho Mac chip **Apple Silicon (M1 / M2 / M3 / M4)**
             - `x64.dmg`: dành cho Mac chip **Intel**
 
-            **Tính năng đầy đủ y hệt bản Windows:**
-            - Hỗ trợ Antigravity IDE `2.34+` (không cần `--csrf_token`), tự xoay tài khoản không cần tắt IDE.
-            - Tự động xoay theo **Quota 5 giờ** hoặc **Model đang chọn** dưới ngưỡng cài đặt + Cooldown + chỉ xoay khi IDE rảnh.
-            - Hỗ trợ đầy đủ gói **Free / Pro / Ultra** (đã fix sẵn nhóm chia sẻ Ultra).
-            - Chạy ngầm dưới **Menu Bar**, thông báo **macOS Notification**, tương thích 100% file `accounts/*.json` từ Windows.
+            **Cập nhật mới trong v2.2.0:**
+            - Tự động xoay vòng `rotator.log` khi vượt 1 MB (giữ 2.000 dòng mới nhất).
+            - Xếp hạng tài khoản đích thông minh: ưu tiên **Quota khả dụng cao nhất -> Quota Tuần cao nhất -> Gói Ultra > Pro > Free**.
+            - Hiển thị thời gian quét `(X.Xs)` trực tiếp cạnh giờ cập nhật.
+            - Hỗ trợ đầy đủ Antigravity IDE `2.34+` / `2.35+`, gói **Free / Pro / Ultra**, Keychain, Menu Bar và macOS Notification.
           files: macos/dist/*.dmg
           draft: false
           prerelease: false

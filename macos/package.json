@@ -1,6 +1,6 @@
 {
   "name": "antigravity-auto-hub-macos",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Antigravity Multi-Account Hub & Auto-Quota Rotator for macOS",
   "main": "src/main.js",
   "scripts": {
