@@ -180,13 +180,15 @@ function ConvertFrom-HubLog {
 }
 
 function Get-HubSnapshot {
+    $sw=[Diagnostics.Stopwatch]::StartNew()
     $accounts=@(Get-AllAccountsQuota -IncludeModels)
     $identity=$null;$runtimeError=$null
     try{$identity=Get-RuntimeIdentity}catch{$runtimeError=Get-RuntimeFailureMessage $_}
     $selectedModel=''
     if($identity -and $identity.Runtimes){try{$selectedModel=Get-RuntimeSelectedModel $identity.Runtimes[0]}catch{}}
     $daemon=@(Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*AutoRotator.ps1*' -and $_.CommandLine -match '(?i)\s-Daemon(?:\s|$)' }).Count -gt 0
-    [pscustomobject]@{Accounts=$accounts;SelectedModel=$selectedModel;Email=$(if($identity){$identity.Email}else{''});Connected=[bool]$identity;Idle=$(if($identity){$identity.Idle}else{$false});RuntimeError=$runtimeError;Daemon=$daemon;State=(Read-RotationState);At=(Get-Date)}
+    $sw.Stop()
+    [pscustomobject]@{Accounts=$accounts;SelectedModel=$selectedModel;Email=$(if($identity){$identity.Email}else{''});Connected=[bool]$identity;Idle=$(if($identity){$identity.Idle}else{$false});RuntimeError=$runtimeError;Daemon=$daemon;State=(Read-RotationState);At=(Get-Date);ScanMs=[int]$sw.ElapsedMilliseconds}
 }
 
 function Update-HubAccountView {
@@ -220,7 +222,8 @@ function Set-HubSnapshot {
     $window.FindName('HintReady').Text=if($Snapshot.SelectedModel){(Get-HubText SelectedModelReady) -replace '20%',"$($cfg.MinQuotaPercent)%"}else{Get-HubText LegacyReady}
     $window.FindName('TxtDaemonStatus').Text=$status
     $window.FindName('TxtActiveAccount').Text=if($Snapshot.Email){(Get-HubText ActiveAccount) -f $Snapshot.Email}else{Get-HubText Unverified}
-    $window.FindName('TxtUpdated').Text=(Get-HubText Updated) -f $Snapshot.At.ToString('HH:mm:ss')
+    $scanSuffix=if($Snapshot.PSObject.Properties['ScanMs'] -and $Snapshot.ScanMs -gt 0){" ($([math]::Round($Snapshot.ScanMs/1000.0,1))s)"}else{''}
+    $window.FindName('TxtUpdated').Text=((Get-HubText Updated) -f $Snapshot.At.ToString('HH:mm:ss')) + $scanSuffix
     Update-HubAccountView
 }
 

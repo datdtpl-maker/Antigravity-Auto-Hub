@@ -211,7 +211,44 @@ function Get-AccountQuotaInfo {
 function Get-AllAccountsQuota {
     param([switch]$IncludeModels)
     $dir=if($accDir){$accDir}elseif($script:accDir){$script:accDir}else{Join-Path (Split-Path $PSCommandPath) 'accounts'}
-    foreach ($file in (Get-ChildItem -LiteralPath $dir -Filter '*.json')) {
+    $files=@(Get-ChildItem -LiteralPath $dir -Filter '*.json' -ErrorAction SilentlyContinue)
+    if(-not $files.Count){return @()}
+    $corePath=$PSCommandPath
+    $rootDir=if($corePath){Split-Path $corePath}else{$null}
+    $cmdInfo=Get-Command Get-AccountQuotaInfo -ErrorAction SilentlyContinue
+    $isRealImpl=$cmdInfo -and $cmdInfo.ScriptBlock -and $cmdInfo.ScriptBlock.File -and ($cmdInfo.ScriptBlock.File -like '*RotationCore.ps1')
+    if($files.Count -gt 1 -and $isRealImpl -and $rootDir -and (Test-Path -LiteralPath (Join-Path $rootDir 'ModelQuota.ps1'))){
+        $maxThreads=[Math]::Min(8,$files.Count)
+        $pool=[runspacefactory]::CreateRunspacePool(1,$maxThreads)
+        $pool.Open()
+        $jobs=@()
+        try {
+            $worker={
+                param($Root,$TokenFile,$IncModels,$Cid,$Csec,$Base)
+                $baseDir=$Base
+                $script:GoogleClientId=$Cid
+                $script:GoogleClientSecret=$Csec
+                . (Join-Path $Root 'ModelQuota.ps1')
+                . (Join-Path $Root 'RotationCore.ps1')
+                Get-AccountQuotaInfo $TokenFile -IncludeModels:$IncModels
+            }
+            $basePass=if($baseDir){$baseDir}else{$rootDir}
+            foreach($file in $files){
+                $ps=[powershell]::Create()
+                $ps.RunspacePool=$pool
+                $null=$ps.AddScript($worker).AddArgument($rootDir).AddArgument($file.FullName).AddArgument([bool]$IncludeModels).AddArgument($script:GoogleClientId).AddArgument($script:GoogleClientSecret).AddArgument($basePass)
+                $jobs+=[pscustomobject]@{PS=$ps;Handle=$ps.BeginInvoke()}
+            }
+            foreach($j in $jobs){
+                try { $j.PS.EndInvoke($j.Handle) } finally { $j.PS.Dispose() }
+            }
+            return
+        } finally {
+            $pool.Close()
+            $pool.Dispose()
+        }
+    }
+    foreach ($file in $files) {
         Get-AccountQuotaInfo $file.FullName -IncludeModels:$IncludeModels
     }
 }
@@ -517,15 +554,19 @@ function Invoke-AutoRotationCheck {
         $best = $accounts | Where-Object { $_.Email -ne $runtime.Email -and $_.Success -and $_.Gemini5H -gt $threshold } | ForEach-Object {
             $candidateQuota = Get-SelectedModelQuota $_ $selectedModel
             if ($candidateQuota.Known -and $candidateQuota.Remaining -gt $threshold) {
-                [pscustomobject]@{ AccountName = $_.AccountName; Remaining = [math]::Min($candidateQuota.Remaining, $_.Gemini5H) }
+                $planRank = if ($_.Plan -eq 'Ultra') { 3 } elseif ($_.Plan -eq 'Pro') { 2 } else { 1 }
+                $wk = if ($null -ne $_.GeminiWeekly -and $_.GeminiWeekly -ge 0) { [double]$_.GeminiWeekly } else { 0.0 }
+                [pscustomobject]@{ AccountName = $_.AccountName; Remaining = [math]::Min($candidateQuota.Remaining, $_.Gemini5H); Weekly = $wk; PlanRank = $planRank }
             }
-        } | Sort-Object @{Expression='Remaining';Descending=$true}, AccountName | Select-Object -First 1
+        } | Sort-Object @{Expression='Remaining';Descending=$true}, @{Expression='Weekly';Descending=$true}, @{Expression='PlanRank';Descending=$true}, AccountName | Select-Object -First 1
         if ($best) { $useExpectedModel = $selectedModel }
     }
     if (-not $best -and $low5h) {
         $best = $accounts | Where-Object { $_.Email -ne $runtime.Email -and $_.Success -and $_.Gemini5H -gt $threshold } | ForEach-Object {
-            [pscustomobject]@{ AccountName = $_.AccountName; Remaining = $_.Gemini5H }
-        } | Sort-Object @{Expression='Remaining';Descending=$true}, AccountName | Select-Object -First 1
+            $planRank = if ($_.Plan -eq 'Ultra') { 3 } elseif ($_.Plan -eq 'Pro') { 2 } else { 1 }
+            $wk = if ($null -ne $_.GeminiWeekly -and $_.GeminiWeekly -ge 0) { [double]$_.GeminiWeekly } else { 0.0 }
+            [pscustomobject]@{ AccountName = $_.AccountName; Remaining = $_.Gemini5H; Weekly = $wk; PlanRank = $planRank }
+        } | Sort-Object @{Expression='Remaining';Descending=$true}, @{Expression='Weekly';Descending=$true}, @{Expression='PlanRank';Descending=$true}, AccountName | Select-Object -First 1
     }
     if (-not $best) { Write-RotatorLog 'No healthy account available; waiting for quota reset.'; return }
     $reason = if ($low5h) { "Gemini 5h quota below $($cfg.MinQuotaPercent) percent" } else { "Selected model below $($cfg.MinQuotaPercent) percent" }

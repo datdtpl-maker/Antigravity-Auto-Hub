@@ -105,6 +105,13 @@ function Write-RotatorLog {
     $entry = "[$ts] $msg"
     Write-Host $entry
     try {
+        if ($logFile -and (Test-Path -LiteralPath $logFile)) {
+            $info = Get-Item -LiteralPath $logFile -ErrorAction SilentlyContinue
+            if ($info -and $info.Length -gt 1048576) {
+                $keep = @(Get-Content -LiteralPath $logFile -Tail 2000 -ErrorAction SilentlyContinue)
+                Set-Content -LiteralPath $logFile -Value $keep -Encoding UTF8 -ErrorAction SilentlyContinue
+            }
+        }
         Add-Content -Path $logFile -Value $entry -Encoding UTF8 -ErrorAction SilentlyContinue
     } catch {}
 }

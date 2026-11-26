@@ -43,6 +43,7 @@ function applyLoginItem(enabled) {
 }
 
 async function buildSnapshot() {
+  const startedAt = Date.now();
   ensureDirs();
   const cfg = getHubConfig();
   const state = readRotationState();
@@ -109,6 +110,7 @@ async function buildSnapshot() {
 
   return {
     at: new Date().toISOString(),
+    scanMs: Date.now() - startedAt,
     baseDir: BASE_DIR,
     version: app.getVersion(),
     config: cfg,

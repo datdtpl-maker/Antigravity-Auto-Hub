@@ -101,6 +101,10 @@ function writeRotatorLog(message) {
   const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   const line = `[${ts}] ${message}\n`;
   try {
+    if (fs.existsSync(LOG_FILE) && fs.statSync(LOG_FILE).size > 1048576) {
+      const keep = fs.readFileSync(LOG_FILE, 'utf8').split(/\r?\n/).filter(Boolean).slice(-2000);
+      writeAtomicText(LOG_FILE, keep.join('\n') + '\n', 0o600);
+    }
     fs.appendFileSync(LOG_FILE, line, 'utf8');
   } catch { /* ignore */ }
 }

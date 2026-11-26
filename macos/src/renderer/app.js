@@ -157,7 +157,8 @@ function renderSnapshot(snap) {
   $('txtDaemonStatus').textContent = statusText;
   $('statusDot').className = `dot ${dotCls}`;
   $('txtActiveAccount').textContent = snap.activeEmail ? `Đang dùng: ${snap.activeEmail}` : 'Chưa xác minh tài khoản trong Antigravity';
-  $('txtUpdated').textContent = `Cập nhật ${new Date(snap.at).toLocaleTimeString('vi-VN')}`;
+  const scanSuffix = snap.scanMs > 0 ? ` (${(snap.scanMs / 1000).toFixed(1)}s)` : '';
+  $('txtUpdated').textContent = `Cập nhật ${new Date(snap.at).toLocaleTimeString('vi-VN')}${scanSuffix}`;
   $('btnPauseToggle').textContent = cfg.AutoRotationEnabled ? 'Tạm dừng xoay' : 'Bật xoay tự động';
   $('txtFooterPath').textContent = `Thư mục lưu trữ: ${snap.baseDir} · v${snap.version}`;
 

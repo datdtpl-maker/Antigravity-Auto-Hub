@@ -229,6 +229,17 @@ async function invokeAutoRotationCheck() {
     return { status: 'Busy' };
   }
 
+  const planRank = (p) => (p === 'Ultra' ? 3 : (p === 'Pro' ? 2 : 1));
+  const compareCandidates = (a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const wkA = a.acc.GeminiWeekly >= 0 ? a.acc.GeminiWeekly : 0;
+    const wkB = b.acc.GeminiWeekly >= 0 ? b.acc.GeminiWeekly : 0;
+    if (wkB !== wkA) return wkB - wkA;
+    const pr = planRank(b.acc.Plan) - planRank(a.acc.Plan);
+    if (pr !== 0) return pr;
+    return a.acc.AccountName.localeCompare(b.acc.AccountName);
+  };
+
   // Prefer account with both Selected Model & Gemini 5h > threshold; fallback to highest Gemini 5h > threshold
   let best = null;
   if (selectedModel) {
@@ -236,12 +247,14 @@ async function invokeAutoRotationCheck() {
       .filter((a) => a.Email !== runtime.Email && a.Success && a.Gemini5H > threshold)
       .map((a) => ({ acc: a, mq: getSelectedModelQuota(a, selectedModel) }))
       .filter((x) => x.mq.Known && x.mq.Remaining > threshold)
-      .sort((a, b) => Math.min(b.mq.Remaining, b.acc.Gemini5H) - Math.min(a.mq.Remaining, a.acc.Gemini5H))[0]?.acc || null;
+      .map((x) => ({ acc: x.acc, score: Math.min(x.mq.Remaining, x.acc.Gemini5H) }))
+      .sort(compareCandidates)[0]?.acc || null;
   }
   if (!best && low5h) {
     best = accounts
       .filter((a) => a.Email !== runtime.Email && a.Success && a.Gemini5H > threshold)
-      .sort((a, b) => b.Gemini5H - a.Gemini5H)[0] || null;
+      .map((a) => ({ acc: a, score: a.Gemini5H }))
+      .sort(compareCandidates)[0]?.acc || null;
   }
   if (!best) {
     writeRotatorLog('No healthy account available; waiting for quota reset.');
